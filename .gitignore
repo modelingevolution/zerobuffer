@@ -1,0 +1,39 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled files
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Test executables
+test_*
+*_test
+/cpp/cmake
+/cpp/Testing/Temporary
+/csharp/.vs/ZeroBuffer
+/csharp/ZeroBuffer/obj
+/csharp/ZeroBuffer/bin/Release/net9.0
+/csharp/ZeroBuffer.Benchmarks/bin/Release/net9.0
+/csharp/ZeroBuffer.Benchmarks/obj
+/csharp/ZeroBuffer.TestHelper/bin/Release/net9.0
+/csharp/ZeroBuffer.TestHelper/obj
+/csharp/ZeroBuffer.Tests/bin/Release/net9.0
+/csharp/ZeroBuffer.Tests/obj
