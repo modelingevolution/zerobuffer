@@ -1,0 +1,426 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Threading;
+
+namespace ZeroBuffer
+{
+    /// <summary>
+    /// Cross-platform Reader implementation using abstracted shared memory and semaphores
+    /// </summary>
+    public sealed class Reader : IDisposable
+    {
+        private readonly string _name;
+        private readonly BufferConfig _config;
+        private readonly IFileLock _lock = null!;
+        private readonly ISharedMemory _sharedMemory = null!;
+        private readonly ISemaphore _writeSemaphore = null!;
+        private readonly ISemaphore _readSemaphore = null!;
+        private readonly long _metadataOffset;
+        private readonly long _payloadOffset;
+        private bool _disposed;
+
+        public Reader(string name, BufferConfig config)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(name);
+            ArgumentNullException.ThrowIfNull(config);
+
+            _name = name;
+            _config = config;
+            
+            // Create lock file path
+            string lockPath = GetLockFilePath(name);
+            
+            // Try to clean up stale resources before creating
+            CleanupStaleResources();
+
+            // Calculate aligned sizes
+            int oiebSize = AlignToBlockBoundary(Marshal.SizeOf<OIEB>());
+            int metadataSize = AlignToBlockBoundary(config.MetadataSize);
+            int payloadSize = AlignToBlockBoundary(config.PayloadSize);
+            
+            long totalSize = oiebSize + metadataSize + payloadSize;
+            
+            // Set offsets
+            _metadataOffset = oiebSize;
+            _payloadOffset = oiebSize + metadataSize;
+
+            bool created = false;
+            int retryCount = 0;
+            const int maxRetries = 2;
+
+            while (!created && retryCount < maxRetries)
+            {
+                try
+                {
+                    // Create lock file first
+                    _lock = FileLockFactory.Create(lockPath);
+                    // Try to create shared memory
+                    _sharedMemory = SharedMemoryFactory.Create(name, totalSize);
+                    
+                    // Initialize OIEB
+                    var oieb = new OIEB
+                    {
+                        OperationSize = (ulong)oiebSize,
+                        MetadataSize = (ulong)metadataSize,
+                        MetadataFreeBytes = (ulong)metadataSize,
+                        MetadataWrittenBytes = 0,
+                        PayloadSize = (ulong)payloadSize,
+                        PayloadFreeBytes = (ulong)payloadSize,
+                        PayloadWritePos = 0,
+                        PayloadReadPos = 0,
+                        PayloadWrittenCount = 0,
+                        PayloadReadCount = 0,
+                        WriterPid = 0,
+                        ReaderPid = (ulong)Environment.ProcessId
+                    };
+                    
+                    _sharedMemory.Write(0, oieb);
+                    
+                    // Create semaphores
+                    _writeSemaphore = SemaphoreFactory.Create($"sem-w-{name}", 0);
+                    _readSemaphore = SemaphoreFactory.Create($"sem-r-{name}", 0);
+                    
+                    created = true;
+                }
+                catch when (retryCount < maxRetries - 1)
+                {
+                    // First attempt failed - try to clean up stale resources
+                    retryCount++;
+                    
+                    // Clean up any partial resources we created
+                    try { _lock?.Dispose(); } catch { }
+                    try { _sharedMemory?.Dispose(); } catch { }
+                    try { _writeSemaphore?.Dispose(); } catch { }
+                    try { _readSemaphore?.Dispose(); } catch { }
+                    _lock = null!;
+                    _sharedMemory = null!;
+                    _writeSemaphore = null!;
+                    _readSemaphore = null!;
+                    
+                    // Check if there are stale resources from a dead process
+                    bool shouldCleanup = false;
+                    try
+                    {
+                        using var existingMem = SharedMemoryFactory.Open(name);
+                        var existingOieb = existingMem.Read<OIEB>(0);
+                        
+                        // Check if the existing reader/writer processes are dead
+                        if (existingOieb.ReaderPid != 0 && !ProcessExists(existingOieb.ReaderPid))
+                            shouldCleanup = true;
+                        if (existingOieb.WriterPid != 0 && !ProcessExists(existingOieb.WriterPid))
+                            shouldCleanup = true;
+                    }
+                    catch
+                    {
+                        // Failed to open existing memory - assume it's corrupted
+                        shouldCleanup = true;
+                    }
+                    
+                    if (shouldCleanup)
+                    {
+                        // Remove all stale resources
+                        try
+                        {
+                            SharedMemoryFactory.Remove(name);
+                            SemaphoreFactory.Remove($"sem-w-{name}");
+                            SemaphoreFactory.Remove($"sem-r-{name}");
+                        }
+                        catch
+                        {
+                            // Ignore cleanup errors
+                        }
+                        
+                        // Small delay before retry
+                        Thread.Sleep(100);
+                    }
+                    else
+                    {
+                        // Resources are in use by live processes
+                        throw new ReaderAlreadyConnectedException();
+                    }
+                }
+                catch
+                {
+                    Dispose();
+                    throw;
+                }
+            }
+        }
+
+        private static string GetLockFilePath(string name)
+        {
+            // Use a platform-appropriate temp directory for lock files
+            string tempDir = Path.GetTempPath();
+            string lockDir = Path.Combine(tempDir, "zerobuffer", "locks");
+            return Path.Combine(lockDir, $"{name}.lock");
+        }
+
+        private void CleanupStaleResources()
+        {
+            // Get the lock directory
+            string tempDir = Path.GetTempPath();
+            string lockDir = Path.Combine(tempDir, "zerobuffer", "locks");
+            
+            // Create directory if it doesn't exist
+            try
+            {
+                Directory.CreateDirectory(lockDir);
+            }
+            catch
+            {
+                // Ignore errors creating directory
+                return;
+            }
+            
+            // Scan all lock files in the directory
+            try
+            {
+                foreach (var lockFile in Directory.GetFiles(lockDir, "*.lock"))
+                {
+                    // Try to remove stale lock
+                    if (FileLockFactory.TryRemoveStale(lockFile))
+                    {
+                        // We successfully removed a stale lock, clean up associated resources
+                        string bufferName = Path.GetFileNameWithoutExtension(lockFile);
+                        
+                        try
+                        {
+                            // Try to open the shared memory to check if it's orphaned
+                            using var shm = SharedMemoryFactory.Open(bufferName);
+                            var oieb = shm.Read<OIEB>(0);
+                            
+                            // Check if both reader and writer are dead
+                            bool readerDead = (oieb.ReaderPid == 0) || !ProcessExists(oieb.ReaderPid);
+                            bool writerDead = (oieb.WriterPid == 0) || !ProcessExists(oieb.WriterPid);
+                            
+                            if (readerDead && writerDead)
+                            {
+                                // Both processes are dead, safe to clean up
+                                // First dispose our handle to the shared memory
+                                shm.Dispose();
+                                
+                                // Now remove all resources
+                                SharedMemoryFactory.Remove(bufferName);
+                                SemaphoreFactory.Remove($"sem-w-{bufferName}");
+                                SemaphoreFactory.Remove($"sem-r-{bufferName}");
+                            }
+                        }
+                        catch
+                        {
+                            // If we can't open shared memory, clean up anyway since lock was stale
+                            try
+                            {
+                                SharedMemoryFactory.Remove(bufferName);
+                                SemaphoreFactory.Remove($"sem-w-{bufferName}");
+                                SemaphoreFactory.Remove($"sem-r-{bufferName}");
+                            }
+                            catch
+                            {
+                                // Ignore cleanup errors
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors during directory scan
+            }
+        }
+
+        /// <summary>
+        /// Get metadata - zero-copy access via ReadOnlySpan
+        /// </summary>
+        public unsafe ReadOnlySpan<byte> GetMetadata()
+        {
+            ThrowIfDisposed();
+
+            ref readonly var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
+            
+            if (oieb.MetadataWrittenBytes == 0)
+                return ReadOnlySpan<byte>.Empty;
+
+            // Return a span directly over the shared memory - true zero-copy
+            byte* metadataPtr = _sharedMemory.GetPointer(_metadataOffset);
+            return new ReadOnlySpan<byte>(metadataPtr, (int)oieb.MetadataWrittenBytes);
+        }
+
+        /// <summary>
+        /// Read a frame from the buffer
+        /// </summary>
+        public Frame ReadFrame(TimeSpan? timeout = null)
+        {
+            ThrowIfDisposed();
+
+            var waitTime = timeout ?? TimeSpan.FromSeconds(5);
+
+            while (true)
+            {
+                var oieb = _sharedMemory.Read<OIEB>(0);
+
+                // Check if writer is alive
+                if (oieb.WriterPid != 0 && !ProcessExists(oieb.WriterPid))
+                {
+                    throw new WriterDeadException();
+                }
+
+                // Check if data is available
+                if (oieb.PayloadWrittenCount > oieb.PayloadReadCount)
+                {
+                    // Read frame header
+                    long readPos = _payloadOffset + (long)oieb.PayloadReadPos;
+                    var header = _sharedMemory.Read<FrameHeader>(readPos);
+
+                    // Handle wrap marker
+                    if (header.IsWrapMarker)
+                    {
+                        // Calculate wasted space from current read position to end of buffer
+                        ulong wastedSpace = oieb.PayloadSize - oieb.PayloadReadPos;
+                        
+                        // Add back the wasted space to free bytes
+                        oieb.PayloadFreeBytes += wastedSpace;
+                        
+                        oieb.PayloadReadPos = 0;
+                        oieb.PayloadReadCount++;
+                        
+                        // Update OIEB and continue to read actual frame
+                        _sharedMemory.Write(0, oieb);
+                        _sharedMemory.Flush();
+                        
+                        // Don't signal semaphore for wrap marker - it's not a logical frame
+                        // Continue to read the actual frame at the beginning
+                        continue;
+                    }
+
+                    if (header.PayloadSize == 0 || header.PayloadSize > oieb.PayloadSize)
+                    {
+                        throw new InvalidOperationException($"Invalid frame size: {header.PayloadSize}");
+                    }
+
+                    // Get pointer to frame data for zero-copy access
+                    long dataPos = readPos + Marshal.SizeOf<FrameHeader>();
+                    unsafe
+                    {
+                        byte* framePtr = _sharedMemory.GetPointer(dataPos);
+                        var frame = new Frame(framePtr, (int)header.PayloadSize, header.SequenceNumber);
+
+                        // Update read position
+                        long nextPos = dataPos + (long)header.PayloadSize - _payloadOffset;
+                        oieb.PayloadReadPos = (ulong)(nextPos % (long)oieb.PayloadSize);
+                        oieb.PayloadReadCount++;
+
+                        // Update free bytes - add back the frame size we just read
+                        ulong totalFrameSize = (ulong)Marshal.SizeOf<FrameHeader>() + header.PayloadSize;
+                        oieb.PayloadFreeBytes += totalFrameSize;
+
+                        _sharedMemory.Write(0, oieb);
+                        _sharedMemory.Flush();
+
+                        // Signal space available
+                        _readSemaphore.Release();
+
+                        return frame;
+                    }
+                }
+
+                // Wait for data
+                if (!_writeSemaphore.Wait(waitTime))
+                {
+                    // Timeout - check if writer died
+                    if (oieb.WriterPid != 0 && !ProcessExists(oieb.WriterPid))
+                    {
+                        throw new WriterDeadException();
+                    }
+                    
+                    return Frame.Invalid;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Check if a writer is connected
+        /// </summary>
+        public bool IsWriterConnected()
+        {
+            if (_disposed)
+                return false;
+
+            // Use ReadRef to avoid copying OIEB
+            ref readonly var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
+            return oieb.WriterPid != 0 && ProcessExists(oieb.WriterPid);
+        }
+
+        public string Name => _name;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static long CalculateUsedBytes(ulong writePos, ulong readPos, ulong bufferSize)
+        {
+            return writePos >= readPos 
+                ? (long)(writePos - readPos) 
+                : (long)(bufferSize - readPos + writePos);
+        }
+
+        private static int AlignToBlockBoundary(int size)
+        {
+            return (size + Constants.BlockAlignment - 1) / Constants.BlockAlignment * Constants.BlockAlignment;
+        }
+
+        private static bool ProcessExists(ulong pid)
+        {
+            try
+            {
+                using var process = Process.GetProcessById((int)pid);
+                return !process.HasExited;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+
+            // Clear reader PID
+            try
+            {
+                if (_sharedMemory != null)
+                {
+                    var oieb = _sharedMemory.Read<OIEB>(0);
+                    oieb.ReaderPid = 0;
+                    _sharedMemory.Write(0, oieb);
+                    _sharedMemory.Flush();
+                }
+            }
+            catch 
+            { 
+                // Ignore errors - shared memory might be corrupted
+            }
+
+            // Dispose our handles (but don't remove the underlying resources)
+            _sharedMemory?.Dispose();
+            _writeSemaphore?.Dispose();
+            _readSemaphore?.Dispose();
+            _lock?.Dispose();
+            
+            // Note: We don't remove the shared memory and semaphores here.
+            // This allows a writer to connect and detect that the reader died.
+            // The resources will be cleaned up when:
+            // 1. A new reader tries to create the same buffer and detects stale resources
+            // 2. The system is restarted
+            // 3. Manual cleanup is performed
+        }
+    }
+}

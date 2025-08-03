@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>13</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <NoWarn>CA1416;CA1031;CA1063;CA1816;CA1823;CA1852</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>ZeroBuffer</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>ModelingEvolution</Authors>
+    <Description>High-performance zero-copy inter-process communication library for video streaming</Description>
+    <PackageTags>ipc;shared-memory;video;streaming;zero-copy</PackageTags>
+    <RepositoryUrl>https://github.com/modelingevolution/streamer</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

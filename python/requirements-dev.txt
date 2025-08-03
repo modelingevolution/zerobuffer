@@ -1,0 +1,13 @@
+# Development dependencies for ZeroBuffer Python
+
+# Testing
+pytest>=7.0.0
+pytest-timeout>=2.0.0
+pytest-cov>=4.0.0
+
+# Platform-specific dependencies
+posix-ipc>=1.0.0; sys_platform != 'win32'
+pywin32>=300; sys_platform == 'win32'
+
+# Optional for performance testing
+numpy>=1.20.0

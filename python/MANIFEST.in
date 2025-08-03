@@ -1,0 +1,29 @@
+# Include important files in source distribution
+include README.md
+include LICENSE
+include MANIFEST.in
+include pyproject.toml
+include setup.py
+include requirements*.txt
+
+# Include all source code
+recursive-include zerobuffer *.py
+
+# Include tests in source distribution (but not in wheel)
+recursive-include tests *.py
+
+# Exclude unnecessary files
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store
+global-exclude *~
+global-exclude *.swp
+global-exclude .git*
+global-exclude .pytest_cache
+global-exclude .coverage
+global-exclude htmlcov
+global-exclude .mypy_cache
+recursive-exclude venv *
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude *.egg-info *
