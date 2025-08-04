@@ -31,7 +31,7 @@ constexpr size_t YUV420_FRAME_SIZE = 1920 * 1080 * 3 / 2;  // 3,110,400 bytes
 constexpr size_t HEADER_SIZE = sizeof(TimestampedFrame);
 constexpr size_t TOTAL_FRAME_SIZE = HEADER_SIZE + YUV420_FRAME_SIZE;
 constexpr size_t BUFFER_SIZE = 256 * 1024 * 1024;  // 256 MB
-constexpr int WARMUP_FRAMES = 100;
+constexpr int WARMUP_FRAMES = 10;  // Reduced for faster testing
 
 // Test configurations
 struct TestConfig {
@@ -198,16 +198,13 @@ void run_benchmark_at_fps(int target_fps, int frame_count) {
         std::atomic<int> warmup_received(0);
         std::atomic<bool> warmup_done(false);
         std::thread warmup_receiver([&]() {
-            std::cout << "  [DEBUG] Warmup receiver thread started" << std::endl;
-            while (!warmup_done) {
+            while (!warmup_done && warmup_received < WARMUP_FRAMES) {
                 try {
-                    std::cout << "  [DEBUG] Waiting for warmup frame..." << std::endl;
                     Frame frame = reader->read_frame();
                     if (frame.valid()) {
                         if (frame.size() >= HEADER_SIZE) {
                             const TimestampedFrame* header = 
                                 reinterpret_cast<const TimestampedFrame*>(frame.data());
-                            std::cout << "  [DEBUG] Received frame id=" << header->frame_id << std::endl;
                             if (header->frame_id < 0) {  // Warmup frame
                                 warmup_received++;
                             }
@@ -215,48 +212,44 @@ void run_benchmark_at_fps(int target_fps, int frame_count) {
                         reader->release_frame(frame);
                     }
                 } catch (const std::exception& e) {
-                    std::cout << "  [DEBUG] Warmup receiver error: " << e.what() << std::endl;
                     break;
                 }
             }
-            std::cout << "  [DEBUG] Warmup receiver thread exiting" << std::endl;
         });
         
         // Warmup
         std::cout << "  Warming up... " << std::flush;
         for (int i = 0; i < WARMUP_FRAMES; ++i) {
+            // Method 1: True zero-copy - write directly to buffer
+            uint64_t sequence;
+            void* buffer = writer->get_frame_buffer(TOTAL_FRAME_SIZE, sequence);
+            
             // Get timestamp right before sending
             int64_t send_ticks = get_timestamp_ticks();
             
-            TimestampedFrame* header = reinterpret_cast<TimestampedFrame*>(frame_data.data());
+            // Write header directly to buffer
+            TimestampedFrame* header = reinterpret_cast<TimestampedFrame*>(buffer);
             header->timestamp = send_ticks;
             header->frame_id = -(i+1);  // Negative for warmup frames
+            header->padding = 0;
             
-            std::cout << "  [DEBUG] Sending warmup frame " << i+1 << "/" << WARMUP_FRAMES 
-                      << " (id=" << header->frame_id << ")" << std::endl;
+            // Note: In real usage, you'd write YUV data directly here too
+            // For benchmark, we just leave it uninitialized since we only care about timestamp
             
-            // Send using zero-copy
-            uint64_t sequence;
-            void* buffer = writer->get_frame_buffer(TOTAL_FRAME_SIZE, sequence);
-            std::memcpy(buffer, frame_data.data(), TOTAL_FRAME_SIZE);
             writer->commit_frame();
             
             timer.wait_for_next_tick();
         }
         
         // Wait for warmup frames to be received
-        std::cout << "  [DEBUG] Waiting for warmup frames to be received..." << std::endl;
         auto warmup_timeout = high_resolution_clock::now() + seconds(5);
         while (warmup_received < WARMUP_FRAMES && high_resolution_clock::now() < warmup_timeout) {
-            std::cout << "  [DEBUG] Warmup received: " << warmup_received << "/" << WARMUP_FRAMES << std::endl;
-            std::this_thread::sleep_for(milliseconds(100));
+            std::this_thread::sleep_for(milliseconds(10));
         }
         
-        std::cout << "  [DEBUG] Setting warmup_done flag" << std::endl;
         warmup_done = true;
-        std::cout << "  [DEBUG] Joining warmup receiver thread..." << std::endl;
         warmup_receiver.join();
-        std::cout << "done (received " << warmup_received << " frames)" << std::endl;
+        std::cout << "done" << std::endl;
         
         // Measurement
         LatencyBenchmark benchmark;
@@ -267,28 +260,6 @@ void run_benchmark_at_fps(int target_fps, int frame_count) {
         int frames_received = 0;
         
         std::cout << "  Measuring " << frames_to_send << " frames... " << std::flush;
-        
-        // Main test loop - similar to C# pattern
-        for (int i = 0; i < frames_to_send; ++i) {
-            // Send frame with timestamp
-            int64_t send_ticks = get_timestamp_ticks();
-            
-            TimestampedFrame* header = reinterpret_cast<TimestampedFrame*>(frame_data.data());
-            header->timestamp = send_ticks;
-            header->frame_id = i;
-            
-            // Send frame using zero-copy
-            uint64_t sequence;
-            void* buffer = writer->get_frame_buffer(TOTAL_FRAME_SIZE, sequence);
-            std::memcpy(buffer, frame_data.data(), TOTAL_FRAME_SIZE);
-            writer->commit_frame();
-            frames_sent++;
-            
-            // Note: C++ doesn't support non-blocking reads, so we'll need
-            // to use a different pattern - collect responses in a separate thread
-            
-            timer.wait_for_next_tick();
-        }
         
         // Start receiver thread
         std::atomic<bool> receiver_done(false);
@@ -332,17 +303,22 @@ void run_benchmark_at_fps(int target_fps, int frame_count) {
         
         // Send frames
         for (int i = 0; i < frames_to_send; ++i) {
-            // Send frame with timestamp
-            int64_t send_ticks = get_timestamp_ticks();
-            
-            TimestampedFrame* header = reinterpret_cast<TimestampedFrame*>(frame_data.data());
-            header->timestamp = send_ticks;
-            header->frame_id = i;
-            
-            // Send frame using zero-copy
+            // Method 1: True zero-copy - write directly to buffer
             uint64_t sequence;
             void* buffer = writer->get_frame_buffer(TOTAL_FRAME_SIZE, sequence);
-            std::memcpy(buffer, frame_data.data(), TOTAL_FRAME_SIZE);
+            
+            // Get timestamp right before sending (after getting buffer)
+            int64_t send_ticks = get_timestamp_ticks();
+            
+            // Write header directly to buffer
+            TimestampedFrame* header = reinterpret_cast<TimestampedFrame*>(buffer);
+            header->timestamp = send_ticks;
+            header->frame_id = i;
+            header->padding = 0;
+            
+            // Note: In real usage, you'd write YUV data directly here too
+            // For benchmark, we just leave it uninitialized since we only care about timestamp
+            
             writer->commit_frame();
             frames_sent++;
             

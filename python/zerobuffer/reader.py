@@ -9,6 +9,7 @@ import threading
 from typing import Optional, Union
 from pathlib import Path
 import glob
+import logging
 
 from . import platform
 from .types import OIEB, BufferConfig, Frame, FrameHeader, align_to_boundary
@@ -17,9 +18,10 @@ from .exceptions import (
     WriterDeadException,
     SequenceError
 )
+from .logging_config import LoggerMixin
 
 
-class Reader:
+class Reader(LoggerMixin):
     """
     Zero-copy reader for ZeroBuffer
     
@@ -27,13 +29,14 @@ class Reader:
     to connect and then reads frames with zero-copy access.
     """
     
-    def __init__(self, name: str, config: Optional[BufferConfig] = None):
+    def __init__(self, name: str, config: Optional[BufferConfig] = None, logger: Optional[logging.Logger] = None):
         """
         Create a new ZeroBuffer reader
         
         Args:
             name: Name of the buffer
             config: Buffer configuration (uses defaults if not provided)
+            logger: Optional logger instance (creates one if not provided)
         """
         self.name = name
         self._config = config or BufferConfig()
@@ -44,6 +47,13 @@ class Reader:
         self._bytes_read = 0
         self._current_frame_size = 0
         
+        # Set logger if provided, otherwise use mixin
+        if logger:
+            self._logger_instance = logger
+        
+        self._logger.debug("Creating Reader with name=%s, config=%s", name, self._config)
+        
+        
         # Calculate aligned sizes
         self._oieb_size = align_to_boundary(OIEB.SIZE)
         self._metadata_size = align_to_boundary(self._config.metadata_size)
@@ -52,6 +62,7 @@ class Reader:
         total_size = self._oieb_size + self._metadata_size + self._payload_size
         
         # Clean up stale resources
+        self._logger.debug("Cleaning up stale resources before creating buffer")
         self._cleanup_stale_resources()
         
         # Create lock file
@@ -60,6 +71,7 @@ class Reader:
         
         try:
             # Create shared memory
+            self._logger.info("Creating shared memory: name=%s, size=%d bytes", name, total_size)
             self._shm = platform.create_shared_memory(name, total_size)
             self._buffer = self._shm.get_buffer()
             
@@ -86,10 +98,14 @@ class Reader:
             self._oieb_view[:] = oieb.pack()
             
             # Create semaphores
+            self._logger.debug("Creating semaphores: write=%s, read=%s", f"sem-w-{name}", f"sem-r-{name}")
             self._sem_write = platform.create_semaphore(f"sem-w-{name}", 0)
             self._sem_read = platform.create_semaphore(f"sem-r-{name}", 0)
             
-        except Exception:
+            self._logger.info("Reader created successfully: pid=%d", os.getpid())
+            
+        except Exception as e:
+            self._logger.error("Failed to create Reader: %s", e)
             self._cleanup_on_error()
             raise
     
@@ -111,6 +127,7 @@ class Reader:
                 if try_remove(str(lock_file)):
                     # We removed a stale lock, clean up associated resources
                     buffer_name = lock_file.stem
+                    self._logger.debug("Found stale lock file for buffer: %s", buffer_name)
                     
                     try:
                         # Check if shared memory exists and is orphaned
@@ -126,6 +143,8 @@ class Reader:
                         
                         if reader_dead and writer_dead:
                             # Both processes are dead, safe to clean up
+                            self._logger.info("Cleaning up orphaned buffer: %s (reader_pid=%d, writer_pid=%d)", 
+                                            buffer_name, oieb.reader_pid, oieb.writer_pid)
                             shm.close()
                             shm.unlink()
                             
@@ -171,6 +190,7 @@ class Reader:
     def _write_oieb(self, oieb: OIEB) -> None:
         """Write OIEB to shared memory"""
         self._oieb_view[:] = oieb.pack()
+    
     
     def _calculate_used_bytes(self, write_pos: int, read_pos: int, buffer_size: int) -> int:
         """Calculate used bytes in circular buffer"""
@@ -218,6 +238,8 @@ class Reader:
             WriterDeadException: If writer process died
             SequenceError: If sequence number is invalid
         """
+        self._logger.debug("ReadFrame called with timeout=%s", timeout)
+        
         with self._lock:
             if self._closed:
                 raise ZeroBufferException("Reader is closed")
@@ -226,13 +248,19 @@ class Reader:
                 # Check if data is already available before waiting
                 oieb = self._read_oieb()
                 
+                self._logger.debug("OIEB state: WrittenCount=%d, ReadCount=%d, WritePos=%d, ReadPos=%d, FreeBytes=%d, PayloadSize=%d",
+                                 oieb.payload_written_count, oieb.payload_read_count, oieb.payload_write_pos, 
+                                 oieb.payload_read_pos, oieb.payload_free_bytes, oieb.payload_size)
+                
                 # If no data available, wait for it
                 if oieb.payload_written_count <= oieb.payload_read_count:
                     # Wait for data with timeout
                     if not self._sem_write.acquire(timeout):
                         # Timeout - check if writer is alive
                         if oieb.writer_pid != 0 and not platform.process_exists(oieb.writer_pid):
+                            self._logger.warning("Writer process %d is dead", oieb.writer_pid)
                             raise WriterDeadException()
+                        self._logger.debug("Read timeout after %s seconds", timeout)
                         return None  # Timeout
                     
                     # Re-read OIEB after semaphore
@@ -260,8 +288,12 @@ class Reader:
                 # Check for wrap-around marker
                 if header.payload_size == 0:
                     # This is a wrap marker
+                    self._logger.debug("Found wrap marker at position %d, handling wrap-around", oieb.payload_read_pos)
+                    
                     # Calculate wasted space from current read position to end of buffer
                     wasted_space = oieb.payload_size - oieb.payload_read_pos
+                    self._logger.debug("Wrap-around: wasted space = %d bytes (from %d to %d)", 
+                                     wasted_space, oieb.payload_read_pos, oieb.payload_size)
                     
                     # Add back the wasted space to free bytes
                     oieb.payload_free_bytes += wasted_space
@@ -272,6 +304,9 @@ class Reader:
                     
                     self._write_oieb(oieb)  # Update OIEB in shared memory
                     
+                    self._logger.debug("After wrap: ReadPos=0, ReadCount=%d, FreeBytes=%d", 
+                                     oieb.payload_read_count, oieb.payload_free_bytes)
+                    
                     # Signal that we consumed the wrap marker (freed space)
                     self._sem_read.release()
                     
@@ -280,13 +315,19 @@ class Reader:
                 
                 # Validate sequence number
                 if header.sequence_number != self._expected_sequence:
+                    self._logger.error("Sequence error: expected %d, got %d", 
+                                     self._expected_sequence, header.sequence_number)
                     raise SequenceError(self._expected_sequence, header.sequence_number)
                 
                 # Validate frame size
                 if header.payload_size == 0:
+                    self._logger.error("Invalid frame size: 0")
                     raise ZeroBufferException("Invalid frame size: 0")
                 
                 total_frame_size = FrameHeader.SIZE + header.payload_size
+                
+                self._logger.debug("Reading frame: seq=%d, size=%d from position %d", 
+                                 header.sequence_number, header.payload_size, oieb.payload_read_pos)
                 
                 # Check if frame wraps around buffer
                 if oieb.payload_read_pos + total_frame_size > oieb.payload_size:
@@ -317,13 +358,19 @@ class Reader:
                 )
                 
                 # Update OIEB immediately (like C++ and C# do)
+                old_pos = oieb.payload_read_pos
                 oieb.payload_read_pos += total_frame_size
                 if oieb.payload_read_pos >= oieb.payload_size:
                     oieb.payload_read_pos -= oieb.payload_size
                 oieb.payload_read_count += 1
                 oieb.payload_free_bytes += total_frame_size
                 
+                self._logger.debug("Updating read position: %d -> %d", old_pos, oieb.payload_read_pos)
+                
                 self._write_oieb(oieb)
+                
+                self._logger.debug("Frame read complete: seq=%d, new state: ReadCount=%d, FreeBytes=%d", 
+                                 header.sequence_number, oieb.payload_read_count, oieb.payload_free_bytes)
                 
                 # Signal writer that space is available
                 self._sem_read.release()
@@ -373,6 +420,9 @@ class Reader:
         with self._lock:
             if self._closed:
                 return
+            
+            self._logger.info("Closing Reader: frames_read=%d, bytes_read=%d", 
+                            self._frames_read, self._bytes_read)
             
             self._closed = True
             

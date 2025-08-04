@@ -1,0 +1,3 @@
+[READER] Completed: read 765 frames in 7.75 seconds
+[READER] Throughput: 0.10 MB/s
+[READER] Verification errors: 764

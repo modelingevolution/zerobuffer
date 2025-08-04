@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ZeroBuffer
 {
@@ -12,6 +14,7 @@ namespace ZeroBuffer
     public sealed class Writer : IDisposable
     {
         private readonly string _name;
+        private readonly ILogger<Writer> _logger;
         private readonly ISharedMemory _sharedMemory;
         private readonly ISemaphore _writeSemaphore;
         private readonly ISemaphore _readSemaphore;
@@ -21,11 +24,17 @@ namespace ZeroBuffer
         private bool _metadataWritten;
         private ulong _sequenceNumber = 1;
 
-        public Writer(string name)
+        public Writer(string name) : this(name, NullLogger<Writer>.Instance)
+        {
+        }
+
+        public Writer(string name, ILogger<Writer> logger)
         {
             ArgumentException.ThrowIfNullOrEmpty(name);
+            ArgumentNullException.ThrowIfNull(logger);
 
             _name = name;
+            _logger = logger;
 
             try
             {
@@ -125,13 +134,18 @@ namespace ZeroBuffer
         {
             ThrowIfDisposed();
 
+            _logger.LogDebug("GetFrameBuffer called with size={Size}", size);
+
             // Check frame size
             long totalFrameSize = Marshal.SizeOf<FrameHeader>() + size;
             
             // Use ReadRef for initial checks to avoid copying
             ref readonly var oiebRef = ref _sharedMemory.ReadRef<OIEB>(0);
             if ((ulong)totalFrameSize > oiebRef.PayloadSize)
+            {
+                _logger.LogError("Frame too large: {FrameSize} > {PayloadSize}", totalFrameSize, oiebRef.PayloadSize);
                 throw new FrameTooLargeException();
+            }
 
             // Wait for space
             while (true)
@@ -168,6 +182,9 @@ namespace ZeroBuffer
             // Now read a mutable copy for modifications
             var oieb = _sharedMemory.Read<OIEB>(0);
 
+            _logger.LogTrace("OIEB state before write: WrittenCount={WrittenCount}, ReadCount={ReadCount}, WritePos={WritePos}, ReadPos={ReadPos}, FreeBytes={FreeBytes}",
+                oieb.PayloadWrittenCount, oieb.PayloadReadCount, oieb.PayloadWritePos, oieb.PayloadReadPos, oieb.PayloadFreeBytes);
+
             // Calculate write position
             long writePos = _payloadOffset + (long)oieb.PayloadWritePos;
             long spaceToEnd = _payloadOffset + (long)oieb.PayloadSize - writePos;
@@ -175,10 +192,10 @@ namespace ZeroBuffer
             // Check if we need to wrap
             if (totalFrameSize > spaceToEnd)
             {
-                // Write wrap marker
+                // Write wrap marker (protocol: payload_size = 0)
                 var wrapHeader = new FrameHeader
                 {
-                    PayloadSize = FrameHeader.WrapMarker,
+                    PayloadSize = 0,
                     SequenceNumber = 0
                 };
 
@@ -299,10 +316,10 @@ namespace ZeroBuffer
             // Check if we need to wrap
             if (totalFrameSize > spaceToEnd)
             {
-                // Write wrap marker
+                // Write wrap marker (protocol: payload_size = 0)
                 var wrapHeader = new FrameHeader
                 {
-                    PayloadSize = FrameHeader.WrapMarker,
+                    PayloadSize = 0,
                     SequenceNumber = 0
                 };
 

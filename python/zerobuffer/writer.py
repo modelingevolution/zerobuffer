@@ -7,6 +7,7 @@ Provides zero-copy writing to shared memory buffers.
 import os
 import threading
 from typing import Optional, Union
+import logging
 
 from . import platform
 from .types import OIEB, Frame, FrameHeader
@@ -19,9 +20,10 @@ from .exceptions import (
     InvalidFrameSizeException,
     MetadataAlreadyWrittenException
 )
+from .logging_config import LoggerMixin
 
 
-class Writer:
+class Writer(LoggerMixin):
     """
     Zero-copy writer for ZeroBuffer
     
@@ -29,12 +31,13 @@ class Writer:
     frames with zero-copy operations when possible.
     """
     
-    def __init__(self, name: str):
+    def __init__(self, name: str, logger: Optional[logging.Logger] = None):
         """
         Connect to an existing ZeroBuffer
         
         Args:
             name: Name of the buffer to connect to
+            logger: Optional logger instance (creates one if not provided)
             
         Raises:
             ZeroBufferException: If buffer doesn't exist
@@ -47,6 +50,13 @@ class Writer:
         self._frames_written = 0
         self._bytes_written = 0
         self._metadata_written = False
+        
+        # Set logger if provided, otherwise use mixin
+        if logger:
+            self._logger_instance = logger
+        
+        self._logger.debug("Creating Writer for buffer: %s", name)
+        
         
         try:
             # Open existing shared memory
@@ -169,6 +179,7 @@ class Writer:
             # Read ahead of write - continuous space until read pos
             return oieb.payload_read_pos - oieb.payload_write_pos
     
+    
     def write_frame(self, data: Union[bytes, bytearray, memoryview]) -> None:
         """
         Write a frame to the buffer
@@ -187,6 +198,8 @@ class Writer:
         """
         if len(data) == 0:
             raise InvalidFrameSizeException()
+        
+        self._logger.debug("WriteFrame called with data size=%d", len(data))
         
         with self._lock:
             if self._closed:

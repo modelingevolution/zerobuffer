@@ -71,9 +71,8 @@ namespace ZeroBuffer
         public ulong PayloadSize;      // Size of the frame data
         public ulong SequenceNumber;   // Sequence number
         
-        public const ulong WrapMarker = 0xFFFFFFFFFFFFFFFF;
-        
-        public bool IsWrapMarker => PayloadSize == WrapMarker;
+        // According to protocol: wrap marker has payload_size = 0
+        public bool IsWrapMarker => PayloadSize == 0;
     }
 
     /// <summary>

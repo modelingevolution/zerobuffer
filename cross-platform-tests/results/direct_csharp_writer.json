@@ -1,0 +1,12 @@
+{
+  "operation": "write",
+  "buffer_name": "cpp_csharp_direct_test",
+  "frames_written": 0,
+  "frame_size": 3110416,
+  "metadata_size": 0,
+  "duration_seconds": 0.0,
+  "throughput_mbps": 0.0,
+  "errors": [
+    "cpp_csharp_direct_test"
+  ]
+}

@@ -1,0 +1,20 @@
+[WRITER] Starting writer process
+[WRITER] Buffer name: debug_wrap_test
+[WRITER] Frame size: 3110416 bytes
+[WRITER] Pattern: sequential
+[WRITER] Frames to write: 88
+[WRITER] Delay between frames: 100ms
+[WRITER] Successfully connected to buffer
+[WRITER] Starting to write frames...
+[WRITER] Wrote frame 1/88
+[WRITER] Wrote frame 10/88
+[WRITER] Wrote frame 20/88
+[WRITER] Wrote frame 30/88
+[WRITER] Wrote frame 40/88
+[WRITER] Wrote frame 50/88
+[WRITER] Wrote frame 60/88
+[WRITER] Wrote frame 70/88
+[WRITER] Wrote frame 80/88
+[WRITER] Wrote frame 88/88
+[WRITER] Completed: wrote 88 frames in 10.1035 seconds
+[WRITER] Throughput: 25.8362 MB/s

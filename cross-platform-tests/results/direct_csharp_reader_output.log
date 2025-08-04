@@ -1,0 +1,15 @@
+[READER] Connecting to buffer: csharp_cpp_test
+[READER] Successfully created buffer
+[READER] Starting to read frames...
+[READER] Read frame 1
+[READER] Read frame 10
+[READER] Read frame 20
+[READER] Read frame 30
+[READER] Read frame 40
+[READER] Read frame 50
+[READER] Read frame 60
+[READER] Read frame 70
+[READER] Read frame 80
+[READER] Completed: read 86 frames in 3.38 seconds
+[READER] Throughput: 75.50 MB/s
+[READER] Verification errors: 0

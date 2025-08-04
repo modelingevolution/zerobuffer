@@ -4,6 +4,9 @@ project(zerobuffer VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Find Boost for logging
+find_package(Boost REQUIRED COMPONENTS log log_setup thread filesystem system)
+
 # Platform detection
 if(WIN32)
     set(PLATFORM_SOURCES src/platform_windows.cpp)
@@ -27,12 +30,18 @@ target_include_directories(zerobuffer
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
+        ${Boost_INCLUDE_DIRS}
 )
 
 # Link libraries
 target_link_libraries(zerobuffer
     PUBLIC
         ${PLATFORM_LIBS}
+        Boost::log
+        Boost::log_setup
+        Boost::thread
+        Boost::filesystem
+        Boost::system
 )
 
 # Compiler features

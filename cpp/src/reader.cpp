@@ -1,7 +1,9 @@
 #include "zerobuffer/reader.h"
+#include "zerobuffer/logger.h"
 #include <cstring>
 #include <atomic>
 #include <filesystem>
+#include <boost/log/attributes/named_scope.hpp>
 
 namespace zerobuffer {
 
@@ -9,6 +11,8 @@ class Reader::Impl {
 public:
     Impl(const std::string& name, const BufferConfig& config) 
         : name_(name), config_(config), expected_sequence_(1), frames_read_(0), bytes_read_(0) {
+        
+        ZEROBUFFER_LOG_DEBUG("Reader") << "Creating buffer: " << name;
         
         // Create lock file
         std::string lock_path = platform::get_temp_directory() + "/" + name + ".lock";
@@ -227,8 +231,14 @@ public:
             
             // Check for wrap-around marker (payload_size == 0)
             if (header.payload_size == 0) {
+                ZEROBUFFER_LOG_DEBUG("Reader") << "Found wrap marker at position " << oieb->payload_read_pos
+                    << ", handling wrap-around";
+                
                 // Calculate wasted space from current read position to end of buffer
                 uint64_t wasted_space = oieb->payload_size - oieb->payload_read_pos;
+                
+                ZEROBUFFER_LOG_DEBUG("Reader") << "Wrap-around: wasted space = " << wasted_space 
+                    << " bytes (from " << oieb->payload_read_pos << " to " << oieb->payload_size << ")";
                 
                 // Add back the wasted space to free bytes
                 oieb->payload_free_bytes += wasted_space;
@@ -236,6 +246,8 @@ public:
                 // This is a wrap marker, move to beginning of buffer
                 oieb->payload_read_pos = 0;
                 oieb->payload_read_count++;  // Count the wrap marker as a "frame"
+                
+                ZEROBUFFER_LOG_DEBUG("Reader") << "After wrap: readPos=0, freeBytes=" << oieb->payload_free_bytes;
                 
                 // Don't signal semaphore for wrap marker - it's not a logical frame
                 // Continue immediately to read the actual frame at the beginning

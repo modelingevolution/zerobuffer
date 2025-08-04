@@ -20,8 +20,18 @@ target_link_libraries(relay_process
         zerobuffer
 )
 
+# Copy-based benchmark for comparison
+add_executable(benchmark_roundtrip_copy
+    benchmark_roundtrip_copy.cpp
+)
+
+target_link_libraries(benchmark_roundtrip_copy
+    PRIVATE
+        zerobuffer
+)
+
 # Set runtime output directory so executables can find each other
-set_target_properties(benchmark_roundtrip relay_process
+set_target_properties(benchmark_roundtrip relay_process benchmark_roundtrip_copy
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmarks"
 )

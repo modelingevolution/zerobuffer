@@ -28,7 +28,9 @@ jobs:
       working-directory: ./python
       run: |
         python -m pip install --upgrade pip
-        pip install build twine pytest
+        pip install build twine pytest pytest-timeout
+        # Install platform-specific dependencies for Linux
+        pip install posix-ipc
         pip install -e .
     
     - name: Determine version
@@ -51,9 +53,24 @@ jobs:
         sed -i "s/^version = .*/version = \"${{ steps.version.outputs.VERSION }}\"/" pyproject.toml
         cat pyproject.toml | grep version
     
+    - name: Debug test discovery
+      working-directory: ./python
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        echo "Tests directory:"
+        ls -la tests/
+        echo "Python path:"
+        python -c "import sys; print('\n'.join(sys.path))"
+        echo "Installed packages:"
+        pip list
+        echo "Try importing zerobuffer:"
+        python -c "import zerobuffer; print(zerobuffer.__file__)"
+    
     - name: Run tests
       working-directory: ./python
-      run: pytest tests/ -v
+      run: pytest tests/ -v --tb=short
     
     - name: Build package
       working-directory: ./python

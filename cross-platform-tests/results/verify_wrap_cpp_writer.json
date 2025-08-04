@@ -1,0 +1,10 @@
+{
+  "buffer_name": "verify_wrap_test",
+  "errors": [
+    "Failed to open shared memory: No such file or directory"
+  ],
+  "frame_size": 3110416,
+  "frames_written": 0,
+  "metadata_size": 0,
+  "operation": "write"
+}

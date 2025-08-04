@@ -1,0 +1,10 @@
+{
+  "buffer_name": "cpp_to_relay_test",
+  "duration_seconds": 0.000241729,
+  "errors": [],
+  "frame_size": 1024,
+  "frames_written": 100,
+  "metadata_size": 0,
+  "operation": "write",
+  "throughput_mbps": 403.99062586615594
+}

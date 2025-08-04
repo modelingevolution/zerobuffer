@@ -21,6 +21,7 @@ from .exceptions import (
     InvalidFrameSizeException,
     MetadataAlreadyWrittenException
 )
+from .logging_config import setup_logging, get_logger
 
 __all__ = [
     'Reader',
@@ -35,5 +36,7 @@ __all__ = [
     'FrameTooLargeException',
     'SequenceError',
     'InvalidFrameSizeException',
-    'MetadataAlreadyWrittenException'
+    'MetadataAlreadyWrittenException',
+    'setup_logging',
+    'get_logger'
 ]

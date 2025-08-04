@@ -1,0 +1,17 @@
+[READER] Starting reader process
+[READER] Buffer name: relay_to_cpp_test
+[READER] Expected frame size: 3110416 bytes
+[READER] Verification pattern: sequential
+[READER] Frames to read: 100
+[READER] Timeout: 5000ms
+[READER] Successfully created buffer
+[READER] Starting to read frames...
+[READER] Read frame 1
+[READER] Read frame 10
+[READER] Read frame 20
+[READER] Read frame 30
+[READER] Read frame 40
+[READER] Read frame 50
+[READER] Read frame 60
+[READER] Read frame 70
+[READER] Read frame 80

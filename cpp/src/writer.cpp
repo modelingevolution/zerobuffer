@@ -1,6 +1,8 @@
 #include "zerobuffer/writer.h"
+#include "zerobuffer/logger.h"
 #include <cstring>
 #include <atomic>
+#include <boost/log/attributes/named_scope.hpp>
 
 namespace zerobuffer {
 
@@ -10,6 +12,8 @@ public:
         : name_(name), sequence_number_(1), frames_written_(0), bytes_written_(0), 
           metadata_written_(false), pending_metadata_size_(0), pending_frame_size_(0),
           pending_frame_sequence_(0), pending_frame_total_size_(0), pending_write_pos_(0) {
+        
+        ZEROBUFFER_LOG_DEBUG("Writer") << "Connecting to buffer: " << name;
         
         // Open existing shared memory
         shm_ = SharedMemory::open(name);
@@ -186,6 +190,11 @@ public:
         // Check if we need to wrap
         size_t space_to_end = oieb->payload_size - oieb->payload_write_pos;
         if (space_to_end < total_size && oieb->payload_read_pos > 0) {
+            ZEROBUFFER_LOG_DEBUG("Writer") << "Need to wrap: frameSize=" << total_size 
+                << " > spaceToEnd=" << space_to_end 
+                << ", writePos=" << oieb->payload_write_pos 
+                << ", readPos=" << oieb->payload_read_pos;
+            
             // Need to wrap to beginning
             // Write a special marker at current position if there's space for a header
             if (space_to_end >= sizeof(FrameHeader)) {
@@ -196,12 +205,20 @@ public:
                 wrap_marker.sequence_number = 0;
                 std::memcpy(wrap_marker_ptr, &wrap_marker, sizeof(wrap_marker));
                 
+                ZEROBUFFER_LOG_DEBUG("Writer") << "Wrote wrap marker at position " << oieb->payload_write_pos;
+                
                 // Increment written count for the wrap marker
                 oieb->payload_written_count++;
             }
             // Account for the wasted space at the end
+            size_t wasted_space = space_to_end;
+            ZEROBUFFER_LOG_DEBUG("Writer") << "Wrap-around: wasted space = " << wasted_space 
+                << " bytes (from " << oieb->payload_write_pos << " to " << oieb->payload_size << ")";
+            
             oieb->payload_free_bytes -= space_to_end;
             oieb->payload_write_pos = 0;
+            
+            ZEROBUFFER_LOG_DEBUG("Writer") << "After wrap: writePos=0, freeBytes=" << oieb->payload_free_bytes;
         }
         
         // Write frame header
@@ -269,6 +286,11 @@ public:
         // Check if we need to wrap
         size_t space_to_end = oieb->payload_size - oieb->payload_write_pos;
         if (space_to_end < total_size && oieb->payload_read_pos > 0) {
+            ZEROBUFFER_LOG_DEBUG("Writer") << "Need to wrap: frameSize=" << total_size 
+                << " > spaceToEnd=" << space_to_end 
+                << ", writePos=" << oieb->payload_write_pos 
+                << ", readPos=" << oieb->payload_read_pos;
+            
             // Need to wrap to beginning
             // Write a special marker at current position if there's space for a header
             if (space_to_end >= sizeof(FrameHeader)) {
@@ -279,12 +301,20 @@ public:
                 wrap_marker.sequence_number = 0;
                 std::memcpy(wrap_marker_ptr, &wrap_marker, sizeof(wrap_marker));
                 
+                ZEROBUFFER_LOG_DEBUG("Writer") << "Wrote wrap marker at position " << oieb->payload_write_pos;
+                
                 // Increment written count for the wrap marker
                 oieb->payload_written_count++;
             }
             // Account for the wasted space at the end
+            size_t wasted_space = space_to_end;
+            ZEROBUFFER_LOG_DEBUG("Writer") << "Wrap-around: wasted space = " << wasted_space 
+                << " bytes (from " << oieb->payload_write_pos << " to " << oieb->payload_size << ")";
+            
             oieb->payload_free_bytes -= space_to_end;
             oieb->payload_write_pos = 0;
+            
+            ZEROBUFFER_LOG_DEBUG("Writer") << "After wrap: writePos=0, freeBytes=" << oieb->payload_free_bytes;
         }
         
         // Store pending operation info

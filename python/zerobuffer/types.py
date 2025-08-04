@@ -113,8 +113,8 @@ class FrameHeader:
         if len(data) < cls.SIZE:
             raise ValueError(f"Invalid frame header size: {len(data)} < {cls.SIZE}")
         
-        payload_size, sequence_number = struct.unpack(cls.FORMAT, data[:cls.SIZE])
-        return cls(payload_size=payload_size, sequence_number=sequence_number)
+        values = struct.unpack(cls.FORMAT, data[:cls.SIZE])
+        return cls(payload_size=values[0], sequence_number=values[1])
     
     def is_wrap_marker(self) -> bool:
         """Check if this is a wrap-around marker"""

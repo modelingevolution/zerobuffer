@@ -4,6 +4,8 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ZeroBuffer
 {
@@ -14,6 +16,7 @@ namespace ZeroBuffer
     {
         private readonly string _name;
         private readonly BufferConfig _config;
+        private readonly ILogger<Reader> _logger;
         private readonly IFileLock _lock = null!;
         private readonly ISharedMemory _sharedMemory = null!;
         private readonly ISemaphore _writeSemaphore = null!;
@@ -22,13 +25,19 @@ namespace ZeroBuffer
         private readonly long _payloadOffset;
         private bool _disposed;
 
-        public Reader(string name, BufferConfig config)
+        public Reader(string name, BufferConfig config) : this(name, config, NullLogger<Reader>.Instance)
+        {
+        }
+
+        public Reader(string name, BufferConfig config, ILogger<Reader> logger)
         {
             ArgumentException.ThrowIfNullOrEmpty(name);
             ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(logger);
 
             _name = name;
             _config = config;
+            _logger = logger;
             
             // Create lock file path
             string lockPath = GetLockFilePath(name);
@@ -256,14 +265,18 @@ namespace ZeroBuffer
             ThrowIfDisposed();
 
             var waitTime = timeout ?? TimeSpan.FromSeconds(5);
+            _logger.LogDebug("ReadFrame called with timeout {Timeout}ms", waitTime.TotalMilliseconds);
 
             while (true)
             {
                 var oieb = _sharedMemory.Read<OIEB>(0);
+                _logger.LogTrace("OIEB state: WrittenCount={WrittenCount}, ReadCount={ReadCount}, WritePos={WritePos}, ReadPos={ReadPos}, FreeBytes={FreeBytes}, PayloadSize={PayloadSize}",
+                    oieb.PayloadWrittenCount, oieb.PayloadReadCount, oieb.PayloadWritePos, oieb.PayloadReadPos, oieb.PayloadFreeBytes, oieb.PayloadSize);
 
                 // Check if writer is alive
                 if (oieb.WriterPid != 0 && !ProcessExists(oieb.WriterPid))
                 {
+                    _logger.LogWarning("Writer process {WriterPid} is dead", oieb.WriterPid);
                     throw new WriterDeadException();
                 }
 
@@ -277,14 +290,21 @@ namespace ZeroBuffer
                     // Handle wrap marker
                     if (header.IsWrapMarker)
                     {
+                        _logger.LogDebug("Found wrap marker at position {ReadPos}, handling wrap-around", oieb.PayloadReadPos);
+                        
                         // Calculate wasted space from current read position to end of buffer
                         ulong wastedSpace = oieb.PayloadSize - oieb.PayloadReadPos;
+                        _logger.LogDebug("Wrap-around: wasted space = {WastedSpace} bytes (from {ReadPos} to {PayloadSize})", 
+                            wastedSpace, oieb.PayloadReadPos, oieb.PayloadSize);
                         
                         // Add back the wasted space to free bytes
                         oieb.PayloadFreeBytes += wastedSpace;
                         
                         oieb.PayloadReadPos = 0;
                         oieb.PayloadReadCount++;
+                        
+                        _logger.LogDebug("After wrap: ReadPos=0, ReadCount={ReadCount}, FreeBytes={FreeBytes}", 
+                            oieb.PayloadReadCount, oieb.PayloadFreeBytes);
                         
                         // Update OIEB and continue to read actual frame
                         _sharedMemory.Write(0, oieb);
@@ -297,8 +317,12 @@ namespace ZeroBuffer
 
                     if (header.PayloadSize == 0 || header.PayloadSize > oieb.PayloadSize)
                     {
+                        _logger.LogError("Invalid frame size: {FrameSize} (buffer size: {PayloadSize})", header.PayloadSize, oieb.PayloadSize);
                         throw new InvalidOperationException($"Invalid frame size: {header.PayloadSize}");
                     }
+
+                    _logger.LogDebug("Reading frame: seq={Sequence}, size={Size} from position {ReadPos}", 
+                        header.SequenceNumber, header.PayloadSize, oieb.PayloadReadPos);
 
                     // Get pointer to frame data for zero-copy access
                     long dataPos = readPos + Marshal.SizeOf<FrameHeader>();
@@ -309,12 +333,19 @@ namespace ZeroBuffer
 
                         // Update read position
                         long nextPos = dataPos + (long)header.PayloadSize - _payloadOffset;
-                        oieb.PayloadReadPos = (ulong)(nextPos % (long)oieb.PayloadSize);
+                        ulong newReadPos = (ulong)(nextPos % (long)oieb.PayloadSize);
+                        _logger.LogTrace("Updating read position: {OldPos} -> {NewPos} (nextPos={NextPos})", 
+                            oieb.PayloadReadPos, newReadPos, nextPos);
+                        
+                        oieb.PayloadReadPos = newReadPos;
                         oieb.PayloadReadCount++;
 
                         // Update free bytes - add back the frame size we just read
                         ulong totalFrameSize = (ulong)Marshal.SizeOf<FrameHeader>() + header.PayloadSize;
                         oieb.PayloadFreeBytes += totalFrameSize;
+
+                        _logger.LogDebug("Frame read complete: seq={Sequence}, new state: ReadCount={ReadCount}, FreeBytes={FreeBytes}", 
+                            header.SequenceNumber, oieb.PayloadReadCount, oieb.PayloadFreeBytes);
 
                         _sharedMemory.Write(0, oieb);
                         _sharedMemory.Flush();

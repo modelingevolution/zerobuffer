@@ -1,0 +1,12 @@
+{
+  "buffer_name": "relay_to_cpp_test",
+  "checksums": [],
+  "duration_seconds": 2.91e-07,
+  "errors": [],
+  "frame_size": 3110416,
+  "frames_read": 0,
+  "metadata_size": 0,
+  "operation": "read",
+  "throughput_mbps": 0.0,
+  "verification_errors": 0
+}

@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
+# Create custom test main library with logging
+add_library(test_main STATIC test_main.cpp)
+target_link_libraries(test_main
+    PUBLIC
+        zerobuffer
+        GTest::gtest
+)
+
 # Main test executable using Google Test
 add_executable(test_zerobuffer
     test_zerobuffer.cpp
@@ -8,7 +16,7 @@ add_executable(test_zerobuffer
 target_link_libraries(test_zerobuffer
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
@@ -55,56 +63,56 @@ add_executable(test_minimal_debug
 target_link_libraries(test_scenarios
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
 target_link_libraries(test_resource_cleanup
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
 target_link_libraries(test_debug_buffer_full
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
 target_link_libraries(test_zerocopy
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
 target_link_libraries(test_free_space_accounting
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
 target_link_libraries(test_free_space_debug
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
 target_link_libraries(test_debug_wrap
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
 target_link_libraries(test_minimal_debug
     PRIVATE
         zerobuffer
-        GTest::gtest_main
+        test_main
         GTest::gtest
 )
 
@@ -141,6 +149,56 @@ add_executable(test_multiprocess_writer
 )
 
 target_link_libraries(test_multiprocess_writer
+    PRIVATE
+        zerobuffer
+)
+
+# Cross-platform test applications
+option(BUILD_CROSS_PLATFORM_TESTS "Build cross-platform test applications" ON)
+if(BUILD_CROSS_PLATFORM_TESTS)
+    # Find JSON library (nlohmann/json)
+    find_package(nlohmann_json QUIET)
+    
+    if(NOT nlohmann_json_FOUND)
+        # Try to find it manually or use FetchContent
+        include(FetchContent)
+        FetchContent_Declare(
+            json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.11.2
+        )
+        FetchContent_MakeAvailable(json)
+    endif()
+    
+    add_executable(zerobuffer-test-writer
+        cross-platform/test_writer.cpp
+    )
+    target_link_libraries(zerobuffer-test-writer
+        PRIVATE
+            zerobuffer
+            nlohmann_json::nlohmann_json
+    )
+    
+    add_executable(zerobuffer-test-reader
+        cross-platform/test_reader.cpp
+    )
+    target_link_libraries(zerobuffer-test-reader
+        PRIVATE
+            zerobuffer
+            nlohmann_json::nlohmann_json
+    )
+    
+    # Install cross-platform test executables
+    install(TARGETS zerobuffer-test-writer zerobuffer-test-reader
+        RUNTIME DESTINATION bin
+    )
+endif()
+
+# Debug test for exact wrap
+add_executable(test_exact_wrap_debug
+    test_exact_wrap_debug.cpp
+)
+target_link_libraries(test_exact_wrap_debug
     PRIVATE
         zerobuffer
 )

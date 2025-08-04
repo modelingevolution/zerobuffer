@@ -1,0 +1,17 @@
+[READER] Connecting to buffer: cpp_csharp_debug
+[READER] Successfully created buffer
+[READER] Starting to read frames...
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=1, size=1024 from position 0
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=1, new state: ReadCount=1, FreeBytes=268426096
+[READER] Read frame 1
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+warn: ZeroBuffer.Reader[0]
+      Writer process 25252 is dead
+[READER] Completed: read 1 frames in 0.75 seconds
+[READER] Throughput: 0.00 MB/s
+[READER] Verification errors: 0

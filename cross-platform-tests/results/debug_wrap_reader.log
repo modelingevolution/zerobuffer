@@ -1,0 +1,550 @@
+[READER] Connecting to buffer: debug_wrap_test
+[READER] Successfully created buffer
+[READER] Starting to read frames...
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=1, size=3110416 from position 0
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=1, new state: ReadCount=1, FreeBytes=268435456
+[READER] Read frame 1
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=2, size=3110416 from position 3110432
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=2, new state: ReadCount=2, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=3, size=3110416 from position 6220864
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=3, new state: ReadCount=3, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=4, size=3110416 from position 9331296
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=4, new state: ReadCount=4, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=5, size=3110416 from position 12441728
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=5, new state: ReadCount=5, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=6, size=3110416 from position 15552160
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=6, new state: ReadCount=6, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=7, size=3110416 from position 18662592
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=7, new state: ReadCount=7, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=8, size=3110416 from position 21773024
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=8, new state: ReadCount=8, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=9, size=3110416 from position 24883456
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=9, new state: ReadCount=9, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=10, size=3110416 from position 27993888
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=10, new state: ReadCount=10, FreeBytes=268435456
+[READER] Read frame 10
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=11, size=3110416 from position 31104320
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=11, new state: ReadCount=11, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=12, size=3110416 from position 34214752
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=12, new state: ReadCount=12, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=13, size=3110416 from position 37325184
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=13, new state: ReadCount=13, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=14, size=3110416 from position 40435616
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=14, new state: ReadCount=14, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=15, size=3110416 from position 43546048
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=15, new state: ReadCount=15, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=16, size=3110416 from position 46656480
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=16, new state: ReadCount=16, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=17, size=3110416 from position 49766912
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=17, new state: ReadCount=17, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=18, size=3110416 from position 52877344
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=18, new state: ReadCount=18, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=19, size=3110416 from position 55987776
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=19, new state: ReadCount=19, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=20, size=3110416 from position 59098208
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=20, new state: ReadCount=20, FreeBytes=268435456
+[READER] Read frame 20
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=21, size=3110416 from position 62208640
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=21, new state: ReadCount=21, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=22, size=3110416 from position 65319072
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=22, new state: ReadCount=22, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=23, size=3110416 from position 68429504
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=23, new state: ReadCount=23, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=24, size=3110416 from position 71539936
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=24, new state: ReadCount=24, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=25, size=3110416 from position 74650368
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=25, new state: ReadCount=25, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=26, size=3110416 from position 77760800
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=26, new state: ReadCount=26, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=27, size=3110416 from position 80871232
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=27, new state: ReadCount=27, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=28, size=3110416 from position 83981664
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=28, new state: ReadCount=28, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=29, size=3110416 from position 87092096
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=29, new state: ReadCount=29, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=30, size=3110416 from position 90202528
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=30, new state: ReadCount=30, FreeBytes=268435456
+[READER] Read frame 30
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=31, size=3110416 from position 93312960
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=31, new state: ReadCount=31, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=32, size=3110416 from position 96423392
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=32, new state: ReadCount=32, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=33, size=3110416 from position 99533824
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=33, new state: ReadCount=33, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=34, size=3110416 from position 102644256
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=34, new state: ReadCount=34, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=35, size=3110416 from position 105754688
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=35, new state: ReadCount=35, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=36, size=3110416 from position 108865120
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=36, new state: ReadCount=36, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=37, size=3110416 from position 111975552
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=37, new state: ReadCount=37, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=38, size=3110416 from position 115085984
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=38, new state: ReadCount=38, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=39, size=3110416 from position 118196416
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=39, new state: ReadCount=39, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=40, size=3110416 from position 121306848
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=40, new state: ReadCount=40, FreeBytes=268435456
+[READER] Read frame 40
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=41, size=3110416 from position 124417280
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=41, new state: ReadCount=41, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=42, size=3110416 from position 127527712
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=42, new state: ReadCount=42, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=43, size=3110416 from position 130638144
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=43, new state: ReadCount=43, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=44, size=3110416 from position 133748576
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=44, new state: ReadCount=44, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=45, size=3110416 from position 136859008
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=45, new state: ReadCount=45, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=46, size=3110416 from position 139969440
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=46, new state: ReadCount=46, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=47, size=3110416 from position 143079872
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=47, new state: ReadCount=47, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=48, size=3110416 from position 146190304
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=48, new state: ReadCount=48, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=49, size=3110416 from position 149300736
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=49, new state: ReadCount=49, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=50, size=3110416 from position 152411168
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=50, new state: ReadCount=50, FreeBytes=268435456
+[READER] Read frame 50
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=51, size=3110416 from position 155521600
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=51, new state: ReadCount=51, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=52, size=3110416 from position 158632032
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=52, new state: ReadCount=52, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=53, size=3110416 from position 161742464
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=53, new state: ReadCount=53, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=54, size=3110416 from position 164852896
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=54, new state: ReadCount=54, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=55, size=3110416 from position 167963328
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=55, new state: ReadCount=55, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=56, size=3110416 from position 171073760
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=56, new state: ReadCount=56, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=57, size=3110416 from position 174184192
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=57, new state: ReadCount=57, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=58, size=3110416 from position 177294624
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=58, new state: ReadCount=58, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=59, size=3110416 from position 180405056
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=59, new state: ReadCount=59, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=60, size=3110416 from position 183515488
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=60, new state: ReadCount=60, FreeBytes=268435456
+[READER] Read frame 60
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=61, size=3110416 from position 186625920
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=61, new state: ReadCount=61, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=62, size=3110416 from position 189736352
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=62, new state: ReadCount=62, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=63, size=3110416 from position 192846784
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=63, new state: ReadCount=63, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=64, size=3110416 from position 195957216
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=64, new state: ReadCount=64, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=65, size=3110416 from position 199067648
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=65, new state: ReadCount=65, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=66, size=3110416 from position 202178080
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=66, new state: ReadCount=66, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=67, size=3110416 from position 205288512
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=67, new state: ReadCount=67, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=68, size=3110416 from position 208398944
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=68, new state: ReadCount=68, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=69, size=3110416 from position 211509376
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=69, new state: ReadCount=69, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=70, size=3110416 from position 214619808
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=70, new state: ReadCount=70, FreeBytes=268435456
+[READER] Read frame 70
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=71, size=3110416 from position 217730240
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=71, new state: ReadCount=71, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=72, size=3110416 from position 220840672
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=72, new state: ReadCount=72, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=73, size=3110416 from position 223951104
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=73, new state: ReadCount=73, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=74, size=3110416 from position 227061536
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=74, new state: ReadCount=74, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=75, size=3110416 from position 230171968
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=75, new state: ReadCount=75, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=76, size=3110416 from position 233282400
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=76, new state: ReadCount=76, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=77, size=3110416 from position 236392832
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=77, new state: ReadCount=77, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=78, size=3110416 from position 239503264
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=78, new state: ReadCount=78, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=79, size=3110416 from position 242613696
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=79, new state: ReadCount=79, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=80, size=3110416 from position 245724128
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=80, new state: ReadCount=80, FreeBytes=268435456
+[READER] Read frame 80
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=81, size=3110416 from position 248834560
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=81, new state: ReadCount=81, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=82, size=3110416 from position 251944992
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=82, new state: ReadCount=82, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=83, size=3110416 from position 255055424
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=83, new state: ReadCount=83, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=84, size=3110416 from position 258165856
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=84, new state: ReadCount=84, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=85, size=3110416 from position 261276288
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=85, new state: ReadCount=85, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=86, size=3110416 from position 264386720
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=86, new state: ReadCount=86, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Found wrap marker at position 267497152, handling wrap-around
+dbug: ZeroBuffer.Reader[0]
+      Wrap-around: wasted space = 938304 bytes (from 267497152 to 268435456)
+dbug: ZeroBuffer.Reader[0]
+      After wrap: ReadPos=0, ReadCount=87, FreeBytes=265325024
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=87, size=3110416 from position 0
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=87, new state: ReadCount=88, FreeBytes=268435456
+dbug: ZeroBuffer.Reader[0]
+      ReadFrame called with timeout 5000ms
+dbug: ZeroBuffer.Reader[0]
+      Reading frame: seq=88, size=3110416 from position 3110432
+dbug: ZeroBuffer.Reader[0]
+      Frame read complete: seq=88, new state: ReadCount=89, FreeBytes=268435456
+[READER] Read frame 88
+[READER] Completed: read 88 frames in 12.75 seconds
+[READER] Throughput: 20.47 MB/s
+[READER] Verification errors: 0
