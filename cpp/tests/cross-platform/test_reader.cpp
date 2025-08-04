@@ -199,8 +199,8 @@ int main(int argc, char* argv[]) {
             if (verbose && !json_output) {
                 std::cout << "[READER] No writer connected after 30 seconds timeout" << std::endl;
             }
-            result.errors.push_back("Timeout waiting for writer connection");
-            print_results(result, json_output);
+            result["errors"].push_back("Timeout waiting for writer connection");
+            std::cout << result.dump(2) << std::endl;
             return 1;
         }
         

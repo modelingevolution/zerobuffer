@@ -52,25 +52,26 @@ jobs:
       working-directory: ./python
       run: |
         echo "=== Running minimal test ==="
-        python -c "
-import os
-import tempfile
-from zerobuffer import Reader, Writer, BufferConfig
-
-# Create a unique buffer name
-buffer_name = f'test_minimal_{os.getpid()}'
-print(f'Buffer name: {buffer_name}')
-
-# Create reader (which creates the shared memory)
-config = BufferConfig(metadata_size=1024, payload_size=1024*1024)
-print('Creating reader...')
-reader = Reader(buffer_name, config)
-print('Reader created successfully')
-
-# Clean up
-reader.close()
-print('Test completed successfully')
-"
+        cat > test_minimal.py << 'EOF'
+        import os
+        import tempfile
+        from zerobuffer import Reader, Writer, BufferConfig
+        
+        # Create a unique buffer name
+        buffer_name = f'test_minimal_{os.getpid()}'
+        print(f'Buffer name: {buffer_name}')
+        
+        # Create reader (which creates the shared memory)
+        config = BufferConfig(metadata_size=1024, payload_size=1024*1024)
+        print('Creating reader...')
+        reader = Reader(buffer_name, config)
+        print('Reader created successfully')
+        
+        # Clean up
+        reader.close()
+        print('Test completed successfully')
+        EOF
+        python test_minimal.py
     
     - name: Run TestTypes
       working-directory: ./python
