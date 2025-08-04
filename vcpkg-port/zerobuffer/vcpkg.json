@@ -1,0 +1,33 @@
+{
+  "name": "zerobuffer",
+  "version": "1.0.0",
+  "description": "High-performance zero-copy inter-process communication library for video streaming",
+  "homepage": "https://github.com/modelingevolution/zerobuffer",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "boost-log",
+      "version>=": "1.82.0"
+    },
+    {
+      "name": "boost-thread",
+      "version>=": "1.82.0"  
+    },
+    {
+      "name": "boost-filesystem",
+      "version>=": "1.82.0"
+    },
+    {
+      "name": "boost-system",
+      "version>=": "1.82.0"
+    },
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}

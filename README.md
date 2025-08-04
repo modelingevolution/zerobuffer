@@ -1,7 +1,8 @@
 # ZeroBuffer
 
-A c++ implementation for ZeroBuffer ring-buffer. This is inter-process communication buffer, defined by the protocol.
-There is reader and writer part, all native. Supported platforms: Linux and Windows.
+A high-performance, zero-copy inter-process communication library with implementations in C++, C#, and Python. This ring-buffer implementation is designed for low-latency data transfer between processes, particularly for video streaming applications.
+
+**Supported platforms**: Linux, Windows, macOS (Python/C#), with platform-specific optimizations.
 
 The protocol is based on structure called zero-buffer(name):
 - shared-memory (SHMB) defined by ${name}
@@ -236,4 +237,32 @@ Applications should monitor `payload_free_bytes` and log warnings when entering 
 - Same-user access by default
 
 For secure IPC, consider encrypted alternatives. ZeroBuffer optimizes for lowest latency in trusted environments.
+
+## Installation
+
+### C++ with vcpkg
+```bash
+# Install from vcpkg registry (when available)
+vcpkg install zerobuffer
+
+# Or using local port
+vcpkg install zerobuffer --overlay-ports=/path/to/zerobuffer/vcpkg-port
+```
+
+### C# with NuGet
+```bash
+dotnet add package ZeroBuffer
+```
+
+### Python with pip
+```bash
+pip install zerobuffer-ipc
+```
+
+## Documentation
+
+- [API Documentation](API.md) - Detailed API reference for C++, C#, and Python
+- [Cross-Platform Tests](CROSS_PLATFORM_TESTS.md) - Testing strategy and standardized interfaces
+- [Improvements TODO](IMPROVEMENTS_TODO.md) - Planned enhancements and known issues
+- [C++ vcpkg Usage](cpp/VCPKG.md) - Using ZeroBuffer with vcpkg
 
