@@ -55,6 +55,7 @@ venv/
 ENV/
 env/
 .venv/
+test_venv/
 
 # IDEs
 .idea/
