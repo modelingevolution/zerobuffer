@@ -1,0 +1,171 @@
+name: Publish vcpkg Registry
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'cpp-v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish-registry:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout zerobuffer
+      uses: actions/checkout@v4
+
+    - name: Set version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION="${VERSION#v}"
+          VERSION="${VERSION#cpp-v}"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create registry repository structure
+      run: |
+        # Create temporary directory for registry
+        mkdir -p registry-repo/ports/zerobuffer
+        mkdir -p registry-repo/versions/z-
+        
+        # Copy port files
+        cp -r vcpkg-port/zerobuffer/* registry-repo/ports/zerobuffer/
+        
+        # Update version in port files
+        sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" registry-repo/ports/zerobuffer/vcpkg.json
+
+    - name: Calculate git-tree SHA
+      id: git-tree
+      run: |
+        cd registry-repo
+        git init
+        git add ports/zerobuffer
+        git -c user.name="GitHub Actions" -c user.email="actions@github.com" commit -m "Add zerobuffer port"
+        GIT_TREE=$(git rev-parse HEAD:ports/zerobuffer)
+        echo "GIT_TREE=$GIT_TREE" >> $GITHUB_ENV
+        echo "git-tree=$GIT_TREE" >> $GITHUB_OUTPUT
+
+    - name: Create baseline.json
+      run: |
+        cat > registry-repo/versions/baseline.json << EOF
+        {
+          "default": {
+            "zerobuffer": {
+              "baseline": "$VERSION",
+              "port-version": 0
+            }
+          }
+        }
+        EOF
+
+    - name: Create version database
+      run: |
+        cat > registry-repo/versions/z-/zerobuffer.json << EOF
+        {
+          "versions": [
+            {
+              "version": "$VERSION",
+              "port-version": 0,
+              "git-tree": "$GIT_TREE"
+            }
+          ]
+        }
+        EOF
+
+    - name: Create registry README
+      run: |
+        cat > registry-repo/README.md << 'EOF'
+        # ZeroBuffer vcpkg Registry
+        
+        Custom vcpkg registry for ZeroBuffer - a high-performance zero-copy IPC library.
+        
+        ## Usage
+        
+        Add to your `vcpkg-configuration.json`:
+        
+        ```json
+        {
+          "registries": [
+            {
+              "kind": "git",
+              "repository": "https://github.com/modelingevolution/zerobuffer-vcpkg-registry",
+              "baseline": "$(git rev-parse HEAD)",
+              "packages": ["zerobuffer"]
+            }
+          ]
+        }
+        ```
+        
+        Then install:
+        ```bash
+        vcpkg install zerobuffer
+        ```
+        EOF
+
+    - name: Push to registry repository
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        cd registry-repo
+        git add .
+        git -c user.name="GitHub Actions" -c user.email="actions@github.com" commit -m "Update zerobuffer to version $VERSION"
+        
+        # Clone or create the registry repository
+        git clone https://github.com/modelingevolution/zerobuffer-vcpkg-registry.git ../existing-registry || {
+          echo "Registry repo doesn't exist, will create it"
+          gh repo create modelingevolution/zerobuffer-vcpkg-registry --public --description "vcpkg registry for ZeroBuffer"
+          git remote add origin https://github.com/modelingevolution/zerobuffer-vcpkg-registry.git
+          git branch -M main
+          git push -u origin main
+        }
+        
+        # If repo existed, update it
+        if [ -d ../existing-registry ]; then
+          cp -r * ../existing-registry/
+          cd ../existing-registry
+          git add .
+          git -c user.name="GitHub Actions" -c user.email="actions@github.com" commit -m "Update zerobuffer to version $VERSION" || echo "No changes to commit"
+          git push
+        fi
+
+    - name: Create release notes
+      run: |
+        cat > release-notes.md << EOF
+        ## ZeroBuffer v$VERSION - vcpkg Registry Update
+        
+        The vcpkg registry has been updated with ZeroBuffer v$VERSION.
+        
+        ### Installation
+        
+        Add to your \`vcpkg-configuration.json\`:
+        \`\`\`json
+        {
+          "registries": [
+            {
+              "kind": "git",
+              "repository": "https://github.com/modelingevolution/zerobuffer-vcpkg-registry",
+              "baseline": "$(cd registry-repo && git rev-parse HEAD)",
+              "packages": ["zerobuffer"]
+            }
+          ]
+        }
+        \`\`\`
+        
+        Then install:
+        \`\`\`bash
+        vcpkg install zerobuffer
+        \`\`\`
+        EOF

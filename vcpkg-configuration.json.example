@@ -1,0 +1,18 @@
+{
+  "default-registry": {
+    "kind": "git",
+    "repository": "https://github.com/Microsoft/vcpkg",
+    "baseline": "latest"
+  },
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/modelingevolution/zerobuffer-vcpkg-registry",
+      "baseline": "main",
+      "packages": ["zerobuffer"]
+    }
+  ],
+  "overlay-ports": [
+    "./vcpkg-port"
+  ]
+}

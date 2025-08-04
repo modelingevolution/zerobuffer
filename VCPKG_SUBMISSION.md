@@ -8,6 +8,15 @@ This guide explains how to submit ZeroBuffer to the official vcpkg repository fo
 2. Clone your fork locally
 3. Set up vcpkg on your system
 
+## Automated Testing
+
+Before submitting, our GitHub Actions workflows automatically test the port:
+
+- **test-vcpkg-port.yml**: Tests port installation on Windows, Linux, and macOS
+- **publish-vcpkg-registry.yml**: Publishes to custom registry on release
+
+The workflows ensure the port works correctly across platforms.
+
 ## Steps to Submit
 
 ### 1. Prepare the Port

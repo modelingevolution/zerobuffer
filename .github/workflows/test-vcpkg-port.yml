@@ -1,0 +1,188 @@
+name: Test vcpkg Port
+
+on:
+  push:
+    branches: ["main", "master", "test-debug"]
+    paths:
+      - 'vcpkg-port/**'
+      - 'cpp/**'
+      - '.github/workflows/test-vcpkg-port.yml'
+  pull_request:
+    branches: ["main", "master"]
+    paths:
+      - 'vcpkg-port/**'
+      - 'cpp/**'
+      - '.github/workflows/test-vcpkg-port.yml'
+
+jobs:
+  test-port:
+    name: Test vcpkg port on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            triplet: x64-windows
+          - os: ubuntu-latest
+            triplet: x64-linux
+          - os: macos-latest
+            triplet: x64-osx
+
+    steps:
+    - name: Checkout zerobuffer
+      uses: actions/checkout@v4
+      with:
+        path: zerobuffer
+
+    - name: Acquire vcpkg
+      uses: actions/checkout@v4
+      with:
+        repository: "Microsoft/vcpkg"
+        path: vcpkg
+
+    - name: Bootstrap vcpkg (Windows)
+      if: runner.os == 'Windows'
+      run: ${{ github.workspace }}\vcpkg\bootstrap-vcpkg.bat
+      shell: cmd
+
+    - name: Bootstrap vcpkg (Unix)
+      if: runner.os != 'Windows'
+      run: ${{ github.workspace }}/vcpkg/bootstrap-vcpkg.sh
+      shell: bash
+
+    - name: Enable GitHub Actions Cache backend
+      uses: actions/github-script@v7
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    - name: Create test manifest
+      run: |
+        cat > vcpkg.json << EOF
+        {
+          "dependencies": [
+            "zerobuffer",
+            {
+              "name": "zerobuffer",
+              "features": ["tests", "benchmarks"]
+            }
+          ]
+        }
+        EOF
+      shell: bash
+      working-directory: ${{ github.workspace }}
+
+    - name: Install zerobuffer port
+      run: |
+        ${{ github.workspace }}/vcpkg/vcpkg install --triplet ${{ matrix.triplet }}
+      env:
+        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+        VCPKG_OVERLAY_PORTS: "${{ github.workspace }}/zerobuffer/vcpkg-port"
+      shell: bash
+
+    - name: Verify installation
+      run: |
+        echo "Checking installed files..."
+        if [ -d "${{ github.workspace }}/vcpkg/installed/${{ matrix.triplet }}" ]; then
+          find "${{ github.workspace }}/vcpkg/installed/${{ matrix.triplet }}" -name "*.h" -o -name "*.hpp" | head -20
+          find "${{ github.workspace }}/vcpkg/installed/${{ matrix.triplet }}" -name "*.a" -o -name "*.lib" | head -20
+        fi
+      shell: bash
+
+    - name: Test CMake integration
+      run: |
+        mkdir test-project
+        cd test-project
+        
+        cat > CMakeLists.txt << 'EOF'
+        cmake_minimum_required(VERSION 3.20)
+        project(test_zerobuffer)
+        
+        find_package(zerobuffer CONFIG REQUIRED)
+        
+        add_executable(test_app main.cpp)
+        target_link_libraries(test_app PRIVATE zerobuffer::zerobuffer)
+        EOF
+        
+        cat > main.cpp << 'EOF'
+        #include <zerobuffer/zerobuffer.h>
+        #include <iostream>
+        
+        int main() {
+            try {
+                zerobuffer::BufferConfig config(1024, 1024*1024);
+                std::cout << "ZeroBuffer library successfully linked!" << std::endl;
+                std::cout << "Metadata size: " << config.metadata_size << std::endl;
+                std::cout << "Payload size: " << config.payload_size << std::endl;
+                return 0;
+            } catch (const std::exception& e) {
+                std::cerr << "Error: " << e.what() << std::endl;
+                return 1;
+            }
+        }
+        EOF
+        
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        cmake --build .
+      shell: bash
+
+  test-features:
+    name: Test vcpkg port features on Ubuntu
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout zerobuffer
+      uses: actions/checkout@v4
+      with:
+        path: zerobuffer
+
+    - name: Acquire vcpkg
+      uses: actions/checkout@v4
+      with:
+        repository: "Microsoft/vcpkg"
+        path: vcpkg
+
+    - name: Bootstrap vcpkg
+      run: ${{ github.workspace }}/vcpkg/bootstrap-vcpkg.sh
+
+    - name: Enable GitHub Actions Cache backend
+      uses: actions/github-script@v7
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    - name: Test default installation
+      run: |
+        echo '{"dependencies": ["zerobuffer"]}' > vcpkg.json
+        ${{ github.workspace }}/vcpkg/vcpkg install
+      env:
+        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+        VCPKG_OVERLAY_PORTS: "${{ github.workspace }}/zerobuffer/vcpkg-port"
+
+    - name: Clean up
+      run: rm -rf vcpkg_installed vcpkg.json
+
+    - name: Test with tests feature
+      run: |
+        echo '{"dependencies": [{"name": "zerobuffer", "features": ["tests"]}]}' > vcpkg.json
+        ${{ github.workspace }}/vcpkg/vcpkg install
+      env:
+        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+        VCPKG_OVERLAY_PORTS: "${{ github.workspace }}/zerobuffer/vcpkg-port"
+
+    - name: Clean up
+      run: rm -rf vcpkg_installed vcpkg.json
+
+    - name: Test with benchmarks feature
+      run: |
+        echo '{"dependencies": [{"name": "zerobuffer", "features": ["benchmarks"]}]}' > vcpkg.json
+        ${{ github.workspace }}/vcpkg/vcpkg install
+      env:
+        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+        VCPKG_OVERLAY_PORTS: "${{ github.workspace }}/zerobuffer/vcpkg-port"
