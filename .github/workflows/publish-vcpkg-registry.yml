@@ -102,17 +102,28 @@ jobs:
             {
               "kind": "git",
               "repository": "https://github.com/modelingevolution/zerobuffer-vcpkg-registry",
-              "baseline": "$(git rev-parse HEAD)",
+              "baseline": "<BASELINE_COMMIT_SHA>",
               "packages": ["zerobuffer"]
             }
           ]
         }
         ```
         
+        Replace `<BASELINE_COMMIT_SHA>` with the latest commit SHA from this repository.
+        
         Then install:
         ```bash
         vcpkg install zerobuffer
         ```
+        
+        ## Finding the Baseline
+        
+        To get the latest baseline commit SHA:
+        ```bash
+        git ls-remote https://github.com/modelingevolution/zerobuffer-vcpkg-registry HEAD
+        ```
+        
+        Or check the [latest commit](https://github.com/modelingevolution/zerobuffer-vcpkg-registry/commits/main) on GitHub.
         EOF
 
     - name: Push to registry repository
@@ -141,6 +152,18 @@ jobs:
           git push
         fi
 
+    - name: Get final baseline commit
+      id: baseline
+      run: |
+        if [ -d ../existing-registry ]; then
+          cd ../existing-registry
+        else
+          cd registry-repo
+        fi
+        BASELINE_SHA=$(git rev-parse HEAD)
+        echo "BASELINE_SHA=$BASELINE_SHA" >> $GITHUB_ENV
+        echo "baseline-sha=$BASELINE_SHA" >> $GITHUB_OUTPUT
+
     - name: Create release notes
       run: |
         cat > release-notes.md << EOF
@@ -157,7 +180,7 @@ jobs:
             {
               "kind": "git",
               "repository": "https://github.com/modelingevolution/zerobuffer-vcpkg-registry",
-              "baseline": "$(cd registry-repo && git rev-parse HEAD)",
+              "baseline": "$BASELINE_SHA",
               "packages": ["zerobuffer"]
             }
           ]
@@ -168,4 +191,8 @@ jobs:
         \`\`\`bash
         vcpkg install zerobuffer
         \`\`\`
+        
+        ### Baseline Commit
+        
+        This release's baseline: \`$BASELINE_SHA\`
         EOF

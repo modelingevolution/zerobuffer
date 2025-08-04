@@ -1,14 +1,15 @@
 {
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg-configuration.schema.json",
   "default-registry": {
     "kind": "git",
     "repository": "https://github.com/Microsoft/vcpkg",
-    "baseline": "latest"
+    "baseline": "latest-microsoft-vcpkg-commit-sha"
   },
   "registries": [
     {
       "kind": "git",
       "repository": "https://github.com/modelingevolution/zerobuffer-vcpkg-registry",
-      "baseline": "main",
+      "baseline": "registry-commit-sha-here",
       "packages": ["zerobuffer"]
     }
   ],
