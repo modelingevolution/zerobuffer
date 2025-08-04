@@ -396,14 +396,47 @@ class Reader(LoggerMixin):
         # No-op: All updates are now done in read_frame()
         pass
     
-    def is_writer_connected(self) -> bool:
-        """Check if a writer is connected"""
+    def is_writer_connected(self, timeout_ms: Optional[int] = None) -> bool:
+        """
+        Check if a writer is connected to the buffer
+        
+        Args:
+            timeout_ms: Optional timeout in milliseconds to wait for writer connection.
+                       If None, checks immediately and returns.
+                       If specified, waits up to timeout_ms for a writer to connect.
+        
+        Returns:
+            True if writer is connected, False otherwise
+        """
+        import time
+        
         with self._lock:
             if self._closed:
                 return False
             
-            oieb = self._read_oieb()
-            return oieb.writer_pid != 0 and platform.process_exists(oieb.writer_pid)
+            if timeout_ms is None:
+                # Immediate check
+                oieb = self._read_oieb()
+                return oieb.writer_pid != 0 and platform.process_exists(oieb.writer_pid)
+            
+            # Wait for writer connection with timeout
+            start_time = time.time() * 1000  # Convert to milliseconds
+            end_time = start_time + timeout_ms
+            
+            while True:
+                oieb = self._read_oieb()
+                if oieb.writer_pid != 0 and platform.process_exists(oieb.writer_pid):
+                    return True
+                
+                current_time = time.time() * 1000
+                if current_time >= end_time:
+                    return False
+                
+                # Sleep for a short time before checking again
+                remaining = end_time - current_time
+                sleep_time = min(100, remaining) / 1000.0  # Sleep up to 100ms
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
     
     @property
     def frames_read(self) -> int:

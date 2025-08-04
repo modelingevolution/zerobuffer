@@ -188,16 +188,28 @@ public:
         return static_cast<size_t>(meta_size);
     }
     
-    Frame read_frame() {
+    Frame read_frame_with_timeout(std::chrono::milliseconds timeout) {
+        auto start = std::chrono::steady_clock::now();
+        
         while (true) {
-            // Wait for data with timeout
-            if (!sem_write_->wait(std::chrono::milliseconds(5000))) {
+            // Calculate remaining timeout
+            auto elapsed = std::chrono::steady_clock::now() - start;
+            if (elapsed >= timeout) {
+                // Return invalid frame on timeout
+                return Frame();
+            }
+            
+            auto remaining = timeout - std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+            
+            // Wait for data with remaining timeout
+            if (!sem_write_->wait(remaining)) {
                 // Timeout - check if writer is alive
                 const OIEB* oieb = get_oieb();
                 if (oieb->writer_pid != 0 && !platform::process_exists(oieb->writer_pid)) {
                     throw WriterDeadException();
                 }
-                continue; // Try again
+                // Return invalid frame on timeout
+                return Frame();
             }
             
             // Acquire memory barrier
@@ -390,8 +402,8 @@ std::vector<uint8_t> Reader::get_metadata() const {
     return impl_->get_metadata();
 }
 
-Frame Reader::read_frame() {
-    return impl_->read_frame();
+Frame Reader::read_frame(std::chrono::milliseconds timeout) {
+    return impl_->read_frame_with_timeout(timeout);
 }
 
 void Reader::release_frame(const Frame& frame) {

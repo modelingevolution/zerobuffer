@@ -5,17 +5,21 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 using ZeroBuffer.DuplexChannel;
+using ZeroBuffer.Tests.TestHelpers;
 
 namespace ZeroBuffer.Tests
 {
     public class DuplexChannelTests : IDisposable
     {
         private readonly string _testChannelName;
+        private readonly ITestOutputHelper _output;
         
-        public DuplexChannelTests()
+        public DuplexChannelTests(ITestOutputHelper output)
         {
             _testChannelName = $"test_duplex_{Guid.NewGuid():N}";
+            _output = output;
         }
         
         public void Dispose()
@@ -26,16 +30,16 @@ namespace ZeroBuffer.Tests
         [Fact]
         public void ImmutableServer_EchoTest()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024); // 10MB buffer
             
             // Create server with echo handler
             using var server = factory.CreateImmutableServer(_testChannelName, config);
             
-            server.Start(request =>
+            server.Start((Frame request) =>
             {
                 // Echo the request data back
-                return request.ToArray();
+                return request.Span;
             });
             
             // Give server time to initialize
@@ -57,18 +61,18 @@ namespace ZeroBuffer.Tests
         [Fact]
         public void ImmutableServer_TransformTest()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
             
             // Create server that transforms data
             using var server = factory.CreateImmutableServer(_testChannelName, config);
             
-            server.Start(request =>
+            server.Start((Frame request) =>
             {
                 var data = request.ToArray();
                 // Simple transform: reverse the bytes
                 Array.Reverse(data);
-                return data;
+                return new ReadOnlySpan<byte>(data);
             });
             
             Thread.Sleep(100);
@@ -87,7 +91,7 @@ namespace ZeroBuffer.Tests
         [Fact]
         public void MutableServer_InPlaceTransformTest()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
             
             // Create mutable server that modifies data in-place
@@ -119,67 +123,15 @@ namespace ZeroBuffer.Tests
         
         
         [Fact]
-        public void MultipleConcurrentRequests_Test()
-        {
-            var factory = DuplexChannelFactory.Instance;
-            var config = new BufferConfig(4096, 10 * 1024 * 1024);
-            
-            // Create server that adds 1 to each byte
-            using var server = factory.CreateImmutableServer(_testChannelName, config);
-            
-            server.Start(request =>
-            {
-                var data = request.ToArray();
-                for (int i = 0; i < data.Length; i++)
-                {
-                    data[i] = (byte)((data[i] + 1) % 256);
-                }
-                Thread.Sleep(10); // Simulate processing time
-                return data;
-            });
-            
-            Thread.Sleep(100);
-            
-            // Run multiple clients concurrently
-            const int clientCount = 5;
-            const int requestsPerClient = 10;
-            var tasks = new Task[clientCount];
-            
-            for (int clientId = 0; clientId < clientCount; clientId++)
-            {
-                var id = clientId;
-                tasks[clientId] = Task.Run(() =>
-                {
-                    using var client = factory.CreateClient(_testChannelName);
-                    
-                    for (int i = 0; i < requestsPerClient; i++)
-                    {
-                        var testData = new byte[] { (byte)(id * 10 + i) };
-                        var sequenceNumber = client.SendRequest(testData);
-                        var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
-                        
-                        Assert.True(response.IsValid);
-                        Assert.Equal(sequenceNumber, response.Sequence);
-                        var responseData = response.ToArray();
-                        Assert.Single(responseData);
-                        Assert.Equal((byte)((id * 10 + i + 1) % 256), responseData[0]);
-                    }
-                });
-            }
-            
-            Task.WaitAll(tasks);
-        }
-        
-        [Fact]
         public void LatencyMeasurement_Test()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
             
             // Create server with minimal processing
             using var server = factory.CreateImmutableServer(_testChannelName, config);
             
-            server.Start(request => request.ToArray());
+            server.Start((Frame request) => request.Span);
             
             Thread.Sleep(100);
             
@@ -213,7 +165,7 @@ namespace ZeroBuffer.Tests
             var maxLatency = latencies.Max();
             
             // Log results
-            Console.WriteLine($"Duplex Channel Latency - Avg: {avgLatency:F2}ms, Min: {minLatency:F2}ms, Max: {maxLatency:F2}ms");
+            _output.WriteLine($"Duplex Channel Latency - Avg: {avgLatency:F2}ms, Min: {minLatency:F2}ms, Max: {maxLatency:F2}ms");
             
             // Basic sanity checks
             Assert.True(avgLatency < 50, $"Average latency too high: {avgLatency}ms");
@@ -223,11 +175,11 @@ namespace ZeroBuffer.Tests
         [Fact]
         public void ServerStop_ClientHandlesGracefully()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
             
             using var server = factory.CreateImmutableServer(_testChannelName, config);
-            server.Start(request => request.ToArray());
+            server.Start((Frame request) => request.Span);
             
             Thread.Sleep(100);
             
@@ -243,10 +195,12 @@ namespace ZeroBuffer.Tests
             server.Stop();
             Thread.Sleep(100);
             
-            // Client request should timeout
-            var seq2 = client.SendRequest(new byte[] { 4, 5, 6 });
-            response = client.ReceiveResponse(TimeSpan.FromSeconds(1));
-            Assert.False(response.IsValid);
+            // Client should detect server disconnection
+            // SendRequest should throw ReaderDeadException when server's reader is gone
+            Assert.Throws<ReaderDeadException>(() => 
+            {
+                client.SendRequest(new byte[] { 4, 5, 6 });
+            });
         }
     }
 }

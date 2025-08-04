@@ -176,6 +176,11 @@ class Frame:
         """Get sequence number"""
         return self._sequence
     
+    @property
+    def is_valid(self) -> bool:
+        """Check if frame is valid (has data)"""
+        return self._size > 0 and self._memory_view is not None
+    
     def __len__(self) -> int:
         """Get frame size"""
         return self._size

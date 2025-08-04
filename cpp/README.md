@@ -58,7 +58,7 @@ std::vector<uint8_t> data = {1, 2, 3, 4, 5};
 writer.write_frame(data);
 
 // Read data
-zerobuffer::Frame frame = reader.read_frame();
+zerobuffer::Frame frame = reader.read_frame(std::chrono::seconds(5)); // 5 second timeout
 // Process frame.data(), frame.size()
 reader.release_frame(frame);
 ```
@@ -69,7 +69,7 @@ reader.release_frame(frame);
 - `Reader(name, config)` - Create buffer and prepare for reading
 - `get_metadata()` - Get metadata as byte vector
 - `get_metadata_as<T>()` - Get metadata as typed pointer (zero-copy)
-- `read_frame()` - Read next frame (blocks if none available)
+- `read_frame(timeout)` - Read next frame with timeout (returns invalid frame on timeout)
 - `release_frame(frame)` - Release frame and free buffer space
 - `is_writer_connected()` - Check if writer is currently connected
 - `is_writer_connected(timeout_ms)` - Wait for writer connection with timeout

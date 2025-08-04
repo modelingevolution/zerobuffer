@@ -200,7 +200,7 @@ void run_benchmark_at_fps(int target_fps, int frame_count) {
         std::thread warmup_receiver([&]() {
             while (!warmup_done && warmup_received < WARMUP_FRAMES) {
                 try {
-                    Frame frame = reader->read_frame();
+                    Frame frame = reader->read_frame(std::chrono::seconds(5));
                     if (frame.valid()) {
                         if (frame.size() >= HEADER_SIZE) {
                             const TimestampedFrame* header = 
@@ -266,7 +266,7 @@ void run_benchmark_at_fps(int target_fps, int frame_count) {
         std::thread receiver([&]() {
             while (!receiver_done) {
                 try {
-                    Frame frame = reader->read_frame();
+                    Frame frame = reader->read_frame(std::chrono::seconds(5));
                     if (!frame.valid()) {
                         continue;
                     }

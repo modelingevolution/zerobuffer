@@ -71,7 +71,7 @@ int main() {
         while (!should_exit) {
             try {
                 // Read frame from Buffer A
-                Frame frame = reader.read_frame();
+                Frame frame = reader.read_frame(std::chrono::seconds(5));
                 
                 if (!frame.valid()) {
                     continue;

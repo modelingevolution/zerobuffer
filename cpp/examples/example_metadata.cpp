@@ -1,6 +1,7 @@
 #include <zerobuffer/zerobuffer.h>
 #include <iostream>
 #include <cstring>
+#include <chrono>
 
 // Example custom metadata structure
 struct VideoMetadata {
@@ -54,7 +55,7 @@ int main() {
         std::cout << "Reader: Got metadata copy, size=" << metadata_bytes.size() << "\n";
         
         // Read frame
-        zerobuffer::Frame frame = reader.read_frame();
+        zerobuffer::Frame frame = reader.read_frame(std::chrono::seconds(5));
         std::cout << "Reader: Got frame, size=" << frame.size() << "\n";
         reader.release_frame(frame);
     }

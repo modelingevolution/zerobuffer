@@ -219,8 +219,7 @@ int main(int argc, char* argv[]) {
                 }
                 
                 // Read frame with timeout
-                // Note: C++ API doesn't have timeout parameter, uses blocking read
-                auto frame = reader.read_frame();
+                auto frame = reader.read_frame(std::chrono::seconds(5));
                 
                 if (!frame.valid()) {
                     // Timeout or no more frames

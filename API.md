@@ -1,5 +1,10 @@
 # ZeroBuffer API Documentation
 
+**Language Requirements:**
+- C++: Requires C++20 (for std::span and other modern features)
+- C#: .NET 6.0 or later
+- Python: 3.8 or later
+
 ## Table of Contents
 1. [Core Principles](#core-principles)
 2. [Basic API Usage](#basic-api-usage)
@@ -259,7 +264,7 @@ This requires two separate buffers for bidirectional communication.
 Client-side interface for sending requests and receiving responses.
 
 ```cpp
-// C++ Interface
+// C++ Interface (requires C++20 for std::span)
 class IDuplexClient {
 public:
     virtual ~IDuplexClient() = default;
@@ -268,9 +273,9 @@ public:
     // This method returns immediately after writing to the request buffer
     virtual uint64_t sendRequest(const void* data, size_t size) = 0;
     
-    // Acquire buffer for zero-copy write. Returns sequence number.
+    // Acquire buffer for zero-copy write. Returns sequence number and span to buffer.
     // Call commitRequest() after writing to send the request.
-    virtual std::pair<uint64_t, void*> acquireRequestBuffer(size_t size) = 0;
+    virtual std::pair<uint64_t, std::span<uint8_t>> acquireRequestBuffer(size_t size) = 0;
     
     // Commit the request after writing to the acquired buffer
     virtual void commitRequest() = 0;
@@ -300,9 +305,9 @@ public interface IDuplexClient : IDisposable
     // Commit the request after writing to the acquired buffer
     void CommitRequest();
     
-    // Receive a response frame. This method blocks until a response is available or timeout
-    // The caller is responsible for correlating responses using the sequence number in the frame
-    Frame ReceiveResponse(TimeSpan timeout);
+    // Receive a response. This method blocks until a response is available or timeout
+    // Returns a DuplexResponse that provides access to sequence number and data
+    DuplexResponse ReceiveResponse(TimeSpan timeout);
     
     // Check if server is connected to the request buffer
     bool IsServerConnected { get; }
@@ -358,18 +363,23 @@ public:
     virtual bool isRunning() const = 0;
 };
 
+// Handler function that returns response data as span (requires C++20)
+using RequestHandler = std::function<std::span<const uint8_t>(const Frame&)>;
+
 // Server that processes immutable requests and returns new response data
 class IImmutableDuplexServer : public IDuplexServer {
 public:
-    // Start processing requests with a handler that returns new data
-    virtual void start(std::function<std::vector<uint8_t>(const Frame&)> handler) = 0;
+    // Start processing requests with a handler that returns response data as span
+    // Note: is_async parameter is currently ignored in C++ implementation
+    virtual void start(RequestHandler handler, bool is_async = false) = 0;
 };
 
 // Server that mutates request data in-place (zero-copy)
 class IMutableDuplexServer : public IDuplexServer {
 public:
     // Start processing with mutable handler
-    virtual void start(std::function<void(Frame&)> handler) = 0;
+    // Note: is_async parameter is currently ignored in C++ implementation
+    virtual void start(std::function<void(Frame&)> handler, bool is_async = false) = 0;
 };
 ```
 
@@ -384,18 +394,23 @@ public interface IDuplexServer : IDisposable
     bool IsRunning { get; }
 }
 
+// Handler delegate that returns response data as ReadOnlySpan
+public delegate ReadOnlySpan<byte> RequestHandler(Frame request);
+
 // Server that processes immutable requests and returns new response data
 public interface IImmutableDuplexServer : IDuplexServer
 {
-    // Start processing requests with a handler that returns new data
-    void Start(Func<Frame, byte[]> handler);
+    // Start processing requests with a handler that returns response data as ReadOnlySpan
+    // Note: isAsync parameter is currently ignored - server always runs in background thread
+    void Start(RequestHandler handler, bool isAsync = false);
 }
 
 // Server that mutates request data in-place (zero-copy)
 public interface IMutableDuplexServer : IDuplexServer
 {
     // Start processing with mutable handler
-    void Start(Action<Frame> handler);
+    // Note: isAsync parameter is currently ignored - server always runs in background thread
+    void Start(Action<Frame> handler, bool isAsync = false);
 }
 ```
 
@@ -413,10 +428,15 @@ class IDuplexServer(ABC):
         """Check if running"""
         pass
 
+# Processing mode enum
+class ProcessingMode(Enum):
+    SINGLE_THREAD = "single_thread"  # Process requests sequentially in one background thread
+    THREAD_POOL = "thread_pool"      # Process each request in a thread pool (not yet implemented)
+
 # Server that processes immutable requests and returns new response data
 class IImmutableDuplexServer(IDuplexServer):
     @abstractmethod
-    def start(self, handler: Callable[[Frame], bytes]) -> None:
+    def start(self, handler: Callable[[Frame], bytes], mode: ProcessingMode = ProcessingMode.SINGLE_THREAD) -> None:
         """Start processing requests with a handler that returns new data"""
         pass
     
@@ -428,7 +448,7 @@ class IImmutableDuplexServer(IDuplexServer):
 # Server that mutates request data in-place (zero-copy)
 class IMutableDuplexServer(IDuplexServer):
     @abstractmethod
-    def start(self, handler: Callable[[Frame], None]) -> None:
+    def start(self, handler: Callable[[Frame], None], mode: ProcessingMode = ProcessingMode.SINGLE_THREAD) -> None:
         """Start processing with mutable handler"""
         pass
 ```
@@ -476,16 +496,25 @@ public interface IDuplexChannelFactory
 
 public class DuplexChannelFactory : IDuplexChannelFactory
 {
-    private static readonly Lazy<DuplexChannelFactory> _instance = 
-        new(() => new DuplexChannelFactory());
+    private readonly ILoggerFactory _loggerFactory;
     
-    public static IDuplexChannelFactory Instance => _instance.Value;
+    // Constructor with optional logger factory for DI
+    public DuplexChannelFactory(ILoggerFactory? loggerFactory = null)
+    {
+        _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+    }
     
-    public IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config) 
-        => new ImmutableDuplexServer(channelName, config);
+    public IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config)
+    {
+        var logger = _loggerFactory.CreateLogger<ImmutableDuplexServer>();
+        return new ImmutableDuplexServer(channelName, config, logger);
+    }
     
-    public IMutableDuplexServer CreateMutableServer(string channelName, BufferConfig config) 
-        => new MutableDuplexServer(channelName, config);
+    public IMutableDuplexServer CreateMutableServer(string channelName, BufferConfig config)
+    {
+        var logger = _loggerFactory.CreateLogger<MutableDuplexServer>();
+        return new MutableDuplexServer(channelName, config, logger);
+    }
     
     public IDuplexClient CreateClient(string channelName) 
         => new DuplexClient(channelName);
@@ -630,6 +659,8 @@ The duplex channel uses the existing Frame sequence numbers for request/response
 - **Error Handling**: Timeouts return invalid frames; disconnections throw exceptions
 - **Async Support**: Not initially implemented due to Frame being a ref struct. Would require async semaphores with custom awaiters
 - **Independent Operations**: Send and receive can be called from different threads, enabling true duplex communication
+- **Zero-Copy Mutable Processing**: C# implementation supports true zero-copy via Frame.GetMutableSpan()
+- **1-to-1 Communication**: ZeroBuffer enforces single reader/writer per buffer - no concurrent clients allowed
 
 ### Benefits of This Design
 
@@ -649,10 +680,11 @@ The duplex channel uses the existing Frame sequence numbers for request/response
 - [ ] Add Python bindings with basic Reader/Writer
 
 ### Phase 2: Duplex Channel - Basic Implementation
-- [ ] Implement basic duplex channel with two separate buffers
-- [ ] Add request-response correlation (sequence numbers)
-- [ ] Implement timeout handling
-- [ ] Add comprehensive tests
+- [x] Implement basic duplex channel with two separate buffers (C++ ✅, C# ✅)
+- [x] Add request-response correlation (sequence numbers) (C++ ✅, C# ✅)
+- [x] Implement timeout handling (C++ ✅, C# ✅)
+- [x] Add comprehensive tests (C++ ✅, C# ✅)
+- [ ] Implement Python duplex channel
 
 ### Phase 3: Zero-Copy Optimization
 - [ ] Design shared payload space protocol

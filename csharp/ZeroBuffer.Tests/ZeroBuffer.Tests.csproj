@@ -15,6 +15,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageReference Include="Xunit.Extensions.Logging" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>

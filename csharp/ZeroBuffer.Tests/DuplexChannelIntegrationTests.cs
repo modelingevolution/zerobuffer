@@ -3,17 +3,21 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 using ZeroBuffer.DuplexChannel;
+using ZeroBuffer.Tests.TestHelpers;
 
 namespace ZeroBuffer.Tests
 {
     public class DuplexChannelIntegrationTests : IDisposable
     {
         private readonly string _testChannelName;
+        private readonly ITestOutputHelper _output;
         
-        public DuplexChannelIntegrationTests()
+        public DuplexChannelIntegrationTests(ITestOutputHelper output)
         {
             _testChannelName = $"test_duplex_{Guid.NewGuid():N}";
+            _output = output;
         }
         
         public void Dispose()
@@ -24,13 +28,13 @@ namespace ZeroBuffer.Tests
         [Fact]
         public void SimplifiedProtocol_EchoTest()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
             
             // Create server that echoes data back
             using var server = factory.CreateImmutableServer(_testChannelName, config);
-            server.Start(request => request.ToArray());
-            
+            server.Start(OnHandle);
+
             Thread.Sleep(100);
             
             // Create client
@@ -52,12 +56,12 @@ namespace ZeroBuffer.Tests
         [Fact]
         public void ZeroCopyClient_Test()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
             
             // Create server
             using var server = factory.CreateImmutableServer(_testChannelName, config);
-            server.Start(request => request.ToArray());
+            server.Start(OnHandle);
             
             Thread.Sleep(100);
             
@@ -78,11 +82,13 @@ namespace ZeroBuffer.Tests
             Assert.Equal(sequenceNumber, response.Sequence);
             Assert.Equal(testData, Encoding.UTF8.GetString(response.ToArray()));
         }
-        
+
+        private static ReadOnlySpan<byte> OnHandle(Frame request) => request.Span;
+
         [Fact]
         public void IndependentSendReceive_Test()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
             
             // Create server that adds 1 to each byte
@@ -152,18 +158,18 @@ namespace ZeroBuffer.Tests
         [Fact]
         public void ServerPreservesSequenceNumber_Test()
         {
-            var factory = DuplexChannelFactory.Instance;
+            var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
             
             // Create server
             using var server = factory.CreateImmutableServer(_testChannelName, config);
             
             ulong capturedSequence = 0;
-            server.Start(request =>
+            server.Start((Frame request) =>
             {
                 // Capture the sequence number from request
                 capturedSequence = request.Sequence;
-                return new byte[] { 42 };
+                return new ReadOnlySpan<byte>(new byte[] { 42 });
             });
             
             Thread.Sleep(100);

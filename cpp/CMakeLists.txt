@@ -22,6 +22,10 @@ endif()
 add_library(zerobuffer STATIC
     src/reader.cpp
     src/writer.cpp
+    src/duplex_client.cpp
+    src/immutable_duplex_server.cpp
+    src/mutable_duplex_server.cpp
+    src/duplex_channel_factory.cpp
     ${PLATFORM_SOURCES}
 )
 
@@ -45,7 +49,7 @@ target_link_libraries(zerobuffer
 )
 
 # Compiler features
-target_compile_features(zerobuffer PUBLIC cxx_std_17)
+target_compile_features(zerobuffer PUBLIC cxx_std_20)
 
 # Installation rules
 install(TARGETS zerobuffer

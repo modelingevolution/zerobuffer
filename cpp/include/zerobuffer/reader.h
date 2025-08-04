@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <stdexcept>
+#include <chrono>
 
 namespace zerobuffer {
 
@@ -45,8 +46,9 @@ public:
     // Get metadata size
     size_t get_metadata_size() const;
     
-    // Wait for and read next frame
-    Frame read_frame();
+    // Wait for and read next frame with timeout
+    // Returns invalid frame on timeout
+    Frame read_frame(std::chrono::milliseconds timeout);
     
     // Signal that frame has been processed (frees buffer space)
     void release_frame(const Frame& frame);

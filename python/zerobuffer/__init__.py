@@ -23,11 +23,28 @@ from .exceptions import (
 )
 from .logging_config import setup_logging, get_logger
 
+# Duplex channel support
+from .duplex import (
+    DuplexChannelFactory,
+    DuplexClient,
+    ImmutableDuplexServer,
+    MutableDuplexServer,
+    IDuplexClient,
+    IDuplexServer,
+    IImmutableDuplexServer,
+    IMutableDuplexServer,
+    IDuplexChannelFactory,
+    DuplexResponse,
+    ProcessingMode
+)
+
 __all__ = [
+    # Core classes
     'Reader',
     'Writer', 
     'BufferConfig',
     'Frame',
+    # Exceptions
     'ZeroBufferException',
     'WriterDeadException',
     'ReaderDeadException',
@@ -37,6 +54,19 @@ __all__ = [
     'SequenceError',
     'InvalidFrameSizeException',
     'MetadataAlreadyWrittenException',
+    # Logging
     'setup_logging',
-    'get_logger'
+    'get_logger',
+    # Duplex channel
+    'DuplexChannelFactory',
+    'DuplexClient',
+    'ImmutableDuplexServer',
+    'MutableDuplexServer',
+    'IDuplexClient',
+    'IDuplexServer',
+    'IImmutableDuplexServer',
+    'IMutableDuplexServer',
+    'IDuplexChannelFactory',
+    'DuplexResponse',
+    'ProcessingMode'
 ]

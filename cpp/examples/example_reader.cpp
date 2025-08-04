@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
         
         while (true) {
             try {
-                zerobuffer::Frame frame = reader.read_frame();
+                zerobuffer::Frame frame = reader.read_frame(std::chrono::seconds(5));
                 
                 if (frame.valid()) {
                     total_frames++;

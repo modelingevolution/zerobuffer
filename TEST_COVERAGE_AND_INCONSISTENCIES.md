@@ -38,6 +38,7 @@ This document provides a comprehensive overview of unit test coverage across all
 - `ResourceCleanupTests.cs` - Cleanup and resource management
 - `FreeSpaceAccountingTests.cs` - Buffer space calculations
 - `DebugFreeSpaceTest.cs` - Debugging utilities
+- `DuplexChannelTests.cs` - Duplex channel implementation
 
 **Estimated Coverage: High**
 - ✅ Basic read/write operations
@@ -46,6 +47,8 @@ This document provides a comprehensive overview of unit test coverage across all
 - ✅ Free space accounting
 - ✅ Wrap-around handling
 - ✅ Cross-platform abstractions (Windows/POSIX)
+- ✅ Duplex channel with immutable/mutable servers
+- ✅ True zero-copy processing with GetMutableSpan()
 
 ### Python Test Coverage
 

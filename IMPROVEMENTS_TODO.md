@@ -83,10 +83,13 @@ This file tracks suggested improvements from code reviews that need to be implem
 ## Future Enhancements
 
 ### 1. Implement Duplex Channel Design
-- [x] Implement IDuplexClient interface
-- [x] Implement IImmutableDuplexServer and IMutableDuplexServer
-- [x] Create DuplexChannelFactory
-- [ ] Add comprehensive duplex channel tests
+- [x] Implement IDuplexClient interface in C#
+- [x] Implement IImmutableDuplexServer and IMutableDuplexServer in C#
+- [x] Create DuplexChannelFactory in C#
+- [x] Add comprehensive duplex channel tests in C#
+- [x] Support true zero-copy mutable processing with GetMutableSpan()
+- [ ] Implement duplex channel in C++
+- [ ] Implement duplex channel in Python
 - [ ] Document usage patterns
 - [ ] Add async support (requires async semaphores with custom awaiters)
 

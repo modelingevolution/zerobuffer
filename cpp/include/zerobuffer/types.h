@@ -55,11 +55,15 @@ public:
     Frame() : data_(nullptr), size_(0), sequence_(0) {}
     Frame(const void* data, size_t size, uint64_t seq)
         : data_(data), size_(size), sequence_(seq) {}
+    Frame(void* data, size_t size, uint64_t seq)
+        : data_(data), size_(size), sequence_(seq) {}
     
     const void* data() const { return data_; }
+    void* data() { return const_cast<void*>(data_); }  // For mutable access
     size_t size() const { return size_; }
     uint64_t sequence() const { return sequence_; }
     bool valid() const { return data_ != nullptr; }
+    bool is_valid() const { return valid(); }  // Alias for consistency
     
 private:
     const void* data_;

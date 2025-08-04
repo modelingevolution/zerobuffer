@@ -134,19 +134,43 @@ The test service maintains its own state and interprets the step strings to dete
 
 ### 5. Feature Files (Test Definitions)
 
-```gherkin
-Feature: Cross-Platform ZeroBuffer Testing
+The test scenarios have been organized into feature files:
 
-Scenario: C# Reader with Python Writer
-    Given the reader is 'csharp'
-    And create buffer 'test-101' with size '10240'
+- `BasicCommunication.feature` - Fundamental read/write operations
+- `ProcessLifecycle.feature` - Process crash detection and recovery
+- `Performance.feature` - Edge cases and performance tests
+- `DuplexChannel.feature` - Bidirectional communication
+- `ErrorHandling.feature` - Error conditions and recovery
+- `Synchronization.feature` - Concurrent operations
+- `EdgeCases.feature` - Boundary conditions
+- `PlatformSpecific.feature` - Platform-specific behavior
+- `Benchmarks.feature` - Performance benchmarks
+- `StressTests.feature` - Long-running stress tests
+- `Initialization.feature` - Resource management
+- `DuplexAdvanced.feature` - Advanced duplex scenarios
+
+Example from `BasicCommunication.feature`:
+
+```gherkin
+Feature: Basic Communication Tests
+    Tests for fundamental ZeroBuffer communication patterns
     
-    When the writer is 'python'
-    And connect to buffer 'test-101'
-    And write frame with data 'Hello from Python'
-    
-    Then the reader is 'csharp'
-    And read frame should return 'Hello from Python'
+    Background:
+        Given the test mode is configured
+        
+    Scenario: Test 1.1 - Simple Write-Read Cycle
+        Given the reader is 'csharp'
+        And create buffer 'test-basic' with metadata size '1024' and payload size '10240'
+        
+        When the writer is 'python'
+        And connect to buffer 'test-basic'
+        And write metadata with size '100'
+        And write frame with size '1024' and sequence '1'
+        
+        Then the reader is 'csharp'
+        And read frame should have sequence '1' and size '1024'
+        And frame data should be valid
+        And signal space available
 ```
 
 ### 6. Common Test Steps
@@ -259,39 +283,14 @@ Each language implementation must parse step strings like:
 4. **Automatic Context Management**: Language switching is handled automatically
 5. **Reusable Framework**: Can test any system that implements the protocol
 
-## Example Test Scenarios
+## Migration from TEST_SCENARIOS.md
 
-### Test 1.1 - Simple Write-Read Cycle
-```gherkin
-Given the reader is 'csharp'
-And create buffer 'test-101' with metadata size '1024' and payload size '10240'
+All test scenarios from `TEST_SCENARIOS.md` have been translated into Gherkin feature files. The original document remains as the reference specification, while the feature files provide executable test definitions.
 
-When the writer is 'python'
-And connect to buffer 'test-101'
-And write metadata with size '100'
-And write frame with size '1024' and sequence '1'
+The feature files use the same test numbering scheme:
+- Test 1.1 = Simple Write-Read Cycle
+- Test 2.1 = Writer Crash Detection
+- Test 14.1 = Basic Request-Response
+- etc.
 
-Then the reader is 'csharp'
-And metadata should have size '100'
-And read frame should have sequence '1' and size '1024'
-```
-
-### Test 2.1 - Writer Crash Detection
-```gherkin
-Given the reader is 'csharp'
-And create buffer 'test-201' with size '10240'
-
-When the writer is 'python'
-And connect to buffer 'test-201'
-And write frame with data 'alive'
-
-Then the reader is 'csharp'
-And read frame should return 'alive'
-
-When the writer is 'python'
-And simulate crash
-
-Then the reader is 'csharp'
-And wait for '2' seconds
-And writer should be disconnected
-```
+See the feature files in the `Features/` directory for the complete set of translated test scenarios.

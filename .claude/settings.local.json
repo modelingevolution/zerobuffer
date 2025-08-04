@@ -165,7 +165,17 @@
       "Bash(wget:*)",
       "Bash(git checkout:*)",
       "Bash(sudo rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(./venv/bin/pip install -e . pytest pytest-timeout posix-ipc --quiet)",
+      "Bash(grep:*)",
+      "Bash(./tests/test_duplex_channel)",
+      "Bash(./tests/test_duplex_simple:*)",
+      "Bash(./build/tests/test_duplex_simple:*)",
+      "Bash(./tests/test_duplex_channel:*)",
+      "Bash(git checkout:*)",
+      "Bash(./examples/example_metadata:*)",
+      "Bash(dotnet add:*)",
+      "Bash(./test-jsonrpc.sh:*)"
     ],
     "deny": []
   }

@@ -95,7 +95,7 @@ void benchmark_method(const std::string& name, bool use_zerocopy) {
         auto start = high_resolution_clock::now();
         
         for (int i = 0; i < 100; i++) {
-            Frame frame = reader.read_frame();
+            Frame frame = reader.read_frame(std::chrono::seconds(5));
             int64_t receive_ticks = get_timestamp_ticks();
             
             if (frame.size() >= HEADER_SIZE) {
