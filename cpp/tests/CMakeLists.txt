@@ -194,11 +194,3 @@ if(BUILD_CROSS_PLATFORM_TESTS)
     )
 endif()
 
-# Debug test for exact wrap
-add_executable(test_exact_wrap_debug
-    test_exact_wrap_debug.cpp
-)
-target_link_libraries(test_exact_wrap_debug
-    PRIVATE
-        zerobuffer
-)

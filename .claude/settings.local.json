@@ -125,7 +125,8 @@
       "Bash(./test_full_roundtrip.sh:*)",
       "Bash(./benchmarks/benchmark_roundtrip:*)",
       "Bash(./test_simple_roundtrip.sh:*)",
-      "Bash(./run_full_test.sh)"
+      "Bash(./run_full_test.sh)",
+      "Bash(./test_cpp_to_csharp.sh:*)"
     ],
     "deny": []
   }

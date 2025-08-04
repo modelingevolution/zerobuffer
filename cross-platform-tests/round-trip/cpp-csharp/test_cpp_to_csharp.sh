@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# C# → C++ Round-Trip Test
-# Tests C# writer with C++ reader
+# C++ → C# Round-Trip Test
+# Tests C++ writer with C# reader
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR/../../.."
-BUFFER_NAME="csharp_to_cpp_$$"
+BUFFER_NAME="cpp_to_csharp_$$"
 FRAME_COUNT=300
 FRAME_SIZE=$((1920 * 1080 * 3 / 2))  # YUV420: 3,110,400 bytes
 BUFFER_SIZE=$((256 * 1024 * 1024))   # 256MB
 TARGET_FPS=30
 
 echo "======================================"
-echo "C# → C++ Round-Trip Test"
+echo "C++ → C# Round-Trip Test"
 echo "======================================"
 echo "Buffer: $BUFFER_NAME"
 echo "Frames: $FRAME_COUNT at $TARGET_FPS FPS"
@@ -25,26 +25,27 @@ echo ""
 # Clean up
 rm -f /dev/shm/*${BUFFER_NAME}* 2>/dev/null || true
 
-# Step 1: Start C++ reader (creates buffer)
-echo "Starting C++ reader..."
-cd "$PROJECT_ROOT/cpp/build"
+# Step 1: Start C# reader (creates buffer)
+echo "Starting C# reader..."
+cd "$PROJECT_ROOT/csharp/ZeroBuffer.CrossPlatform/bin/Release/net9.0" 2>/dev/null || \
+    cd "$PROJECT_ROOT/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0"
 
-./tests/zerobuffer-test-reader "$BUFFER_NAME" \
+./ZeroBuffer.CrossPlatform reader "$BUFFER_NAME" \
     --frames $FRAME_COUNT \
-    --size $FRAME_SIZE \
     --verify sequential \
+    --buffer-size $BUFFER_SIZE \
+    --timeout-ms 20000 \
     --verbose &
 READER_PID=$!
 
 # Wait for buffer creation
 sleep 2
 
-# Step 2: Start C# writer (connects to buffer)
-echo "Starting C# writer..."
-cd "$PROJECT_ROOT/csharp/ZeroBuffer.CrossPlatform/bin/Release/net9.0" 2>/dev/null || \
-    cd "$PROJECT_ROOT/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0"
+# Step 2: Start C++ writer (connects to buffer)
+echo "Starting C++ writer..."
+cd "$PROJECT_ROOT/cpp/build"
 
-./ZeroBuffer.CrossPlatform writer "$BUFFER_NAME" \
+./tests/zerobuffer-test-writer "$BUFFER_NAME" \
     --frames $FRAME_COUNT \
     --size $FRAME_SIZE \
     --pattern sequential \
