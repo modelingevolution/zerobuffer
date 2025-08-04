@@ -6,18 +6,28 @@ This directory contains round-trip tests between C++ and C# implementations of Z
 
 - `test_cpp_to_csharp.sh` - Tests C++ writer → C# reader ✅
 - `test_csharp_to_cpp.sh` - Tests C# writer → C++ reader ✅
-- `test_bidirectional.sh` - Runs all round-trip tests
+- `test_with_relay.sh` - Tests C++ → C# relay → C++ ✅
+- `test_bidirectional.sh` - Runs all bidirectional tests
 
 ## Running Tests
 
 ```bash
 # Run individual tests
-./test_cpp_to_csharp.sh
-./test_csharp_to_cpp.sh
+./test_cpp_to_csharp.sh      # C++ writes, C# reads
+./test_csharp_to_cpp.sh      # C# writes, C++ reads
+./test_with_relay.sh         # Full round-trip through relay
 
-# Run all tests
+# Run all bidirectional tests
 ./test_bidirectional.sh
 ```
+
+## Key Features Tested
+
+- **Cross-language compatibility**: Binary protocol works between C++ and C#
+- **Wrap-around handling**: Proper circular buffer management (typically at frame 87)
+- **Writer connection timeout**: Reader waits up to 30 seconds for writer
+- **Data integrity**: Sequential pattern verification
+- **Performance**: ~60-80 MB/s direct, ~55 MB/s through relay
 
 ## Test Parameters
 

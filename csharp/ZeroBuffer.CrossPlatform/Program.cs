@@ -118,26 +118,11 @@ namespace ZeroBuffer.CrossPlatform
         [Value(0, Required = true, HelpText = "Name of the buffer to read from")]
         public string BufferName { get; set; } = "";
 
-        [Option('n', "frames", Default = 0, HelpText = "Expected number of frames (0 for unlimited)")]
+        [Option('n', "frames", Default = 0, HelpText = "Number of frames to read (0 for unlimited)")]
         public int Frames { get; set; }
-
-        [Option("create", HelpText = "Create buffer if it doesn't exist")]
-        public bool Create { get; set; }
-
-        [Option("buffer-size", Default = 256 * 1024 * 1024, HelpText = "Buffer size when creating")]
-        public int BufferSize { get; set; }
-
-        [Option("metadata-size", Default = 4096, HelpText = "Metadata size when creating")]
-        public int MetadataSize { get; set; }
 
         [Option("timeout-ms", Default = 5000, HelpText = "Timeout per frame in milliseconds")]
         public int TimeoutMs { get; set; }
-
-        [Option("validate", HelpText = "Validate frame sequence numbers")]
-        public bool Validate { get; set; }
-
-        [Option("check-pattern", HelpText = "Validate data pattern")]
-        public bool CheckPattern { get; set; }
     }
 
     // Relay options
@@ -156,8 +141,8 @@ namespace ZeroBuffer.CrossPlatform
         [Option("create-output", HelpText = "Create output buffer if it doesn't exist")]
         public bool CreateOutput { get; set; }
 
-        [Option("buffer-size", Default = 100 * 1024 * 1024, HelpText = "Output buffer size when creating (default: 100MB)")]
-        public int BufferSize { get; set; } = 100 * 1024 * 1024;
+        [Option("buffer-size", Default = 256 * 1024 * 1024, HelpText = "Output buffer size when creating (default: 256MB)")]
+        public int BufferSize { get; set; } = 256 * 1024 * 1024;
 
         [Option("timeout-ms", Default = 5000, HelpText = "Timeout per frame in milliseconds")]
         public int TimeoutMs { get; set; }

@@ -44,8 +44,8 @@ namespace ZeroBuffer.CrossPlatform
                     Console.WriteLine($"[READER] Connecting to buffer: {options.BufferName}");
                 }
 
-                // Create buffer with config from options
-                var config = new BufferConfig(options.MetadataSize, options.BufferSize);
+                // Create buffer with fixed config matching C++ implementation
+                var config = new BufferConfig(4096, 256 * 1024 * 1024);
                 
                 // Create logger for Reader
                 using var loggerFactory = LoggerFactory.Create(builder =>
@@ -277,6 +277,12 @@ namespace ZeroBuffer.CrossPlatform
     // Update ReaderOptions in Program.cs to match
     public partial class ReaderOptions : BaseOptions
     {
+        [Option('s', "size", Default = 1024, HelpText = "Expected size of each frame in bytes")]
+        public int Size { get; set; }
+
+        [Option("batch-size", Default = 1, HelpText = "Read frames in batches")]
+        public int BatchSize { get; set; }
+
         [Option("verify", Default = "none", HelpText = "Verify data pattern: none|sequential|random|zero|ones")]
         public string Verify { get; set; } = "none";
 

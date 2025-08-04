@@ -119,6 +119,12 @@ namespace ZeroBuffer
         public ReadOnlySpan<byte> Span => _dataPtr != null ? new ReadOnlySpan<byte>(_dataPtr, _length) : ReadOnlySpan<byte>.Empty;
         
         /// <summary>
+        /// Get mutable span for direct zero-copy write access to frame data.
+        /// Use with caution - modifying shared memory requires coordination.
+        /// </summary>
+        public Span<byte> GetMutableSpan() => _dataPtr != null ? new Span<byte>(_dataPtr, _length) : Span<byte>.Empty;
+        
+        /// <summary>
         /// Copy frame data to a byte array (only use when a copy is truly needed)
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

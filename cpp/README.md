@@ -71,6 +71,8 @@ reader.release_frame(frame);
 - `get_metadata_as<T>()` - Get metadata as typed pointer (zero-copy)
 - `read_frame()` - Read next frame (blocks if none available)
 - `release_frame(frame)` - Release frame and free buffer space
+- `is_writer_connected()` - Check if writer is currently connected
+- `is_writer_connected(timeout_ms)` - Wait for writer connection with timeout
 
 ### Writer Class
 - `Writer(name)` - Connect to existing buffer

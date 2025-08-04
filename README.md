@@ -263,6 +263,8 @@ pip install zerobuffer-ipc
 
 - [API Documentation](API.md) - Detailed API reference for C++, C#, and Python
 - [Cross-Platform Tests](CROSS_PLATFORM_TESTS.md) - Testing strategy and standardized interfaces
+- [Benchmarking Guide](BENCHMARKING_GUIDE.md) - How to run performance benchmarks
+- [Test Coverage & Inconsistencies](TEST_COVERAGE_AND_INCONSISTENCIES.md) - Unit test analysis and known issues
 - [Improvements TODO](IMPROVEMENTS_TODO.md) - Planned enhancements and known issues
 - [C++ vcpkg Usage](cpp/VCPKG.md) - Using ZeroBuffer with vcpkg
 

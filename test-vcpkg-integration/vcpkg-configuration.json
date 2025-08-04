@@ -1,0 +1,10 @@
+{
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "file:///mnt/d/source/modelingevolution/streamer/src/zerobuffer/test-vcpkg-integration/.././test-registry",
+      "baseline": "cf476af5439b03157351ffd12ce25c10f8b6304f",
+      "packages": ["zerobuffer"]
+    }
+  ]
+}

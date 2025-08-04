@@ -9,35 +9,90 @@ out/
 *.swp
 *.swo
 *~
+.vs/
 
 # Compiled files
 *.o
+*.obj
 *.a
 *.so
 *.dylib
 *.dll
+*.exe
+*.pdb
+*.ilk
+*.lib
+*.exp
 
 # CMake files
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
+CTestTestfile.cmake
+Testing/
 
-# Test executables (only C++ executables, not Python test files)
+# C++ build artifacts
+/cpp/build/
+/cpp/cmake-build-*/
+/cpp/Testing/
 /cpp/test_*
 /cpp/*_test
 /cpp/tests/test_*
 /cpp/tests/*_test
 /cpp/benchmarks/test_*
 /cpp/benchmarks/*_test
-/cpp/cmake
-/cpp/Testing/Temporary
-/csharp/.vs/ZeroBuffer
-/csharp/ZeroBuffer/obj
-/csharp/ZeroBuffer/bin/Release/net9.0
-/csharp/ZeroBuffer.Benchmarks/bin/Release/net9.0
-/csharp/ZeroBuffer.Benchmarks/obj
-/csharp/ZeroBuffer.TestHelper/bin/Release/net9.0
-/csharp/ZeroBuffer.TestHelper/obj
-/csharp/ZeroBuffer.Tests/bin/Release/net9.0
-/csharp/ZeroBuffer.Tests/obj
+
+# C# build artifacts
+/csharp/.vs/
+/csharp/**/bin/
+/csharp/**/obj/
+/csharp/**/*.user
+/csharp/**/*.suo
+/csharp/**/*.cache
+/csharp/**/project.lock.json
+/csharp/**/project.fragment.lock.json
+/csharp/**/artifacts/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+*.egg
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Test results and logs
+*.log
+*.err
+/cross-platform-tests/results/
+/cross-platform-tests/**/*.json
+test_output.log
+test_error.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+.DS_Store
+Thumbs.db
+
+# vcpkg
+vcpkg_installed/
+.vcpkg/

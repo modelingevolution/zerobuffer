@@ -7,12 +7,25 @@ This directory contains tests to verify interoperability between different langu
 ```
 cross-platform-tests/
 ├── round-trip/           # Round-trip tests between implementations
-│   ├── cpp-csharp/      # C++ ↔ C# tests
+│   ├── cpp-csharp/      # C++ ↔ C# tests ✅
 │   ├── cpp-python/      # C++ ↔ Python tests  
 │   └── csharp-python/   # C# ↔ Python tests
 ├── compatibility/        # Protocol compatibility tests
 └── relay/               # Relay/chain tests
 ```
+
+## Test Status
+
+### C++ ↔ C# Tests ✅
+All tests passing:
+- C++ → C# direct transfer
+- C# → C++ direct transfer  
+- C++ → C# relay → C++ round-trip
+
+Key fixes implemented:
+- Added `is_writer_connected(timeout)` to both implementations
+- Fixed wrap-around protocol (using `payload_size=0` as marker)
+- Added comprehensive debug logging
 
 ## Test Programs
 

@@ -70,6 +70,168 @@ Three-process relay chain testing:
 - Test timeout behavior across platforms
 - Verify signal/wait patterns match
 
+## Test Application Interface Specification
+
+### Unified Command-Line Interface
+
+All test applications across C++, C#, and Python must support the same arguments and behavior to ensure interoperability testing.
+
+#### Test Writer Application
+
+**Purpose**: Write frames to a ZeroBuffer for testing purposes.
+
+**Command**: `zerobuffer-test-writer`
+
+**Arguments**:
+```
+zerobuffer-test-writer <buffer-name> [options]
+
+Required:
+  buffer-name              Name of the buffer to write to
+
+Options:
+  --frames, -n COUNT      Number of frames to write (default: 1000)
+  --size, -s BYTES        Size of each frame in bytes (default: 1024)
+  --metadata, -m TEXT     Metadata to write (optional)
+  --metadata-file FILE    Read metadata from file (optional)
+  --pattern PATTERN       Data pattern: sequential|random|zero|ones (default: sequential)
+  --delay-ms MILLIS       Delay between frames in milliseconds (default: 0)
+  --batch-size COUNT      Write frames in batches (default: 1)
+  --json-output           Output results in JSON format
+  --verbose, -v           Verbose output
+  --help, -h              Show help message
+```
+
+**Exit Codes**:
+- 0: Success - all frames written
+- 1: Buffer connection failed
+- 2: Write error
+- 3: Invalid arguments
+
+#### Test Reader Application
+
+**Purpose**: Read frames from a ZeroBuffer for testing purposes.
+
+**Command**: `zerobuffer-test-reader`
+
+**Arguments**:
+```
+zerobuffer-test-reader <buffer-name> [options]
+
+Required:
+  buffer-name              Name of the buffer to read from
+
+Options:
+  --frames, -n COUNT      Number of frames to read (default: 1000, 0 for unlimited)
+  --size, -s BYTES        Expected size of each frame in bytes (default: 1024)
+  --timeout-ms MILLIS     Timeout per frame in milliseconds (default: 5000)
+  --verify PATTERN        Verify data pattern: none|sequential|random|zero|ones (default: none)
+  --checksum              Calculate checksums for each frame
+  --batch-size COUNT      Read frames in batches (default: 1)
+  --json-output           Output results in JSON format
+  --verbose, -v           Verbose output
+  --help, -h              Show help message
+```
+
+**Exit Codes**:
+- 0: Success - all expected frames read
+- 1: Buffer connection failed
+- 2: Read error or timeout
+- 3: Invalid arguments
+- 4: Validation error (sequence or pattern)
+
+#### Test Relay Application
+
+**Purpose**: Read from one buffer and write to another, acting as a relay.
+
+**Command**: `zerobuffer-test-relay`
+
+**Arguments**:
+```
+zerobuffer-test-relay <input-buffer> <output-buffer> [options]
+
+Required:
+  input-buffer            Name of the buffer to read from
+  output-buffer           Name of the buffer to write to
+
+Options:
+  --frames, -n COUNT      Number of frames to relay (default: 0 for unlimited)
+  --create-output         Create output buffer if it doesn't exist
+  --buffer-size BYTES     Output buffer size when creating (default: 256MB)
+  --timeout-ms MILLIS     Timeout per frame in milliseconds (default: 5000)
+  --transform TRANSFORM   Apply transformation: none|reverse|xor (default: none)
+  --xor-key BYTE          XOR key for transform (default: 255)
+  --log-interval COUNT    Log progress every N frames (default: 100)
+  --json-output           Output results in JSON format
+  --verbose, -v           Verbose output
+  --help, -h              Show help message
+```
+
+**Exit Codes**:
+- 0: Success - relay completed
+- 1: Input buffer connection failed
+- 2: Output buffer connection failed
+- 3: Relay error
+- 4: Invalid arguments
+
+### Output Format (JSON)
+
+All test applications output standardized JSON when `--json-output` is specified:
+
+**Writer Output**:
+```json
+{
+  "operation": "write",
+  "buffer_name": "test_buffer",
+  "frames_written": 1000,
+  "frame_size": 1024,
+  "metadata_size": 256,
+  "duration_seconds": 1.234,
+  "throughput_mbps": 812.5,
+  "errors": []
+}
+```
+
+**Reader Output**:
+```json
+{
+  "operation": "read",
+  "buffer_name": "test_buffer",
+  "frames_read": 1000,
+  "frame_size": 1024,
+  "metadata_size": 256,
+  "duration_seconds": 1.234,
+  "throughput_mbps": 812.5,
+  "verification_errors": 0,
+  "errors": []
+}
+```
+
+**Relay Output**:
+```json
+{
+  "operation": "relay",
+  "input_buffer": "buffer_in",
+  "output_buffer": "buffer_out",
+  "frames_relayed": 1000,
+  "metadata_relayed": true,
+  "duration_seconds": 1.234,
+  "throughput_mbps": 812.5,
+  "transform": "none",
+  "errors": []
+}
+```
+
+### Data Pattern Specifications
+
+**Sequential Pattern**: Each byte in frame = (frame_index + byte_index) % 256
+
+**Random Pattern**: Seeded random data (seed = frame_index)
+
+**Zero Pattern**: All bytes = 0x00
+
+**Ones Pattern**: All bytes = 0xFF
+
 ## Implementation
 
 ### Test Framework Structure
@@ -104,6 +266,48 @@ cross-platform-tests/
 │   └── semaphores/
 └── results/
     └── benchmark_results.json
+```
+
+### Language-Specific Implementations
+
+#### C++ Implementation
+
+Location: `cpp/tests/cross-platform/`
+```bash
+# Build
+cd cpp && ./build.sh
+
+# Executables
+./build/tests/zerobuffer-test-writer
+./build/tests/zerobuffer-test-reader
+# Note: C++ doesn't have a general-purpose relay test app (only benchmark relay)
+# Use ./build/benchmarks/relay_process for benchmarking relay scenarios
+```
+
+#### C# Implementation
+
+Location: `csharp/ZeroBuffer.CrossPlatform/`
+```bash
+# Build
+cd csharp && dotnet build
+
+# Run
+dotnet run --project ZeroBuffer.CrossPlatform -- writer <args>
+dotnet run --project ZeroBuffer.CrossPlatform -- reader <args>
+dotnet run --project ZeroBuffer.CrossPlatform -- relay <args>
+```
+
+#### Python Implementation
+
+Location: `python/zerobuffer/cross_platform/`
+```bash
+# Install
+cd python && pip install -e .
+
+# Run
+python -m zerobuffer.cross_platform.writer <args>
+python -m zerobuffer.cross_platform.reader <args>
+python -m zerobuffer.cross_platform.relay <args>
 ```
 
 ### Round-Trip Test Script Example

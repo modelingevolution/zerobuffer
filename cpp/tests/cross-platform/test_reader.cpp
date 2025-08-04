@@ -60,7 +60,7 @@ std::string calculate_checksum(const std::vector<uint8_t>& data) {
 void print_usage(const char* program_name) {
     std::cout << "Usage: " << program_name << " <buffer-name> [options]\n"
               << "\nOptions:\n"
-              << "  -n, --frames NUM         Number of frames to read (default: 1000, -1 for unlimited)\n"
+              << "  -n, --frames NUM         Number of frames to read (default: 1000, 0 for unlimited)\n"
               << "  -s, --size SIZE          Expected size of each frame in bytes (default: 1024)\n"
               << "  --timeout-ms MS          Timeout for frame reads in milliseconds (default: 5000)\n"
               << "  --verify PATTERN         Verify data pattern: none|sequential|random|zero|ones (default: none)\n"
@@ -187,7 +187,7 @@ int main(int argc, char* argv[]) {
         
         // Read frames
         auto start_time = std::chrono::high_resolution_clock::now();
-        int frames_to_read = (frames >= 0) ? frames : INT_MAX;
+        int frames_to_read = (frames > 0) ? frames : INT_MAX;  // 0 means unlimited
         int frame_index = 0;
         
         if (verbose && !json_output) {
