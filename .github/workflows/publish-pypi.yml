@@ -70,7 +70,7 @@ jobs:
     
     - name: Run tests
       working-directory: ./python
-      run: pytest tests/ -v --tb=short
+      run: pytest tests/ -v --tb=short --timeout=300 -x
     
     - name: Build package
       working-directory: ./python
