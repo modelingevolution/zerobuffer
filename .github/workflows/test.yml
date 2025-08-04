@@ -78,8 +78,8 @@ jobs:
       working-directory: ./python
       run: |
         # Run tests with better error handling
-        # Start with basic tests and gradually include more
-        pytest tests/test_zerobuffer.py::TestTypes tests/test_zerobuffer.py::TestReaderWriter -v --cov=zerobuffer --cov-report=xml --cov-report=html --durations=10
+        # Include TestTypes, TestReaderWriter, and TestFrameOperations
+        pytest tests/test_zerobuffer.py::TestTypes tests/test_zerobuffer.py::TestReaderWriter tests/test_zerobuffer.py::TestFrameOperations -v --cov=zerobuffer --cov-report=xml --cov-report=html --durations=10
     
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3

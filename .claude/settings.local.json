@@ -136,7 +136,10 @@
       "Bash(./test_venv2/bin/python -m pytest tests/test_zerobuffer.py::TestReaderWriter -v -s)",
       "Bash(./test_venv2/bin/python -m pytest tests/test_zerobuffer.py::TestFrameOperations -v -s)",
       "WebFetch(domain:github.com)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(./test_venv2/bin/pip install -q -e . pytest posix-ipc)",
+      "Bash(./test_venv2/bin/python -m pytest tests/test_zerobuffer.py::TestTypes tests/test_zerobuffer.py::TestReaderWriter tests/test_zerobuffer.py::TestFrameOperations --collect-only)",
+      "Bash(./test_with_relay.sh)"
     ],
     "deny": []
   }

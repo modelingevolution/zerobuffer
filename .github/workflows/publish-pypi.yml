@@ -72,7 +72,7 @@ jobs:
       working-directory: ./python
       run: |
         # Run basic unit tests that are known to work in CI
-        pytest tests/test_zerobuffer.py::TestTypes tests/test_zerobuffer.py::TestReaderWriter -v --tb=short --durations=10
+        pytest tests/test_zerobuffer.py::TestTypes tests/test_zerobuffer.py::TestReaderWriter tests/test_zerobuffer.py::TestFrameOperations -v --tb=short --durations=10
     
     - name: Build package
       working-directory: ./python

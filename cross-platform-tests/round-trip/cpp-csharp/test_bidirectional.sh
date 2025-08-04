@@ -25,11 +25,32 @@ else
 fi
 
 echo ""
+
+# Test 2: C# → C++
+echo "Test 2: C# → C++ Round-Trip"
+echo "-----------------------------------"
+"$SCRIPT_DIR/test_csharp_to_cpp.sh"
+CSHARP_TO_CPP=$?
+
+if [ $CSHARP_TO_CPP -eq 0 ]; then
+    echo "✅ C# → C++ test PASSED"
+else
+    echo "❌ C# → C++ test FAILED"
+fi
+
+echo ""
 echo "======================================"
 echo "Summary:"
 echo "======================================"
 echo "C++ → C#: $([ $CPP_TO_CSHARP -eq 0 ] && echo "✅ PASSED" || echo "❌ FAILED")"
-echo ""
-echo "Note: C# → C++ test requires the C++ reader to wait for writers,"
-echo "which the current test program doesn't support. This would require"
-echo "modifying the C++ test reader to add a --wait-for-writer flag."
+echo "C# → C++: $([ $CSHARP_TO_CPP -eq 0 ] && echo "✅ PASSED" || echo "❌ FAILED")"
+
+if [ $CPP_TO_CSHARP -eq 0 ] && [ $CSHARP_TO_CPP -eq 0 ]; then
+    echo ""
+    echo "✅ All tests PASSED!"
+    exit 0
+else
+    echo ""
+    echo "❌ Some tests FAILED"
+    exit 1
+fi

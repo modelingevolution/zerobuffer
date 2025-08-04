@@ -5,23 +5,19 @@ This directory contains round-trip tests between C++ and C# implementations of Z
 ## Test Scripts
 
 - `test_cpp_to_csharp.sh` - Tests C++ writer → C# reader ✅
-- `test_bidirectional.sh` - Runs available round-trip tests
+- `test_csharp_to_cpp.sh` - Tests C# writer → C++ reader ✅
+- `test_bidirectional.sh` - Runs all round-trip tests
 
 ## Running Tests
 
 ```bash
-# Run C++ → C# test
+# Run individual tests
 ./test_cpp_to_csharp.sh
+./test_csharp_to_cpp.sh
 
-# Run all available tests
+# Run all tests
 ./test_bidirectional.sh
 ```
-
-## Known Limitations
-
-The C# → C++ test is not currently supported because the C++ test reader program
-exits immediately if no writer is connected. This would require modifying the
-C++ reader to add a `--wait-for-writer` flag or similar functionality.
 
 ## Test Parameters
 

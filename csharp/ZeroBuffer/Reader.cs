@@ -384,6 +384,31 @@ namespace ZeroBuffer
             return oieb.WriterPid != 0 && ProcessExists(oieb.WriterPid);
         }
 
+        /// <summary>
+        /// Wait for a writer to connect with timeout
+        /// </summary>
+        /// <param name="timeoutMs">Timeout in milliseconds</param>
+        /// <returns>True if writer connected within timeout, false otherwise</returns>
+        public bool IsWriterConnected(int timeoutMs)
+        {
+            if (_disposed)
+                return false;
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var timeout = TimeSpan.FromMilliseconds(timeoutMs);
+
+            while (stopwatch.Elapsed < timeout)
+            {
+                if (IsWriterConnected())
+                    return true;
+
+                // Sleep for a short time before checking again
+                Thread.Sleep(100);
+            }
+
+            return false;
+        }
+
         public string Name => _name;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
