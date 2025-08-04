@@ -1,0 +1,22 @@
+{
+  "testMode": "separate-process",
+  "targets": {
+    "csharp": {
+      "executable": "dotnet",
+      "arguments": "run --project ZeroBuffer.ProtocolTests.csproj -- serve",
+      "workingDirectory": "."
+    },
+    "python": {
+      "executable": "python",
+      "arguments": "protocol_tests.py serve",
+      "workingDirectory": "../../python"
+    },
+    "cpp": {
+      "executable": "./zerobuffer_tests",
+      "arguments": "serve",
+      "workingDirectory": "../../cpp/build"
+    }
+  },
+  "defaultTimeout": 5000,
+  "initializationDelay": 500
+}
