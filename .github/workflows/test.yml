@@ -1,0 +1,104 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-csharp:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dotnet-version: ['9.0.x']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ matrix.dotnet-version }}
+    
+    - name: Restore dependencies
+      working-directory: ./csharp
+      run: dotnet restore
+    
+    - name: Build
+      working-directory: ./csharp
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Test
+      working-directory: ./csharp
+      run: dotnet test --configuration Release --no-build --verbosity normal --logger:trx
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-csharp-${{ matrix.os }}-${{ matrix.dotnet-version }}
+        path: csharp/**/*.trx
+
+  test-python:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      working-directory: ./python
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov
+        pip install -e .
+    
+    - name: Test with pytest
+      working-directory: ./python
+      run: pytest tests/ -v --cov=zerobuffer --cov-report=xml --cov-report=html
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      with:
+        file: ./python/coverage.xml
+        flags: python
+        name: codecov-python
+
+  test-cpp:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        build-type: [Debug, Release]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
+    
+    - name: Configure CMake
+      working-directory: ./cpp
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DBUILD_TESTS=ON
+    
+    - name: Build
+      working-directory: ./cpp
+      run: cmake --build build --config ${{ matrix.build-type }}
+    
+    - name: Test
+      working-directory: ./cpp/build
+      run: ctest -C ${{ matrix.build-type }} --output-on-failure

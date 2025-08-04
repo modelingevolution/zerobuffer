@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "zerobuffer"
 version = "0.1.0"
-description = "High-performance zero-copy inter-process communication"
+description = "High-performance zero-copy inter-process communication library for video streaming"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "ZeroBuffer Contributors"},
+    {name = "ModelingEvolution", email = "info@modelingevolution.com"},
 ]
 keywords = ["ipc", "shared-memory", "zero-copy", "streaming", "video"]
 classifiers = [
@@ -53,10 +53,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/zerobuffer/zerobuffer-python"
-Documentation = "https://zerobuffer.readthedocs.io"
-Repository = "https://github.com/zerobuffer/zerobuffer-python"
-Issues = "https://github.com/zerobuffer/zerobuffer-python/issues"
+Homepage = "https://github.com/modelingevolution/zerobuffer"
+Documentation = "https://github.com/modelingevolution/zerobuffer#readme"
+Repository = "https://github.com/modelingevolution/zerobuffer"
+Issues = "https://github.com/modelingevolution/zerobuffer/issues"
 
 [tool.setuptools.packages.find]
 include = ["zerobuffer*"]

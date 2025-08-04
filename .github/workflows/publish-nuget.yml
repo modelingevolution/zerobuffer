@@ -1,0 +1,60 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'csharp-v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: Determine version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          # Extract version from tag (remove 'v' or 'csharp-v' prefix)
+          VERSION=${GITHUB_REF_NAME#v}
+          VERSION=${VERSION#csharp-v}
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Publishing version: $VERSION"
+    
+    - name: Restore dependencies
+      working-directory: ./csharp
+      run: dotnet restore
+    
+    - name: Build
+      working-directory: ./csharp
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Run tests
+      working-directory: ./csharp
+      run: dotnet test --configuration Release --no-build --verbosity normal
+    
+    - name: Pack
+      working-directory: ./csharp/ZeroBuffer
+      run: dotnet pack --configuration Release --no-build -p:PackageVersion=${{ steps.version.outputs.VERSION }} --output ./nupkg
+    
+    - name: Push to NuGet
+      working-directory: ./csharp/ZeroBuffer
+      run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

@@ -1,0 +1,71 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'python-v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      working-directory: ./python
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine pytest
+        pip install -e .
+    
+    - name: Determine version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          # Extract version from tag (remove 'v' or 'python-v' prefix)
+          VERSION=${GITHUB_REF_NAME#v}
+          VERSION=${VERSION#python-v}
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Publishing version: $VERSION"
+    
+    - name: Update version in pyproject.toml
+      working-directory: ./python
+      run: |
+        # Update version in pyproject.toml
+        sed -i "s/^version = .*/version = \"${{ steps.version.outputs.VERSION }}\"/" pyproject.toml
+        cat pyproject.toml | grep version
+    
+    - name: Run tests
+      working-directory: ./python
+      run: pytest tests/ -v
+    
+    - name: Build package
+      working-directory: ./python
+      run: python -m build
+    
+    - name: Check package
+      working-directory: ./python
+      run: twine check dist/*
+    
+    - name: Publish to PyPI
+      working-directory: ./python
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: twine upload dist/* --skip-existing
