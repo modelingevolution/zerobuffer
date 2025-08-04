@@ -23,9 +23,13 @@ CMakeFiles/
 cmake_install.cmake
 Makefile
 
-# Test executables
-test_*
-*_test
+# Test executables (only C++ executables, not Python test files)
+/cpp/test_*
+/cpp/*_test
+/cpp/tests/test_*
+/cpp/tests/*_test
+/cpp/benchmarks/test_*
+/cpp/benchmarks/*_test
 /cpp/cmake
 /cpp/Testing/Temporary
 /csharp/.vs/ZeroBuffer

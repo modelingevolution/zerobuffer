@@ -115,7 +115,9 @@
       "Bash(gh run view:*)",
       "Bash(./run_round_trip.sh:*)",
       "Bash(./ZeroBuffer.CrossPlatform reader test_buffer:*)",
-      "Bash(./run_round_trip_debug.sh:*)"
+      "Bash(./run_round_trip_debug.sh:*)",
+      "Bash(./run_round_trip_fps.sh:*)",
+      "Bash(./run_round_trip_reverse.sh:*)"
     ],
     "deny": []
   }
