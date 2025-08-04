@@ -3,6 +3,13 @@ using System;
 namespace ZeroBuffer.DuplexChannel
 {
     /// <summary>
+    /// Handler delegate that returns response data as ReadOnlySpan
+    /// </summary>
+    /// <param name="request">The request frame</param>
+    /// <returns>Response data as ReadOnlySpan (must not be stack-allocated)</returns>
+    public delegate ReadOnlySpan<byte> RequestHandler(Frame request);
+    
+    /// <summary>
     /// Base server-side interface with common functionality.
     /// </summary>
     public interface IDuplexServer : IDisposable
@@ -24,10 +31,11 @@ namespace ZeroBuffer.DuplexChannel
     public interface IImmutableDuplexServer : IDuplexServer
     {
         /// <summary>
-        /// Start processing requests with a handler that returns new data
+        /// Start processing requests with a handler that returns response data as ReadOnlySpan
         /// </summary>
-        /// <param name="handler">Function that processes request and returns response data</param>
-        void Start(Func<Frame, byte[]> handler);
+        /// <param name="handler">Handler that processes request and returns response data</param>
+        /// <param name="mode">Processing mode (SingleThread or ThreadPool)</param>
+        void Start(RequestHandler handler, ProcessingMode mode = ProcessingMode.SingleThread);
     }
     
     /// <summary>
@@ -39,6 +47,7 @@ namespace ZeroBuffer.DuplexChannel
         /// Start processing with mutable handler
         /// </summary>
         /// <param name="handler">Action that modifies frame data in-place</param>
-        void Start(Action<Frame> handler);
+        /// <param name="mode">Processing mode (SingleThread or ThreadPool)</param>
+        void Start(Action<Frame> handler, ProcessingMode mode = ProcessingMode.SingleThread);
     }
 }

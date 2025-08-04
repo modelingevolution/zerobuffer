@@ -1,0 +1,10 @@
+{
+  "jsonrpc": "2.0",
+  "method": "setup",
+  "params": {
+    "testId": 101,
+    "role": "reader",
+    "bufferName": "test-buffer"
+  },
+  "id": 1
+}

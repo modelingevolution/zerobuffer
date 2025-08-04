@@ -1,5 +1,7 @@
 using System;
 using System.Threading;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ZeroBuffer.DuplexChannel
 {
@@ -10,6 +12,7 @@ namespace ZeroBuffer.DuplexChannel
     {
         private readonly string _channelName;
         private readonly BufferConfig _config;
+        private readonly ILogger<MutableDuplexServer> _logger;
         private Reader _requestReader;
         private Writer _responseWriter;
         private Thread _processingThread;
@@ -17,15 +20,16 @@ namespace ZeroBuffer.DuplexChannel
         private volatile bool _isRunning;
         private bool _disposed;
         
-        public MutableDuplexServer(string channelName, BufferConfig config)
+        public MutableDuplexServer(string channelName, BufferConfig config, ILogger<MutableDuplexServer>? logger = null)
         {
             _channelName = channelName;
             _config = config;
+            _logger = logger ?? NullLogger<MutableDuplexServer>.Instance;
         }
         
         public bool IsRunning => _isRunning;
         
-        public void Start(Action<Frame> handler)
+        public void Start(Action<Frame> handler, ProcessingMode mode = ProcessingMode.SingleThread)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(MutableDuplexServer));
@@ -48,13 +52,22 @@ namespace ZeroBuffer.DuplexChannel
                 _cancellationTokenSource = new CancellationTokenSource();
                 _isRunning = true;
                 
-                // Start processing thread - it will connect to response buffer when available
-                _processingThread = new Thread(() => ProcessRequests(handler, responseBufferName, _cancellationTokenSource.Token))
+                // Start processing based on mode
+                if (mode == ProcessingMode.SingleThread)
                 {
-                    Name = $"MutableDuplexServer_{_channelName}",
-                    IsBackground = true
-                };
-                _processingThread.Start();
+                    // Start processing thread - it will connect to response buffer when available
+                    _processingThread = new Thread(() => ProcessRequests(handler, responseBufferName, _cancellationTokenSource.Token))
+                    {
+                        Name = $"MutableDuplexServer_{_channelName}",
+                        IsBackground = true
+                    };
+                    _processingThread.Start();
+                }
+                else
+                {
+                    // ThreadPool mode not yet implemented
+                    throw new NotSupportedException($"Processing mode {mode} is not yet implemented");
+                }
             }
             catch
             {
@@ -124,7 +137,7 @@ namespace ZeroBuffer.DuplexChannel
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"Failed to connect to response buffer: {ex.Message}");
+                    _logger.LogError(ex, "Failed to connect to response buffer {BufferName}", responseBufferName);
                     return;
                 }
             }
@@ -159,7 +172,7 @@ namespace ZeroBuffer.DuplexChannel
                     catch (Exception ex)
                     {
                         // Log error but continue processing
-                        Console.Error.WriteLine($"Handler error: {ex.Message}");
+                        _logger.LogError(ex, "Error in mutable request handler for channel {ChannelName}", _channelName);
                     }
                     
                     // Send the modified data as response with sequence number prefix
@@ -182,7 +195,7 @@ namespace ZeroBuffer.DuplexChannel
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
                     // Log unexpected errors
-                    Console.Error.WriteLine($"Server processing error: {ex.Message}");
+                    _logger.LogError(ex, "Server processing error on channel {ChannelName}", _channelName);
                 }
             }
         }

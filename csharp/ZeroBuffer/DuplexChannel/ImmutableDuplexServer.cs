@@ -1,5 +1,7 @@
 using System;
 using System.Threading;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ZeroBuffer.DuplexChannel
 {
@@ -10,6 +12,7 @@ namespace ZeroBuffer.DuplexChannel
     {
         private readonly string _channelName;
         private readonly BufferConfig _config;
+        private readonly ILogger<ImmutableDuplexServer> _logger;
         private Reader _requestReader;
         private Writer _responseWriter;
         private Thread _processingThread;
@@ -17,15 +20,16 @@ namespace ZeroBuffer.DuplexChannel
         private volatile bool _isRunning;
         private bool _disposed;
         
-        public ImmutableDuplexServer(string channelName, BufferConfig config)
+        public ImmutableDuplexServer(string channelName, BufferConfig config, ILogger<ImmutableDuplexServer>? logger = null)
         {
             _channelName = channelName;
             _config = config;
+            _logger = logger ?? NullLogger<ImmutableDuplexServer>.Instance;
         }
         
         public bool IsRunning => _isRunning;
         
-        public void Start(Func<Frame, byte[]> handler)
+        public void Start(RequestHandler handler, ProcessingMode mode = ProcessingMode.SingleThread)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(ImmutableDuplexServer));
@@ -48,13 +52,22 @@ namespace ZeroBuffer.DuplexChannel
                 _cancellationTokenSource = new CancellationTokenSource();
                 _isRunning = true;
                 
-                // Start processing thread - it will connect to response buffer when available
-                _processingThread = new Thread(() => ProcessRequests(handler, responseBufferName, _cancellationTokenSource.Token))
+                // Start processing based on mode
+                if (mode == ProcessingMode.SingleThread)
                 {
-                    Name = $"DuplexServer_{_channelName}",
-                    IsBackground = true
-                };
-                _processingThread.Start();
+                    // Start processing thread - it will connect to response buffer when available
+                    _processingThread = new Thread(() => ProcessRequests(handler, responseBufferName, _cancellationTokenSource.Token))
+                    {
+                        Name = $"DuplexServer_{_channelName}",
+                        IsBackground = true
+                    };
+                    _processingThread.Start();
+                }
+                else
+                {
+                    // ThreadPool mode not yet implemented
+                    throw new NotSupportedException($"Processing mode {mode} is not yet implemented");
+                }
             }
             catch
             {
@@ -113,7 +126,7 @@ namespace ZeroBuffer.DuplexChannel
             throw new TimeoutException($"Timeout waiting for response buffer {bufferName}");
         }
         
-        private void ProcessRequests(Func<Frame, byte[]> handler, string responseBufferName, CancellationToken cancellationToken)
+        private void ProcessRequests(RequestHandler handler, string responseBufferName, CancellationToken cancellationToken)
         {
             // Connect to response buffer when it becomes available
             if (_responseWriter == null)
@@ -124,7 +137,7 @@ namespace ZeroBuffer.DuplexChannel
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"Failed to connect to response buffer: {ex.Message}");
+                    _logger.LogError(ex, "Failed to connect to response buffer {BufferName}", responseBufferName);
                     return;
                 }
             }
@@ -138,8 +151,8 @@ namespace ZeroBuffer.DuplexChannel
                     if (!request.IsValid)
                         continue;
                     
-                    // Process request
-                    byte[] responseData;
+                    // Process request and get response data
+                    ReadOnlySpan<byte> responseData;
                     try
                     {
                         responseData = handler(request);
@@ -147,21 +160,25 @@ namespace ZeroBuffer.DuplexChannel
                     catch (Exception ex)
                     {
                         // Log error and send empty response
-                        Console.Error.WriteLine($"Handler error: {ex.Message}");
-                        responseData = Array.Empty<byte>();
+                        _logger.LogError(ex, "Error in request handler for channel {ChannelName}", _channelName);
+                        responseData = ReadOnlySpan<byte>.Empty;
                     }
                     
-                    // We need to preserve the request sequence number in the response
-                    // Since Writer manages its own sequence, we'll prepend the sequence number
-                    var responseWithSequence = new byte[8 + responseData.Length];
-                    BitConverter.TryWriteBytes(responseWithSequence.AsSpan(0, 8), (long)request.Sequence);
+                    // Allocate buffer for sequence number + response data
+                    var totalSize = 8 + responseData.Length;
+                    var buffer = _responseWriter.GetFrameBuffer(totalSize, out _);
+                    
+                    // Write sequence number
+                    BitConverter.TryWriteBytes(buffer.Slice(0, 8), (long)request.Sequence);
+                    
+                    // Copy response data
                     if (responseData.Length > 0)
                     {
-                        Buffer.BlockCopy(responseData, 0, responseWithSequence, 8, responseData.Length);
+                        responseData.CopyTo(buffer.Slice(8));
                     }
                     
-                    // Send response
-                    _responseWriter.WriteFrame(responseWithSequence);
+                    // Commit the frame
+                    _responseWriter.CommitFrame();
                 }
                 catch (ReaderDeadException)
                 {
@@ -176,7 +193,7 @@ namespace ZeroBuffer.DuplexChannel
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
                     // Log unexpected errors
-                    Console.Error.WriteLine($"Server processing error: {ex.Message}");
+                    _logger.LogError(ex, "Server processing error on channel {ChannelName}", _channelName);
                 }
             }
         }

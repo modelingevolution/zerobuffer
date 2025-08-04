@@ -1,4 +1,6 @@
 using System;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ZeroBuffer.DuplexChannel
 {
@@ -7,16 +9,15 @@ namespace ZeroBuffer.DuplexChannel
     /// </summary>
     public class DuplexChannelFactory : IDuplexChannelFactory
     {
-        private static readonly Lazy<DuplexChannelFactory> _instance = 
-            new(() => new DuplexChannelFactory());
+        private readonly ILoggerFactory _loggerFactory;
         
         /// <summary>
-        /// Get the singleton instance of the factory
+        /// Creates a new instance of the duplex channel factory
         /// </summary>
-        public static IDuplexChannelFactory Instance => _instance.Value;
-        
-        private DuplexChannelFactory()
+        /// <param name="loggerFactory">Optional logger factory for creating loggers</param>
+        public DuplexChannelFactory(ILoggerFactory? loggerFactory = null)
         {
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         }
         
         /// <inheritdoc/>
@@ -28,7 +29,8 @@ namespace ZeroBuffer.DuplexChannel
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
                 
-            return new ImmutableDuplexServer(channelName, config);
+            var logger = _loggerFactory.CreateLogger<ImmutableDuplexServer>();
+            return new ImmutableDuplexServer(channelName, config, logger);
         }
         
         /// <inheritdoc/>
@@ -40,7 +42,8 @@ namespace ZeroBuffer.DuplexChannel
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
                 
-            return new MutableDuplexServer(channelName, config);
+            var logger = _loggerFactory.CreateLogger<MutableDuplexServer>();
+            return new MutableDuplexServer(channelName, config, logger);
         }
         
         /// <inheritdoc/>
