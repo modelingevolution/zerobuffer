@@ -54,6 +54,10 @@ public:
     // Check if writer is connected
     bool is_writer_connected() const;
     
+    // Wait for writer to connect with timeout (milliseconds)
+    // Returns true if writer connected within timeout, false otherwise
+    bool is_writer_connected(int timeout_ms) const;
+    
     // Get buffer statistics
     uint64_t frames_read() const;
     uint64_t bytes_read() const;

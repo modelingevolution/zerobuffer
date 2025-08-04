@@ -1,0 +1,98 @@
+name: Test Debug
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ test-debug ]
+
+jobs:
+  debug-python-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Debug environment
+      run: |
+        echo "=== System Info ==="
+        uname -a
+        echo ""
+        echo "=== Python Info ==="
+        python --version
+        which python
+        echo ""
+        echo "=== Shared Memory Info ==="
+        ls -la /dev/shm/
+        df -h /dev/shm
+        echo ""
+        echo "=== IPC Info ==="
+        ipcs -l
+    
+    - name: Install dependencies
+      working-directory: ./python
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest posix-ipc
+        pip install -e .
+    
+    - name: Test imports
+      working-directory: ./python
+      run: |
+        echo "=== Testing imports ==="
+        python -c "import zerobuffer; print(f'ZeroBuffer imported from: {zerobuffer.__file__}')"
+        python -c "from zerobuffer import Reader, Writer, BufferConfig; print('Basic imports OK')"
+        python -c "import posix_ipc; print(f'posix_ipc version: {posix_ipc.VERSION}')"
+    
+    - name: Run minimal test
+      working-directory: ./python
+      run: |
+        echo "=== Running minimal test ==="
+        python -c "
+import os
+import tempfile
+from zerobuffer import Reader, Writer, BufferConfig
+
+# Create a unique buffer name
+buffer_name = f'test_minimal_{os.getpid()}'
+print(f'Buffer name: {buffer_name}')
+
+# Create reader (which creates the shared memory)
+config = BufferConfig(metadata_size=1024, payload_size=1024*1024)
+print('Creating reader...')
+reader = Reader(buffer_name, config)
+print('Reader created successfully')
+
+# Clean up
+reader.close()
+print('Test completed successfully')
+"
+    
+    - name: Run TestTypes
+      working-directory: ./python
+      continue-on-error: true
+      run: |
+        echo "=== Running TestTypes ==="
+        pytest tests/test_zerobuffer.py::TestTypes -v -s
+    
+    - name: Run TestReaderWriter individually
+      working-directory: ./python
+      continue-on-error: true
+      run: |
+        echo "=== Running TestReaderWriter tests individually ==="
+        for test in test_create_reader test_connect_writer test_multiple_writers_rejected test_writer_without_reader test_metadata_write_read; do
+          echo ""
+          echo "Running $test..."
+          pytest tests/test_zerobuffer.py::TestReaderWriter::$test -v -s || echo "FAILED: $test"
+        done
+    
+    - name: Check shared memory after tests
+      if: always()
+      run: |
+        echo "=== Shared memory status after tests ==="
+        ls -la /dev/shm/
+        ipcs -m

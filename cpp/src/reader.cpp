@@ -3,6 +3,8 @@
 #include <cstring>
 #include <atomic>
 #include <filesystem>
+#include <thread>
+#include <chrono>
 #include <boost/log/attributes/named_scope.hpp>
 
 namespace zerobuffer {
@@ -338,6 +340,26 @@ public:
         return oieb->writer_pid != 0 && platform::process_exists(oieb->writer_pid);
     }
     
+    bool is_writer_connected(int timeout_ms) const {
+        using namespace std::chrono;
+        auto start = high_resolution_clock::now();
+        auto timeout = milliseconds(timeout_ms);
+        
+        while (true) {
+            if (is_writer_connected()) {
+                return true;
+            }
+            
+            auto elapsed = high_resolution_clock::now() - start;
+            if (elapsed >= timeout) {
+                return false;
+            }
+            
+            // Sleep for a short time before checking again
+            std::this_thread::sleep_for(milliseconds(100));
+        }
+    }
+    
 private:
     std::string name_;
     BufferConfig config_;
@@ -378,6 +400,10 @@ void Reader::release_frame(const Frame& frame) {
 
 bool Reader::is_writer_connected() const {
     return impl_->is_writer_connected();
+}
+
+bool Reader::is_writer_connected(int timeout_ms) const {
+    return impl_->is_writer_connected(timeout_ms);
 }
 
 uint64_t Reader::frames_read() const {
