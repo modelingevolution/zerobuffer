@@ -1,0 +1,247 @@
+name: Test Custom vcpkg Registry
+
+on:
+  push:
+    paths:
+      - 'vcpkg-port/**'
+      - '.github/workflows/test-custom-registry.yml'
+      - 'setup-custom-vcpkg-registry.sh'
+  pull_request:
+    paths:
+      - 'vcpkg-port/**'
+      - '.github/workflows/test-custom-registry.yml'
+  workflow_dispatch:
+
+jobs:
+  test-custom-registry:
+    name: Test custom registry on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up test registry (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        # Create registry structure
+        mkdir -p test-registry/ports/zerobuffer
+        mkdir -p test-registry/versions/z-
+        
+        # Copy port files
+        cp -r vcpkg-port/zerobuffer/* test-registry/ports/zerobuffer/
+        
+        # Initialize git repo
+        cd test-registry
+        git init
+        git config user.name "Test"
+        git config user.email "test@example.com"
+        git add ports/zerobuffer
+        git commit -m "Add zerobuffer port"
+        
+        # Get git-tree hash
+        GIT_TREE=$(git rev-parse HEAD:ports/zerobuffer)
+        echo "GIT_TREE=$GIT_TREE" >> $GITHUB_ENV
+        
+        # Get version
+        VERSION=$(grep '"version"' ports/zerobuffer/vcpkg.json | head -1 | sed 's/.*"version": "\(.*\)".*/\1/')
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        
+        # Create baseline
+        cat > versions/baseline.json << EOF
+        {
+          "default": {
+            "zerobuffer": {
+              "baseline": "$VERSION",
+              "port-version": 0
+            }
+          }
+        }
+        EOF
+        
+        # Create version database
+        cat > versions/z-/zerobuffer.json << EOF
+        {
+          "versions": [
+            {
+              "version": "$VERSION",
+              "port-version": 0,
+              "git-tree": "$GIT_TREE"
+            }
+          ]
+        }
+        EOF
+        
+        git add versions/
+        git commit -m "Add version database"
+        
+        # Get baseline commit
+        BASELINE=$(git rev-parse HEAD)
+        echo "BASELINE=$BASELINE" >> $GITHUB_ENV
+        cd ..
+
+    - name: Set up test registry (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        # Create registry structure
+        mkdir -p test-registry/ports/zerobuffer
+        mkdir -p test-registry/versions/z-
+        
+        # Copy port files
+        cp -r vcpkg-port/zerobuffer/* test-registry/ports/zerobuffer/
+        
+        # Initialize git repo
+        cd test-registry
+        git init
+        git config user.name "Test"
+        git config user.email "test@example.com"
+        git add ports/zerobuffer
+        git commit -m "Add zerobuffer port"
+        
+        # Get git-tree hash
+        GIT_TREE=$(git rev-parse HEAD:ports/zerobuffer)
+        echo "GIT_TREE=$GIT_TREE" >> $GITHUB_ENV
+        
+        # Get version
+        VERSION=$(grep '"version"' ports/zerobuffer/vcpkg.json | head -1 | sed 's/.*"version": "\(.*\)".*/\1/')
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        
+        # Create baseline
+        echo "{
+          \"default\": {
+            \"zerobuffer\": {
+              \"baseline\": \"$VERSION\",
+              \"port-version\": 0
+            }
+          }
+        }" > versions/baseline.json
+        
+        # Create version database
+        echo "{
+          \"versions\": [
+            {
+              \"version\": \"$VERSION\",
+              \"port-version\": 0,
+              \"git-tree\": \"$GIT_TREE\"
+            }
+          ]
+        }" > versions/z-/zerobuffer.json
+        
+        git add versions/
+        git commit -m "Add version database"
+        
+        # Get baseline commit
+        BASELINE=$(git rev-parse HEAD)
+        echo "BASELINE=$BASELINE" >> $GITHUB_ENV
+        cd ..
+
+    - name: Acquire vcpkg
+      uses: actions/checkout@v4
+      with:
+        repository: "Microsoft/vcpkg"
+        path: vcpkg
+
+    - name: Bootstrap vcpkg (Windows)
+      if: runner.os == 'Windows'
+      run: ${{ github.workspace }}\vcpkg\bootstrap-vcpkg.bat
+      shell: cmd
+
+    - name: Bootstrap vcpkg (Unix)
+      if: runner.os != 'Windows'
+      run: ${{ github.workspace }}/vcpkg/bootstrap-vcpkg.sh
+
+    - name: Create test project
+      run: |
+        mkdir test-project
+        cd test-project
+        
+        # Create vcpkg-configuration.json pointing to local registry
+        echo "{
+          \"registries\": [
+            {
+              \"kind\": \"git\",
+              \"repository\": \"file://${{ github.workspace }}/test-registry\",
+              \"baseline\": \"${{ env.BASELINE }}\",
+              \"packages\": [\"zerobuffer\"]
+            }
+          ]
+        }" > vcpkg-configuration.json
+        
+        # Create manifest
+        echo "{
+          \"dependencies\": [\"zerobuffer\"]
+        }" > vcpkg.json
+        
+        # Create CMakeLists.txt
+        cat > CMakeLists.txt << 'EOF'
+        cmake_minimum_required(VERSION 3.20)
+        project(test_custom_registry)
+        
+        find_package(zerobuffer CONFIG REQUIRED)
+        
+        add_executable(test_app main.cpp)
+        target_link_libraries(test_app PRIVATE zerobuffer::zerobuffer)
+        EOF
+        
+        # Create test app
+        cat > main.cpp << 'EOF'
+        #include <zerobuffer/zerobuffer.h>
+        #include <iostream>
+        
+        int main() {
+            zerobuffer::BufferConfig config(1024, 1024*1024);
+            std::cout << "Custom registry test passed!" << std::endl;
+            return 0;
+        }
+        EOF
+      shell: bash
+
+    - name: Install from custom registry
+      working-directory: test-project
+      run: ${{ github.workspace }}/vcpkg/vcpkg install
+      shell: bash
+
+    - name: Build test project
+      working-directory: test-project
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        cmake --build . --config Release
+      shell: bash
+
+    - name: Run test
+      working-directory: test-project/build
+      run: |
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          ./Release/test_app.exe
+        else
+          ./test_app
+        fi
+      shell: bash
+
+  test-private-registry:
+    name: Test private registry features
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Test registry with authentication
+      run: |
+        echo "=== Testing Private Registry Setup ==="
+        echo
+        echo "Private registries work the same way but require:"
+        echo "1. Repository set to private on GitHub"
+        echo "2. Users need access token or SSH key"
+        echo "3. Configure git credentials before vcpkg install"
+        echo
+        echo "Example setup:"
+        echo "  git config --global url.\"https://\${GITHUB_TOKEN}@github.com/\".insteadOf \"https://github.com/\""
+        echo "  vcpkg install zerobuffer"
