@@ -4,21 +4,44 @@ This guide explains how to use ZeroBuffer with vcpkg package manager.
 
 ## Installing ZeroBuffer via vcpkg
 
-### Option 1: Using the local port
+### Option 1: From Official vcpkg Repository (Coming Soon)
 
-If you have the ZeroBuffer source code with the vcpkg port:
+Once ZeroBuffer is accepted into the official vcpkg repository:
+
+```bash
+# Just install directly - no configuration needed!
+vcpkg install zerobuffer
+```
+
+### Option 2: Using Custom Registry
+
+Add to your `vcpkg-configuration.json`:
+
+```json
+{
+  "registries": [
+    {
+      "kind": "git", 
+      "repository": "https://github.com/modelingevolution/zerobuffer-vcpkg-registry",
+      "baseline": "latest-commit-sha",
+      "packages": ["zerobuffer"]
+    }
+  ]
+}
+```
+
+Then install:
+```bash
+vcpkg install zerobuffer
+```
+
+### Option 3: Using Local Port (Development)
+
+If you have the ZeroBuffer source code:
 
 ```bash
 # From your vcpkg root directory
 vcpkg install zerobuffer --overlay-ports=/path/to/zerobuffer/vcpkg-port
-```
-
-### Option 2: Adding to vcpkg registry
-
-Once ZeroBuffer is published to a vcpkg registry, you can install it directly:
-
-```bash
-vcpkg install zerobuffer
 ```
 
 ## Using ZeroBuffer in your CMake project
