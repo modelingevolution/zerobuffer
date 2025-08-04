@@ -20,3 +20,15 @@
 /mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/obj/Debug/net9.0/ZeroBuffer.CrossPlatform.pdb
 /mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/obj/Debug/net9.0/ZeroBuffer.CrossPlatform.genruntimeconfig.cache
 /mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/obj/Debug/net9.0/ref/ZeroBuffer.CrossPlatform.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Configuration.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Configuration.Abstractions.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Configuration.Binder.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.DependencyInjection.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Logging.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Logging.Abstractions.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Logging.Configuration.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Logging.Console.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Options.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Options.ConfigurationExtensions.dll
+/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.CrossPlatform/bin/Debug/net9.0/Microsoft.Extensions.Primitives.dll

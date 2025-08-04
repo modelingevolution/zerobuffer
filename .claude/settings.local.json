@@ -120,7 +120,8 @@
       "Bash(./run_round_trip_reverse.sh:*)",
       "Bash(gh api:*)",
       "Bash(gh run cancel:*)",
-      "Bash(./test_csharp_to_cpp.sh:*)"
+      "Bash(./test_csharp_to_cpp.sh:*)",
+      "Bash(./test_cpp_csharp_cpp.sh:*)"
     ],
     "deny": []
   }

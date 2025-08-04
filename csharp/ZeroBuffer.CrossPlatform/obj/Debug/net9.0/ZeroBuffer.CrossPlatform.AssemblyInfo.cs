@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ZeroBuffer.CrossPlatform")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ff64e32fbe45eff1b1756ac197ac671715a4a916")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a2d3595ae88df91ec43765837db4bf6bd91c1406")]
 [assembly: System.Reflection.AssemblyProductAttribute("ZeroBuffer.CrossPlatform")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ZeroBuffer.CrossPlatform")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
