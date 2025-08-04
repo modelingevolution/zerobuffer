@@ -191,7 +191,21 @@ int main(int argc, char* argv[]) {
         int frame_index = 0;
         
         if (verbose && !json_output) {
-            std::cout << "[READER] Starting to read frames..." << std::endl;
+            std::cout << "[READER] Waiting for writer to connect..." << std::endl;
+        }
+        
+        // Wait for writer to connect (with 30 second timeout)
+        if (!reader.is_writer_connected(30000)) {
+            if (verbose && !json_output) {
+                std::cout << "[READER] No writer connected after 30 seconds timeout" << std::endl;
+            }
+            result.errors.push_back("Timeout waiting for writer connection");
+            print_results(result, json_output);
+            return 1;
+        }
+        
+        if (verbose && !json_output) {
+            std::cout << "[READER] Writer connected, starting to read frames..." << std::endl;
         }
         
         while (frame_index < frames_to_read) {
