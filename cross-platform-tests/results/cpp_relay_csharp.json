@@ -2,13 +2,14 @@
   "Operation": "relay",
   "InputBuffer": "cpp_to_relay_test",
   "OutputBuffer": "relay_to_cpp_test",
-  "FramesRelayed": 1,
+  "FramesRelayed": 0,
   "MetadataRelayed": false,
   "MetadataSize": 0,
-  "TotalBytes": 1024,
-  "DurationSeconds": 1.16501,
-  "ThroughputMbps": 0.0008382438777349549,
+  "TotalBytes": 0,
+  "DurationSeconds": 0,
+  "ThroughputMbps": 0,
   "Errors": [
-    "Frame 1: Writer process is dead"
+    "Timeout waiting for output buffer relay_to_cpp_test",
+    "Timeout waiting for output buffer relay_to_cpp_test"
   ]
 }

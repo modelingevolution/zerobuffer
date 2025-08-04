@@ -121,7 +121,11 @@
       "Bash(gh api:*)",
       "Bash(gh run cancel:*)",
       "Bash(./test_csharp_to_cpp.sh:*)",
-      "Bash(./test_cpp_csharp_cpp.sh:*)"
+      "Bash(./test_cpp_csharp_cpp.sh:*)",
+      "Bash(./test_full_roundtrip.sh:*)",
+      "Bash(./benchmarks/benchmark_roundtrip:*)",
+      "Bash(./test_simple_roundtrip.sh:*)",
+      "Bash(./run_full_test.sh)"
     ],
     "deny": []
   }
