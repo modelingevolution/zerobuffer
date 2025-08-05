@@ -138,6 +138,11 @@ namespace ZeroBuffer
             return array;
         }
         
+        /// <summary>
+        /// Get the internal data pointer for creating FrameRef
+        /// </summary>
+        internal byte* GetDataPointer() => _dataPtr;
+        
         // Invalid frame sentinel
         public static Frame Invalid => new Frame(null, 0, 0);
     }

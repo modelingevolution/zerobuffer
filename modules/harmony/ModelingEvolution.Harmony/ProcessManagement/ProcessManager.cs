@@ -184,7 +184,7 @@ public class ProcessConnection : IProcessConnection, IDisposable
             throw new InvalidOperationException("Connection not initialized");
         }
         
-        return await _rpc.InvokeWithCancellationAsync<T>(method, new[] { parameters }, cancellationToken);
+        return await _rpc.InvokeWithCancellationAsync<T>(method, [parameters], cancellationToken);
     }
     
     public void Dispose()

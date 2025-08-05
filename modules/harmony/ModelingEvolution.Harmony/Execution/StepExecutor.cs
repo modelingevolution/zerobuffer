@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ModelingEvolution.Harmony.Core;
 using ModelingEvolution.Harmony.ProcessManagement;
@@ -29,15 +30,13 @@ public class StepExecutor : IStepExecutor
             var targetProcess = step.Process;
             if (string.IsNullOrEmpty(targetProcess))
             {
-                // No specific process, might be a general step
+                // No specific process, this is a general step
+                // TODO: We should broadcast this to all processes
                 _logger.LogWarning("Step has no process context: {Step}", step.Text);
                 return new StepExecutionResult
                 {
                     Success = true,
-                    Logs = new List<LogEntry>
-                    {
-                        new() { Message = $"Skipping step with no process context: {step.Text}" }
-                    }
+                    Logs = [new() { Message = $"Skipping step with no process context: {step.Text}" }]
                 };
             }
             
@@ -66,22 +65,25 @@ public class StepExecutor : IStepExecutor
             
             // Convert response to result
             var logs = new List<LogEntry>();
-            
-            if (response.Logs != null)
-            {
-                foreach (var log in response.Logs)
+
+            if (response.Logs == null)
+                return new StepExecutionResult
                 {
-                    logs.Add(new LogEntry
-                    {
-                        Timestamp = DateTime.UtcNow,
-                        Process = targetProcess,
-                        Platform = platform,
-                        Level = log.Level ?? "INFO",
-                        Message = log.Message ?? ""
-                    });
-                }
-            }
-            
+                    Success = response.Success,
+                    Error = response.Error,
+                    Data = response.Data ?? new Dictionary<string, object>(),
+                    Logs = logs
+                };
+
+            logs.AddRange(response.Logs.Select(log => new LogEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                Process = targetProcess,
+                Platform = platform,
+                Level = log.Level ?? "INFO",
+                Message = log.Message ?? ""
+            }));
+
             return new StepExecutionResult
             {
                 Success = response.Success,
@@ -120,7 +122,7 @@ public class StepExecutor : IStepExecutor
         public Dictionary<string, object>? Data { get; set; }
         public List<LogResponse>? Logs { get; set; }
     }
-    
+    [DebuggerDisplay("{Level} {Message}")]
     private class LogResponse
     {
         public string? Level { get; set; }

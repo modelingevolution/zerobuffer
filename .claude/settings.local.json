@@ -177,7 +177,10 @@
       "Bash(dotnet add:*)",
       "Bash(./test-jsonrpc.sh:*)",
       "WebFetch(domain:docs.specflow.org)",
-      "Bash(dotnet list:*)"
+      "Bash(dotnet list:*)",
+      "Bash(dotnet sln add:*)",
+      "Bash(../run-single-test.sh)",
+      "Bash(./test-serve-directly.sh:*)"
     ],
     "deny": []
   }

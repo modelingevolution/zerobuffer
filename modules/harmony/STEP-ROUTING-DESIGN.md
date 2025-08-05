@@ -159,15 +159,80 @@ Step: "Given the 'reader' process creates buffer 'test'"
   ├─ Finds reader is C# process
   └─ Sends ONLY to C# process: "creates buffer 'test'"
 
+Step: "And sets buffer size to '1024'"
+  ├─ Orchestrator detects And keyword
+  ├─ Inherits process="reader" from previous step
+  └─ Sends ONLY to C# process: "sets buffer size to '1024'"
+
 Step: "When the 'writer' process connects to buffer 'test'"
   ├─ Orchestrator extracts: process="writer"
   ├─ Finds writer is Python process
   └─ Sends ONLY to Python process: "connects to buffer 'test'"
 
+Step: "And writes 'Hello' to the buffer"
+  ├─ Orchestrator detects And keyword
+  ├─ Inherits process="writer" from previous step
+  └─ Sends ONLY to Python process: "writes 'Hello' to the buffer"
+
 Step: "Then the 'reader' process should read 'Hello'"
   ├─ Orchestrator extracts: process="reader"
   ├─ Finds reader is C# process
   └─ Sends ONLY to C# process: "should read 'Hello'"
+```
+
+## Handling And/But Keywords
+
+The orchestrator must handle Gherkin's And/But keywords which inherit context from the previous step:
+
+```csharp
+public class StepRouter
+{
+    private string? _lastProcess;
+    private StepType _lastStepType = StepType.Given;
+    
+    public async Task<StepResult> RouteStep(
+        StepDefinition step,
+        PlatformCombination platforms)
+    {
+        // Handle And/But inheritance
+        var effectiveStepType = step.Type;
+        var effectiveProcess = step.Process;
+        
+        if (step.Type == StepType.And || step.Type == StepType.But)
+        {
+            effectiveStepType = _lastStepType;
+            effectiveProcess = effectiveProcess ?? _lastProcess;
+        }
+        else
+        {
+            _lastStepType = step.Type;
+        }
+        
+        if (effectiveProcess != null)
+        {
+            _lastProcess = effectiveProcess;
+            
+            // Route to specific process
+            var platform = platforms.GetPlatform(effectiveProcess);
+            var connection = _processManager.GetConnection(effectiveProcess);
+            
+            return await connection.InvokeAsync<StepResult>(
+                "executeStep",
+                new
+                {
+                    stepType = effectiveStepType.ToString().ToLower(),
+                    step = step.ProcessedText,
+                    parameters = step.Parameters,
+                    table = step.Table
+                });
+        }
+        else
+        {
+            // No process specified - coordination step
+            return await HandleCoordinationStep(step);
+        }
+    }
+}
 ```
 
 ## Updated TestContext

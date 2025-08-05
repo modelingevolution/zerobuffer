@@ -69,40 +69,30 @@ public class GherkinParser : IGherkinParser
     
     private BackgroundDefinition ParseBackground(Background background)
     {
+        var stepParser = new StepParser(_contextExtractor);
+        
         return new BackgroundDefinition
         {
-            Steps = background.Steps.Select(ParseStep).ToList()
+            Steps = background.Steps.Select(step => stepParser.ParseStep(step)).ToList()
         };
     }
     
     private ScenarioDefinition ParseScenario(Scenario scenario, BackgroundDefinition? background)
     {
+        var stepParser = new StepParser(_contextExtractor);
+        
         return new ScenarioDefinition
         {
             Name = scenario.Name,
             Description = scenario.Description,
             Background = background,
-            Steps = scenario.Steps.Select(ParseStep).ToList(),
+            Steps = scenario.Steps.Select(step => stepParser.ParseStep(step)).ToList(),
             Tags = scenario.Tags.Select(t => t.Name).ToList()
         };
     }
     
     // ScenarioOutline support removed - not available in newer Gherkin versions
     // Would need to implement custom parsing or use an older version if needed
-    
-    private StepDefinition ParseStep(Step step)
-    {
-        var (process, processedText) = _contextExtractor.ExtractContext(step.Text);
-        
-        return new StepDefinition
-        {
-            Type = ParseStepType(step.Keyword.Trim()),
-            Text = step.Text,
-            Process = process,
-            ProcessedText = processedText
-        };
-    }
-    
     
     private StepType ParseStepType(string keyword)
     {
@@ -115,5 +105,65 @@ public class GherkinParser : IGherkinParser
             "but" => StepType.But,
             _ => StepType.And
         };
+    }
+    
+    private class StepParser
+    {
+        private readonly IProcessContextExtractor _contextExtractor;
+        private string? _lastProcess;
+        private StepType _lastStepType = StepType.Given;
+        
+        public StepParser(IProcessContextExtractor contextExtractor)
+        {
+            _contextExtractor = contextExtractor;
+        }
+        
+        public StepDefinition ParseStep(Step step)
+        {
+            var stepType = ParseStepType(step.Keyword.Trim());
+            var (process, processedText) = _contextExtractor.ExtractContext(step.Text);
+            
+            // Handle And/But inheritance
+            if (stepType == StepType.And || stepType == StepType.But)
+            {
+                // If no process was extracted and we have a previous process, use it
+                if (process == null && _lastProcess != null)
+                {
+                    process = _lastProcess;
+                }
+            }
+            else
+            {
+                // For Given/When/Then, update the last step type
+                _lastStepType = stepType;
+            }
+            
+            // Always update last process if we have one
+            if (process != null)
+            {
+                _lastProcess = process;
+            }
+            
+            return new StepDefinition
+            {
+                Type = stepType,
+                Text = step.Text,
+                Process = process,
+                ProcessedText = processedText
+            };
+        }
+        
+        private StepType ParseStepType(string keyword)
+        {
+            return keyword.ToLowerInvariant() switch
+            {
+                "given" => StepType.Given,
+                "when" => StepType.When,
+                "then" => StepType.Then,
+                "and" => StepType.And,
+                "but" => StepType.But,
+                _ => StepType.And
+            };
+        }
     }
 }

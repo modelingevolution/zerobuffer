@@ -13,19 +13,15 @@ public class ScenarioExecution
     public PlatformCombination Platforms { get; }
     public string TestId { get; }
     
-    private readonly IProcessManager _processManager;
-    private readonly IStepExecutor _stepExecutor;
+    
     
     public ScenarioExecution(
         ScenarioDefinition scenario, 
-        PlatformCombination platforms,
-        IProcessManager processManager,
-        IStepExecutor stepExecutor)
+        PlatformCombination platforms)
     {
         Scenario = scenario ?? throw new ArgumentNullException(nameof(scenario));
         Platforms = platforms ?? throw new ArgumentNullException(nameof(platforms));
-        _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
-        _stepExecutor = stepExecutor ?? throw new ArgumentNullException(nameof(stepExecutor));
+        
         
         TestId = GenerateTestId();
     }
@@ -33,7 +29,7 @@ public class ScenarioExecution
     /// <summary>
     /// Executes the scenario with the configured platform combination
     /// </summary>
-    public async Task<ExecutionResult> RunAsync(CancellationToken cancellationToken = default)
+    public async Task<ExecutionResult> RunAsync(IStepExecutor stepExecutor, IProcessManager processManager, CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         var logs = new List<LogEntry>();
@@ -41,14 +37,14 @@ public class ScenarioExecution
         try
         {
             // Start required processes
-            await StartProcessesAsync(cancellationToken);
+            await StartProcessesAsync(processManager,cancellationToken);
             
             // Execute background steps if any
             if (Scenario.Background != null)
             {
                 foreach (var step in Scenario.Background.Steps)
                 {
-                    var result = await _stepExecutor.ExecuteStepAsync(step, Platforms, cancellationToken);
+                    var result = await stepExecutor.ExecuteStepAsync(step, Platforms, cancellationToken);
                     logs.AddRange(result.Logs);
                     
                     if (!result.Success)
@@ -67,7 +63,7 @@ public class ScenarioExecution
             // Execute scenario steps
             foreach (var step in Scenario.Steps)
             {
-                var result = await _stepExecutor.ExecuteStepAsync(step, Platforms, cancellationToken);
+                var result = await stepExecutor.ExecuteStepAsync(step, Platforms, cancellationToken);
                 logs.AddRange(result.Logs);
                 
                 if (!result.Success)
@@ -102,7 +98,7 @@ public class ScenarioExecution
         }
         finally
         {
-            await StopProcessesAsync();
+            await StopProcessesAsync(processManager);
         }
     }
     
@@ -128,19 +124,19 @@ public class ScenarioExecution
         return $"{platformId}-{scenarioId}";
     }
     
-    private async Task StartProcessesAsync(CancellationToken cancellationToken)
+    private async Task StartProcessesAsync(IProcessManager processManager, CancellationToken cancellationToken)
     {
         var processes = ExtractProcessNames();
         
         foreach (var (processName, platform) in Platforms.GetMappings(processes))
         {
-            await _processManager.StartProcessAsync(processName, platform, cancellationToken);
+            await processManager.StartProcessAsync(processName, platform, cancellationToken);
         }
     }
     
-    private async Task StopProcessesAsync()
+    private async Task StopProcessesAsync(IProcessManager processManager)
     {
-        await _processManager.StopAllProcessesAsync();
+        await processManager.StopAllProcessesAsync();
     }
     
     private List<string> ExtractProcessNames()

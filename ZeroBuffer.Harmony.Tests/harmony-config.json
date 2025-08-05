@@ -1,0 +1,22 @@
+{
+  "platforms": {
+    "csharp": {
+      "executable": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.Serve/bin/Debug/net9.0/ZeroBuffer.Serve",
+      "arguments": "",
+      "workingDirectory": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer"
+    },
+    "python": {
+      "executable": "python",
+      "arguments": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/python/zerobuffer_serve.py",
+      "workingDirectory": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer"
+    },
+    "cpp": {
+      "executable": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/cpp/build/zerobuffer-serve",
+      "arguments": "",
+      "workingDirectory": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer"
+    }
+  },
+  "featuresPath": "Features",
+  "defaultTimeoutMs": 30000,
+  "processInitializationDelayMs": 1000
+}

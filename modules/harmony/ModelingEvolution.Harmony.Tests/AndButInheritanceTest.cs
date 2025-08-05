@@ -29,7 +29,7 @@ Scenario: Process context should be inherited
     And writes 'Hello' to the buffer
     But should not block
     Then the 'reader' process should read 'Hello'
-    And the read position should advance
+    And should verify the read position advances
 ";
         
         // Parse the feature
@@ -82,13 +82,14 @@ Scenario: Process context should be inherited
             var noProcessSteps = scenario.Steps.Where(s => s.Process == null).Count();
             
             _output.WriteLine($"\n=== Analysis ===");
-            _output.WriteLine($"Reader steps: {readerSteps} (should be 4)");
+            _output.WriteLine($"Reader steps: {readerSteps} (should be 5)");
             _output.WriteLine($"Writer steps: {writerSteps} (should be 3)");
             _output.WriteLine($"No process steps: {noProcessSteps} (should be 0)");
             
-            // This will likely fail showing the issue
-            Assert.True(noProcessSteps == 0, 
-                "And/But steps should inherit process context but currently don't");
+            // Now this passes - And/But steps inherit process context
+            Assert.Equal(0, noProcessSteps);
+            Assert.Equal(5, readerSteps); // 1 Given + 2 And + 1 Then + 1 And
+            Assert.Equal(3, writerSteps); // 1 When + 1 And + 1 But
         }
         finally
         {

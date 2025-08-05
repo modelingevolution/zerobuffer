@@ -11,25 +11,16 @@ public interface IScenarioGenerator
 {
     IEnumerable<ScenarioExecution> GenerateScenarios(
         string featuresPath,
-        string[] platforms,
-        IProcessManager processManager,
-        IStepExecutor stepExecutor);
+        params string[] platforms);
 }
 
-public class ScenarioGenerator : IScenarioGenerator
+public class ScenarioGenerator(IGherkinParser parser) : IScenarioGenerator
 {
-    private readonly IGherkinParser _parser;
-    
-    public ScenarioGenerator(IGherkinParser parser)
-    {
-        _parser = parser ?? throw new ArgumentNullException(nameof(parser));
-    }
-    
+    private readonly IGherkinParser _parser = parser ?? throw new ArgumentNullException(nameof(parser));
+
     public IEnumerable<ScenarioExecution> GenerateScenarios(
         string featuresPath,
-        string[] platforms,
-        IProcessManager processManager,
-        IStepExecutor stepExecutor)
+        params string[] platforms)
     {
         var scenarios = _parser.ParseFeatureFiles(Path.Combine(featuresPath, "*.feature"));
         
@@ -49,9 +40,7 @@ public class ScenarioGenerator : IScenarioGenerator
             {
                 yield return new ScenarioExecution(
                     scenario,
-                    combination,
-                    processManager,
-                    stepExecutor);
+                    combination);
             }
         }
     }
