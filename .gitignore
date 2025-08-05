@@ -101,3 +101,5 @@ vcpkg_installed/
 /modules/harmony/ModelingEvolution.Harmony.Tests/bin/Debug/net9.0
 /modules/harmony/ModelingEvolution.Harmony.Tests/obj
 /ZeroBuffer.Harmony.Tests/obj
+/ZeroBuffer.Harmony.Tests/CodeGeneration/obj
+/ZeroBuffer.Harmony.Tests/CodeGeneration/bin/Debug/net9.0
