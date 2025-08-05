@@ -34,9 +34,7 @@ public class TestNameVerificationTest : TestBase
         // Act - Generate first 20 scenarios
         var scenarios = scenarioGenerator.GenerateScenarios(
             configuration.FeaturesPath,
-            platforms,
-            mockProcessManager,
-            stepExecutor).Take(20).ToList();
+            platforms).Take(20).ToList();
         
         // Output test names
         _output.WriteLine("=== GENERATED TEST NAMES (First 20) ===\n");

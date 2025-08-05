@@ -46,9 +46,7 @@ public class ScenarioGeneratorTests
         // Act
         var scenarios = _generator.GenerateScenarios(
             "Features",
-            platforms,
-            _processManagerMock.Object,
-            _stepExecutorMock.Object
+            platforms
         ).ToList();
         
         // Assert
@@ -88,9 +86,7 @@ public class ScenarioGeneratorTests
         // Act
         var scenarios = _generator.GenerateScenarios(
             "Features",
-            platforms,
-            _processManagerMock.Object,
-            _stepExecutorMock.Object
+            platforms
         ).ToList();
         
         // Assert
@@ -126,9 +122,7 @@ public class ScenarioGeneratorTests
         // Act
         var scenarios = _generator.GenerateScenarios(
             "Features",
-            platforms,
-            _processManagerMock.Object,
-            _stepExecutorMock.Object
+            platforms
         ).ToList();
         
         // Assert
@@ -155,9 +149,7 @@ public class ScenarioGeneratorTests
         // Act
         var scenarios = _generator.GenerateScenarios(
             "Features",
-            new[] { "csharp" },
-            _processManagerMock.Object,
-            _stepExecutorMock.Object
+            new[] { "csharp" }
         ).ToList();
         
         // Assert

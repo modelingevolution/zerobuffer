@@ -11,6 +11,7 @@ public class ScenarioDefinition
     public List<StepDefinition> Steps { get; init; } = new();
     public List<string> Tags { get; init; } = new();
     public Dictionary<string, string> Metadata { get; init; } = new();
+    public string? FeatureFile { get; set; }
 }
 
 /// <summary>
@@ -75,6 +76,14 @@ public class PlatformCombination
         {
             yield return (process, GetPlatform(process));
         }
+    }
+    
+    /// <summary>
+    /// Gets all processes in this platform combination
+    /// </summary>
+    public IEnumerable<string> GetAllProcesses()
+    {
+        return _mapping.Keys;
     }
     
     /// <summary>

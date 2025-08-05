@@ -4,6 +4,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,8 @@
 
   <ItemGroup>
     <ProjectReference Include="../modules/harmony/ModelingEvolution.Harmony/ModelingEvolution.Harmony.csproj" />
+    <ProjectReference Include="../csharp/ZeroBuffer/ZeroBuffer.csproj" />
+    <ProjectReference Include="../csharp/ZeroBuffer.Serve/ZeroBuffer.Serve.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,4 +37,34 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  
+  <!-- Exclude generated files and CodeGeneration folder from default compile items -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Generated\**;CodeGeneration\**</DefaultItemExcludes>
+  </PropertyGroup>
+  
+  <!-- Include generated test files from all subdirectories -->
+  <ItemGroup>
+    <Compile Include="Generated\**\*.generated.cs" />
+  </ItemGroup>
+  
+  <!-- MSBuild target to generate tests before build -->
+  <Target Name="GenerateHarmonyTests" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <FeaturesPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../modules/harmony/ModelingEvolution.Harmony/Features'))</FeaturesPath>
+      <GeneratedPath>$(MSBuildProjectDirectory)/Generated</GeneratedPath>
+    </PropertyGroup>
+    
+    <!-- Create Generated directory if it doesn't exist -->
+    <MakeDir Directories="$(GeneratedPath)" />
+    
+    <!-- Run the test generator (we'll compile and run the generator inline) -->
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)/CodeGeneration/TestGeneratorConsole.csproj&quot; -- &quot;$(FeaturesPath)&quot; &quot;$(GeneratedPath)&quot; &quot;$(MSBuildProjectDirectory)/harmony-config.json&quot;" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" />
+  </Target>
+  
+  <!-- Clean generated files -->
+  <Target Name="CleanGeneratedTests" BeforeTargets="Clean">
+    <RemoveDir Directories="$(MSBuildProjectDirectory)/Generated" />
+  </Target>
+  
 </Project>

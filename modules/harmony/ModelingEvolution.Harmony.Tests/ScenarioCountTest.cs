@@ -36,9 +36,7 @@ public class ScenarioCountTest : TestBase
         // Act - Generate all scenarios
         var allScenarios = scenarioGenerator.GenerateScenarios(
             configuration.FeaturesPath,
-            platforms,
-            mockProcessManager,
-            stepExecutor).ToList();
+            platforms).ToList();
         
         // Count unique base scenarios
         var uniqueScenarios = allScenarios

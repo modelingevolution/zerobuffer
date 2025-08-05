@@ -48,9 +48,7 @@ public class ComprehensiveJsonRpcLoggingTest : TestBase, IDisposable
         var platforms = new[] { "csharp", "python", "cpp" };
         var allScenarios = _scenarioGenerator.GenerateScenarios(
             _configuration.FeaturesPath,
-            platforms,
-            _mockProcessManager,
-            _stepExecutor
+            platforms
         ).ToList();
         
         _output.WriteLine($"=== COMPREHENSIVE JSON-RPC LOG ===");
@@ -72,7 +70,7 @@ public class ComprehensiveJsonRpcLoggingTest : TestBase, IDisposable
             
             try
             {
-                var result = await scenario.RunAsync();
+                var result = await scenario.RunAsync(_stepExecutor, _mockProcessManager);
                 
                 if (!result.Success)
                 {

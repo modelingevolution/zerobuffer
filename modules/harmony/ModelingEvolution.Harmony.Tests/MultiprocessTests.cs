@@ -44,7 +44,7 @@ public class MultiprocessTests : TestBase, IDisposable
         _output.WriteLine($"Test ID: {scenario.TestId}");
         _output.WriteLine("");
         
-        var result = await scenario.RunAsync();
+        var result = await scenario.RunAsync(_stepExecutor, _processManager);
         
         // Output logs
         foreach (var log in result.Logs)
@@ -85,9 +85,7 @@ public class MultiprocessTests : TestBase, IDisposable
         // Just return first few scenarios to avoid too many test cases
         foreach (var scenario in scenarioGenerator.GenerateScenarios(
             configuration.FeaturesPath,
-            platforms,
-            mockProcessManager, // Pass the mock, not the real one
-            stepExecutor).Take(10))
+            platforms).Take(10))
         {
             yield return new object[] { scenario };
         }

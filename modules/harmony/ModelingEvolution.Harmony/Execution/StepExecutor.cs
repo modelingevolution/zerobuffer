@@ -26,71 +26,29 @@ public class StepExecutor : IStepExecutor
     {
         try
         {
-            // Determine target process
-            var targetProcess = step.Process;
-            if (string.IsNullOrEmpty(targetProcess))
+            var targetProcesses = GetTargetProcesses(step, platforms);
+            
+            if (targetProcesses.Count == 0)
             {
-                // No specific process, this is a general step
-                // TODO: We should broadcast this to all processes
-                _logger.LogWarning("Step has no process context: {Step}", step.Text);
+                _logger.LogWarning("No processes available for step: {Step}", step.Text);
                 return new StepExecutionResult
                 {
                     Success = true,
-                    Logs = [new() { Message = $"Skipping step with no process context: {step.Text}" }]
+                    Logs = [new() { Message = $"No processes available: {step.Text}" }]
                 };
             }
             
-            // Get connection to the process
-            var connection = _processManager.GetConnection(targetProcess);
-            var platform = platforms.GetPlatform(targetProcess);
-            
-            _logger.LogDebug("Executing step on {Process} ({Platform}): {Step}", 
-                targetProcess, platform, step.Text);
-            
-            // Prepare request
-            var request = new
+            var isBroadcast = string.IsNullOrEmpty(step.Process);
+            if (isBroadcast)
             {
-                process = targetProcess,
-                stepType = step.Type.ToString().ToLowerInvariant(),
-                step = step.ProcessedText ?? step.Text,
-                originalStep = step.Text,
-                parameters = step.Parameters
-            };
+                _logger.LogInformation("Broadcasting step to all processes: {Step}", step.Text);
+            }
             
-            // Execute via JSON-RPC
-            var response = await connection.InvokeAsync<StepResponse>(
-                "executeStep", 
-                request, 
-                cancellationToken);
+            var results = await Task.WhenAll(
+                targetProcesses.Select(processName => 
+                    ExecuteOnProcessAsync(step, processName, platforms, isBroadcast, cancellationToken)));
             
-            // Convert response to result
-            var logs = new List<LogEntry>();
-
-            if (response.Logs == null)
-                return new StepExecutionResult
-                {
-                    Success = response.Success,
-                    Error = response.Error,
-                    Data = response.Data ?? new Dictionary<string, object>(),
-                    Logs = logs
-                };
-
-            logs.AddRange(response.Logs.Select(log => new LogEntry
-            {
-                Timestamp = DateTime.UtcNow,
-                Process = targetProcess,
-                Platform = platform,
-                Level = log.Level ?? "INFO",
-                Message = log.Message ?? ""
-            }));
-
-            return new StepExecutionResult
-            {
-                Success = response.Success,
-                Error = response.Error,
-                Data = response.Data ?? new Dictionary<string, object>(),
-                Logs = logs
-            };
+            return CombineResults(results, isBroadcast);
         }
         catch (Exception ex)
         {
@@ -100,19 +58,120 @@ public class StepExecutor : IStepExecutor
             {
                 Success = false,
                 Error = ex.Message,
-                Logs = new List<LogEntry>
-                {
-                    new()
-                    {
-                        Timestamp = DateTime.UtcNow,
-                        Process = step.Process ?? "unknown",
-                        Platform = "unknown",
-                        Level = "ERROR",
-                        Message = $"Step execution failed: {ex.Message}"
-                    }
-                }
+                Logs = [CreateErrorLog(step.Process ?? "unknown", ex.Message)]
             };
         }
+    }
+    
+    private List<string> GetTargetProcesses(StepDefinition step, PlatformCombination platforms)
+    {
+        return string.IsNullOrEmpty(step.Process) 
+            ? platforms.GetAllProcesses().ToList() 
+            : [step.Process];
+    }
+    
+    private async Task<StepExecutionResult> ExecuteOnProcessAsync(
+        StepDefinition step, 
+        string processName, 
+        PlatformCombination platforms,
+        bool isBroadcast,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var connection = _processManager.GetConnection(processName);
+            var platform = platforms.GetPlatform(processName);
+            
+            _logger.LogDebug("Executing step on {Process} ({Platform}): {Step}", 
+                processName, platform, step.Text);
+            
+            var request = CreateStepRequest(step, processName, isBroadcast);
+            var response = await connection.InvokeAsync<StepResponse>(
+                "executeStep", request, cancellationToken);
+            
+            return ConvertResponse(response, processName, platform);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to execute on {Process}", processName);
+            
+            return new StepExecutionResult
+            {
+                Success = false,
+                Error = $"{processName}: {ex.Message}",
+                Logs = [CreateErrorLog(processName, ex.Message)]
+            };
+        }
+    }
+    
+    private object CreateStepRequest(StepDefinition step, string processName, bool isBroadcast)
+    {
+        return new
+        {
+            process = processName,
+            stepType = step.Type.ToString().ToLowerInvariant(),
+            step = step.ProcessedText ?? step.Text,
+            originalStep = step.Text,
+            parameters = step.Parameters,
+            isBroadcast
+        };
+    }
+    
+    private StepExecutionResult ConvertResponse(StepResponse response, string processName, string platform)
+    {
+        var logs = response.Logs?.Select(log => new LogEntry
+        {
+            Timestamp = DateTime.UtcNow,
+            Process = processName,
+            Platform = platform,
+            Level = log.Level ?? "INFO",
+            Message = log.Message ?? ""
+        }).ToList() ?? new List<LogEntry>();
+        
+        return new StepExecutionResult
+        {
+            Success = response.Success,
+            Error = response.Error,
+            Data = response.Data ?? new Dictionary<string, object>(),
+            Logs = logs
+        };
+    }
+    
+    private StepExecutionResult CombineResults(StepExecutionResult[] results, bool isBroadcast)
+    {
+        var allLogs = results.SelectMany(r => r.Logs).ToList();
+        var failures = results.Where(r => !r.Success).ToList();
+        
+        if (failures.Count == 0)
+        {
+            return new StepExecutionResult
+            {
+                Success = true,
+                Logs = allLogs
+            };
+        }
+        
+        var errorPrefix = isBroadcast ? "Broadcast failed on: " : "Execution failed: ";
+        var errors = string.Join(", ", failures.Select(f => f.Error));
+        
+        return new StepExecutionResult
+        {
+            Success = false,
+            Error = errorPrefix + errors,
+            Logs = allLogs
+        };
+    }
+    
+    private LogEntry CreateErrorLog(string process, string message)
+    {
+        return new LogEntry
+        {
+            Timestamp = DateTime.UtcNow,
+            Process = process,
+            Platform = "unknown",
+            Level = "ERROR",
+            Message = $"Step execution failed: {message}"
+        };
     }
     
     private class StepResponse

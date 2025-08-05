@@ -34,6 +34,7 @@ public class GherkinParser : IGherkinParser
             yield break;
         }
         
+        var featureFileName = Path.GetFileNameWithoutExtension(path);
         BackgroundDefinition? background = null;
         
         foreach (var child in feature.Children)
@@ -44,7 +45,9 @@ public class GherkinParser : IGherkinParser
             }
             else if (child is Scenario scenario)
             {
-                yield return ParseScenario(scenario, background);
+                var scenarioDefinition = ParseScenario(scenario, background);
+                scenarioDefinition.FeatureFile = featureFileName;
+                yield return scenarioDefinition;
             }
             // Skip ScenarioOutline for now - not supported in newer Gherkin versions
         }

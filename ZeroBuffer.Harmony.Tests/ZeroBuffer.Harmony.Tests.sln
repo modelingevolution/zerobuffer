@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Harmony.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelingEvolution.Harmony", "..\modules\harmony\ModelingEvolution.Harmony\ModelingEvolution.Harmony.csproj", "{9E216934-18C1-EEB0-07BA-E93867D8B755}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelingEvolution.Harmony.Tests", "..\modules\harmony\ModelingEvolution.Harmony.Tests\ModelingEvolution.Harmony.Tests.csproj", "{C5613208-DC25-AA54-3A51-A02D23BCE458}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{9E216934-18C1-EEB0-07BA-E93867D8B755}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E216934-18C1-EEB0-07BA-E93867D8B755}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E216934-18C1-EEB0-07BA-E93867D8B755}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5613208-DC25-AA54-3A51-A02D23BCE458}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5613208-DC25-AA54-3A51-A02D23BCE458}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5613208-DC25-AA54-3A51-A02D23BCE458}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5613208-DC25-AA54-3A51-A02D23BCE458}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

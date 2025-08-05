@@ -96,10 +96,11 @@ Thumbs.db
 # vcpkg
 vcpkg_installed/
 .vcpkg/
-/modules/harmony/ModelingEvolution.Harmony/bin/Debug/net9.0
-/modules/harmony/ModelingEvolution.Harmony/obj
-/modules/harmony/ModelingEvolution.Harmony.Tests/bin/Debug/net9.0
-/modules/harmony/ModelingEvolution.Harmony.Tests/obj
-/ZeroBuffer.Harmony.Tests/obj
-/ZeroBuffer.Harmony.Tests/CodeGeneration/obj
-/ZeroBuffer.Harmony.Tests/CodeGeneration/bin/Debug/net9.0
+/modules/harmony/ModelingEvolution.Harmony/bin/
+/modules/harmony/ModelingEvolution.Harmony/obj/
+/modules/harmony/ModelingEvolution.Harmony.Tests/bin/
+/modules/harmony/ModelingEvolution.Harmony.Tests/obj/
+/ZeroBuffer.Harmony.Tests/obj/
+/ZeroBuffer.Harmony.Tests/bin/
+/ZeroBuffer.Harmony.Tests/CodeGeneration/obj/
+/ZeroBuffer.Harmony.Tests/CodeGeneration/bin/
