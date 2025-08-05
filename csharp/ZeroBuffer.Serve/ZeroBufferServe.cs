@@ -34,9 +34,10 @@ public class ZeroBufferServe
         using var jsonRpc = new StreamJsonRpc.JsonRpc(stdout, stdin);
         
         // Register JSON-RPC methods
-        jsonRpc.AddLocalRpcMethod("health", new Func<object, Task<bool>>(async _ => await Task.FromResult(true)));
+        jsonRpc.AddLocalRpcMethod("health", new Func<HealthRequest, Task<bool>>(HealthAsync));
         jsonRpc.AddLocalRpcMethod("initialize", new Func<InitializeRequest, Task<bool>>(InitializeAsync));
         jsonRpc.AddLocalRpcMethod("executeStep", new Func<StepRequest, Task<StepResponse>>(ExecuteStepAsync));
+        jsonRpc.AddLocalRpcMethod("discover", new Func<Task<DiscoverResponse>>(DiscoverAsync));
         jsonRpc.AddLocalRpcMethod("cleanup", new Func<Task>(CleanupAsync));
         jsonRpc.AddLocalRpcMethod("shutdown", new Action(() => 
         {
@@ -58,6 +59,25 @@ public class ZeroBufferServe
         }
         
         _logger.LogInformation("JSON-RPC server stopped");
+    }
+    
+    private async Task<bool> HealthAsync(HealthRequest request)
+    {
+        _logger.LogInformation("Health check requested with hostPid: {HostPid}, featureId: {FeatureId}", 
+            request.HostPid, request.FeatureId);
+        return await Task.FromResult(true);
+    }
+    
+    private async Task<DiscoverResponse> DiscoverAsync()
+    {
+        _logger.LogInformation("Discovering available step definitions");
+        
+        var steps = _stepExecutor.GetStepRegistry().GetAllSteps();
+        
+        var response = new DiscoverResponse { Steps = steps };
+        
+        _logger.LogInformation("Discovered {Count} step definitions", response.Steps.Count);
+        return await Task.FromResult(response);
     }
     
     private async Task<bool> InitializeAsync(InitializeRequest request)

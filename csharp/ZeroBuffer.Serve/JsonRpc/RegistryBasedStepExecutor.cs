@@ -20,4 +20,9 @@ public class RegistryBasedStepExecutor : IStepExecutor
         // The StepRegistry handles all the execution logic
         return await _stepRegistry.ExecuteStepAsync(request.StepType, request.Step);
     }
+    
+    public StepRegistry GetStepRegistry()
+    {
+        return _stepRegistry;
+    }
 }

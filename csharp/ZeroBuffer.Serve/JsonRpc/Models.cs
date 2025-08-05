@@ -1,5 +1,11 @@
 namespace ZeroBuffer.Serve.JsonRpc;
 
+public class HealthRequest
+{
+    public int HostPid { get; set; }
+    public int FeatureId { get; set; }
+}
+
 public class InitializeRequest
 {
     // Harmony ProcessManager parameters
@@ -40,4 +46,15 @@ public class LogEntry
 {
     public string Level { get; set; } = "INFO";
     public string Message { get; set; } = string.Empty;
+}
+
+public class DiscoverResponse
+{
+    public List<StepInfo> Steps { get; set; } = new();
+}
+
+public class StepInfo
+{
+    public string Type { get; set; } = string.Empty;
+    public string Pattern { get; set; } = string.Empty;
 }

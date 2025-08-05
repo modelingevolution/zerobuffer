@@ -388,10 +388,10 @@ public class StressTestsSteps
     [Then(@"verify sequence numbers handle overflow")]
     public void ThenVerifySequenceNumbersHandleOverflow()
     {
-        if (_testContext.TryGetData<Task<object>>("stress_test_task", out var stressTask))
+        if (_testContext.TryGetData<Task>("stress_test_task", out var stressTask))
         {
-            var result = stressTask.Result;
-            _logger.LogInformation("Verified sequence number overflow handling during stress test: {Result}", result);
+            stressTask.Wait();
+            _logger.LogInformation("Verified sequence number overflow handling during stress test");
         }
         else
         {
@@ -409,10 +409,10 @@ public class StressTestsSteps
     [Then(@"ensure stable operation throughout")]
     public void ThenEnsureStableOperationThroughout()
     {
-        if (_testContext.TryGetData<Task<object>>("stress_test_task", out var stressTask))
+        if (_testContext.TryGetData<Task>("stress_test_task", out var stressTask))
         {
-            var result = stressTask.Result;
-            _logger.LogInformation("Ensured stable operation throughout stress test: {Result}", result);
+            stressTask.Wait();
+            _logger.LogInformation("Ensured stable operation throughout stress test");
         }
         else
         {

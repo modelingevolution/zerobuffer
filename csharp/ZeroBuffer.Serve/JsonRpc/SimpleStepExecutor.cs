@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ZeroBuffer.Serve.JsonRpc;
 
@@ -39,5 +40,13 @@ public class SimpleStepExecutor : IStepExecutor
                 new() { Level = "WARN", Message = $"No handler for: {request.Step}" }
             }
         };
+    }
+    
+    public StepRegistry GetStepRegistry()
+    {
+        // SimpleStepExecutor doesn't use a registry, return empty one
+        var serviceProvider = new ServiceCollection()
+            .BuildServiceProvider();
+        return new StepRegistry(Microsoft.Extensions.Logging.Abstractions.NullLogger<StepRegistry>.Instance, serviceProvider);
     }
 }

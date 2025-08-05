@@ -66,6 +66,11 @@ public abstract class HarmonyTestBase
     
     protected ScenarioExecution DeserializeScenario(string json)
     {
+        return DeserializeScenarioStatic(json);
+    }
+    
+    protected static ScenarioExecution DeserializeScenarioStatic(string json)
+    {
         var data = JsonSerializer.Deserialize<ScenarioData>(json) 
             ?? throw new InvalidOperationException("Failed to deserialize scenario");
         
@@ -77,9 +82,9 @@ public abstract class HarmonyTestBase
             Tags = data.Tags ?? new List<string>(),
             Background = data.Background != null ? new BackgroundDefinition
             {
-                Steps = data.Background.Select(DeserializeStep).ToList()
+                Steps = data.Background.Select(DeserializeStepStatic).ToList()
             } : null,
-            Steps = data.Steps.Select(DeserializeStep).ToList(),
+            Steps = data.Steps.Select(DeserializeStepStatic).ToList(),
             FeatureId = data.FeatureId
         };
         
@@ -90,6 +95,11 @@ public abstract class HarmonyTestBase
     }
     
     private StepDefinition DeserializeStep(StepData data)
+    {
+        return DeserializeStepStatic(data);
+    }
+    
+    private static StepDefinition DeserializeStepStatic(StepData data)
     {
         return new StepDefinition
         {

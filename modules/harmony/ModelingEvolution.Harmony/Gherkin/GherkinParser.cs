@@ -83,6 +83,7 @@ public class GherkinParser : IGherkinParser
     
     private ScenarioDefinition ParseScenario(Scenario scenario, BackgroundDefinition? background)
     {
+        // Create a new step parser for each scenario to maintain proper state
         var stepParser = new StepParser(_contextExtractor);
         
         return new ScenarioDefinition
@@ -130,6 +131,9 @@ public class GherkinParser : IGherkinParser
             // Handle And/But inheritance
             if (stepType == StepType.And || stepType == StepType.But)
             {
+                // And/But inherit the type from the last Given/When/Then
+                stepType = _lastStepType;
+                
                 // If no process was extracted and we have a previous process, use it
                 if (process == null && _lastProcess != null)
                 {

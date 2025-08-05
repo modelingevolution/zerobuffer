@@ -294,6 +294,28 @@ public class StepRegistry
         throw new NotSupportedException($"Parameter type {targetType.Name} is not supported");
     }
     
+    public List<StepInfo> GetAllSteps()
+    {
+        var result = new List<StepInfo>();
+        
+        foreach (var kvp in _steps)
+        {
+            var stepType = kvp.Key;
+            var stepDefinitions = kvp.Value;
+            
+            foreach (var stepDef in stepDefinitions)
+            {
+                result.Add(new StepInfo
+                {
+                    Type = stepType.ToString().ToLower(),
+                    Pattern = stepDef.Pattern
+                });
+            }
+        }
+        
+        return result.OrderBy(x => x.Type).ThenBy(x => x.Pattern).ToList();
+    }
+    
     private enum StepType
     {
         Given,

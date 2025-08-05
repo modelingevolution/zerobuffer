@@ -7,6 +7,20 @@ using ModelingEvolution.Harmony.ProcessManagement;
 
 namespace ModelingEvolution.Harmony.Tests;
 
+public class StepResponseTest
+{
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public Dictionary<string, object>? Data { get; set; }
+    public List<LogEntryTest> Logs { get; set; } = new();
+}
+
+public class LogEntryTest
+{
+    public string Level { get; set; } = "INFO";
+    public string Message { get; set; } = string.Empty;
+}
+
 public class CSharpServeIntegrationTest : IDisposable
 {
     private readonly ITestOutputHelper _output;
@@ -92,6 +106,8 @@ public class CSharpServeIntegrationTest : IDisposable
         
         var initRequest = new
         {
+            hostPid = 1234,
+            featureId = 5678,
             role = "reader",
             platform = "csharp",
             scenario = "Test Scenario",
@@ -99,13 +115,13 @@ public class CSharpServeIntegrationTest : IDisposable
         };
         
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var initResponse = await _jsonRpc.InvokeWithParameterObjectAsync<dynamic>(
+        var initResponse = await _jsonRpc.InvokeWithParameterObjectAsync<bool>(
             "initialize", 
             initRequest,
             cts.Token);
         
-        _output.WriteLine($"Initialize response: Success={initResponse.success}");
-        Assert.True((bool)initResponse.success);
+        _output.WriteLine($"Initialize response: Success={initResponse}");
+        Assert.True(initResponse);
         
         // Execute a simple step
         _output.WriteLine("Executing step...");
@@ -122,13 +138,13 @@ public class CSharpServeIntegrationTest : IDisposable
         };
         
         var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var stepResponse = await _jsonRpc.InvokeWithParameterObjectAsync<dynamic>(
+        var stepResponse = await _jsonRpc.InvokeWithParameterObjectAsync<StepResponseTest>(
             "executeStep",
             stepRequest,
             cts2.Token);
         
-        _output.WriteLine($"Step response: Success={stepResponse.success}");
-        Assert.True((bool)stepResponse.success);
+        _output.WriteLine($"Step response: Success={stepResponse.Success}");
+        Assert.True(stepResponse.Success);
         
         // Cleanup
         await _jsonRpc.InvokeAsync("cleanup");
