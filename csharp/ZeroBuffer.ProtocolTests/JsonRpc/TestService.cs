@@ -88,6 +88,19 @@ namespace ZeroBuffer.ProtocolTests.JsonRpc
                 Summary = context.GetSummary()
             };
         }
+
+        /// <summary>
+        /// Execute a generic step (used by SpecFlow tests)
+        /// </summary>
+        public async Task<StepResult> ExecuteStep(object request)
+        {
+            // For now, return a failure since we haven't implemented actual test logic
+            return await Task.FromResult(new StepResult
+            {
+                Success = false,
+                Error = "Not implemented: Generic step execution is not yet implemented"
+            });
+        }
     }
 
     // Request/Response DTOs
@@ -128,5 +141,13 @@ namespace ZeroBuffer.ProtocolTests.JsonRpc
     {
         public int ExitCode { get; set; }
         public string Summary { get; set; } = "";
+    }
+
+    public class StepResult
+    {
+        public bool Success { get; set; }
+        public Dictionary<string, object>? Data { get; set; }
+        public string? Error { get; set; }
+        public Dictionary<string, object>? Context { get; set; }
     }
 }

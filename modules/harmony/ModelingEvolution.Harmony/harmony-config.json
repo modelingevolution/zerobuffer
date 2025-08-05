@@ -1,0 +1,22 @@
+{
+  "platforms": {
+    "csharp": {
+      "executable": "dotnet",
+      "arguments": "run --project ../ZeroBuffer.ProtocolTests.Server/ZeroBuffer.ProtocolTests.Server.csproj -- serve",
+      "workingDirectory": "."
+    },
+    "python": {
+      "executable": "python",
+      "arguments": "zerobuffer_test_server.py serve",
+      "workingDirectory": "../../python"
+    },
+    "cpp": {
+      "executable": "./zerobuffer_test_server",
+      "arguments": "serve",
+      "workingDirectory": "../../cpp/build"
+    }
+  },
+  "featuresPath": "Features",
+  "defaultTimeoutMs": 30000,
+  "processInitializationDelayMs": 1000
+}

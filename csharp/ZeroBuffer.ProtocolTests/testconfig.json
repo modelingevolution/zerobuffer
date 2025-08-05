@@ -2,19 +2,19 @@
   "testMode": "separate-process",
   "targets": {
     "csharp": {
-      "executable": "dotnet",
-      "arguments": "run --project ZeroBuffer.ProtocolTests.csproj -- serve",
+      "executable": "echo",
+      "arguments": "C# serve not implemented yet",
       "workingDirectory": "."
     },
     "python": {
-      "executable": "python",
-      "arguments": "protocol_tests.py serve",
-      "workingDirectory": "../../python"
+      "executable": "echo",
+      "arguments": "Python serve not implemented yet",
+      "workingDirectory": "."
     },
     "cpp": {
-      "executable": "./zerobuffer_tests",
-      "arguments": "serve",
-      "workingDirectory": "../../cpp/build"
+      "executable": "echo",
+      "arguments": "C++ serve not implemented yet",
+      "workingDirectory": "."
     }
   },
   "defaultTimeout": 5000,

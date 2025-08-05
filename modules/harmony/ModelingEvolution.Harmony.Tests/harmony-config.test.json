@@ -1,0 +1,19 @@
+{
+  "platforms": {
+    "csharp": {
+      "executable": "mock-csharp",
+      "arguments": "test"
+    },
+    "python": {
+      "executable": "mock-python",
+      "arguments": "test"
+    },
+    "cpp": {
+      "executable": "mock-cpp",
+      "arguments": "test"
+    }
+  },
+  "featuresPath": "Features",
+  "defaultTimeoutMs": 5000,
+  "processInitializationDelayMs": 100
+}

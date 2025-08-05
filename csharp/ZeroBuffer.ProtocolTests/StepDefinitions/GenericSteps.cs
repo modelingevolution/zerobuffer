@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using StreamJsonRpc;
 using TechTalk.SpecFlow;
-using TechTalk.SpecFlow.Bindings;
+using Xunit.Abstractions;
 
 namespace ZeroBuffer.ProtocolTests.StepDefinitions
 {
@@ -10,641 +10,68 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
     public class GenericSteps
     {
         private readonly ScenarioContext _scenarioContext;
+        private readonly ITestOutputHelper _outputHelper;
         private readonly Dictionary<string, ProcessContext> _processes = new();
         private readonly Dictionary<string, JsonRpcClass> _rpcConnections = new();
         private readonly TestConfiguration _configuration;
-        private string _currentGivenTarget = "";
-        private string _currentWhenTarget = "";
-        private string _currentThenTarget = "";
+        private string _currentTarget = "";
 
-        public GenericSteps(ScenarioContext scenarioContext)
+        public GenericSteps(ScenarioContext scenarioContext, ITestOutputHelper outputHelper)
         {
             _scenarioContext = scenarioContext;
+            _outputHelper = outputHelper;
             _configuration = LoadConfiguration();
         }
 
-        #region Background Steps
+        #region Generic Step Definitions
 
-        [Given(@"^the test mode is configured$")]
-        public void GivenTheTestModeIsConfigured()
+        [Given(@"(.*)")]
+        public async Task GivenGeneric(string step)
         {
-            // This would read from configuration to determine test mode
-            // For now, we'll use separate process mode by default
-            _scenarioContext["testMode"] = "separate-process";
+            await ExecuteStepWithParsing("given", step);
         }
 
-        #endregion
-
-        #region Context Setting Steps
-
-        [Given(@"^the (reader|writer|server|client) is '(.+)'$")]
-        [When(@"^the (reader|writer|server|client) is '(.+)'$")]
-        [Then(@"^the (reader|writer|server|client) is '(.+)'$")]
-        public async Task SetContext(string role, string target)
+        [When(@"(.*)")]
+        public async Task WhenGeneric(string step)
         {
-            if (IsConfiguredTarget(target))
-            {
-                var stepType = _scenarioContext.StepContext.StepInfo.StepInstance.StepDefinitionKeyword;
-                switch (stepType)
-                {
-                    case StepDefinitionKeyword.Given:
-                        _currentGivenTarget = target;
-                        break;
-                    case StepDefinitionKeyword.When:
-                        _currentWhenTarget = target;
-                        break;
-                    case StepDefinitionKeyword.Then:
-                        _currentThenTarget = target;
-                        break;
-                }
-                
-                await EnsureProcessStarted(target);
-            }
-            else
-            {
-                // Not a context switch, execute as a normal step
-                await ExecuteStep($"the {role} is '{target}'");
-            }
+            await ExecuteStepWithParsing("when", step);
         }
 
-        #endregion
-
-        #region Generic Step Handlers
-
-        // Given steps - more specific patterns to avoid ambiguity
-        [Given(@"^create (.+)$")]
-        public async Task GivenCreate(string step)
+        [Then(@"(.*)")]
+        public async Task ThenGeneric(string step)
         {
-            await ExecuteStep($"create {step}");
-        }
-        
-        [Given(@"^manually (.+)$")]
-        public async Task GivenManually(string step)
-        {
-            await ExecuteStep($"manually {step}");
-        }
-        
-        [Given(@"^two readers (.+)$")]
-        public async Task GivenTwoReaders(string step)
-        {
-            await ExecuteStep($"two readers {step}");
-        }
-        
-        [Given(@"^perform (.+)$")]
-        public async Task GivenPerform(string step)
-        {
-            await ExecuteStep($"perform {step}");
-        }
-        
-        [Given(@"^attempt (.+)$")]
-        public async Task GivenAttempt(string step)
-        {
-            await ExecuteStep($"attempt {step}");
-        }
-        
-        [Given(@"^the platform is (.+)$")]
-        public async Task GivenPlatform(string platform)
-        {
-            await ExecuteStep($"the platform is {platform}");
-        }
-        
-        [Given(@"^spawn (.+)$")]
-        public async Task GivenSpawn(string step)
-        {
-            await ExecuteStep($"spawn {step}");
-        }
-        
-        [Given(@"^create buffers with various names:$")]
-        public async Task GivenCreateBuffersWithNames(TechTalk.SpecFlow.Table table)
-        {
-            await ExecuteStep($"create buffers with various names: [table]");
-        }
-        
-        [Given(@"^measure (.+)$")]
-        public async Task GivenMeasure(string step)
-        {
-            await ExecuteStep($"measure {step}");
-        }
-        
-        [Given(@"^benchmark environment is prepared$")]
-        public async Task GivenBenchmarkEnvironment()
-        {
-            await ExecuteStep("benchmark environment is prepared");
-        }
-        
-        [Given(@"^buffer size is (.+)$")]
-        public async Task GivenBufferSize(string size)
-        {
-            await ExecuteStep($"buffer size is {size}");
-        }
-        
-        [Given(@"^create maximum (.+)$")]
-        public async Task GivenCreateMaximum(string what)
-        {
-            await ExecuteStep($"create maximum {what}");
-        }
-        
-        [Given(@"^stress test environment is prepared$")]
-        public async Task GivenStressTestEnvironment()
-        {
-            await ExecuteStep("stress test environment is prepared");
-        }
-
-        // When steps - more specific patterns to avoid ambiguity
-        [When(@"^connect (.+)$")]
-        public async Task WhenConnect(string step)
-        {
-            await ExecuteStep($"connect {step}");
-        }
-        
-        [When(@"^write (.+)$")]
-        public async Task WhenWrite(string step)
-        {
-            await ExecuteStep($"write {step}");
-        }
-        
-        [When(@"^read (.+)$")]
-        public async Task WhenRead(string step)
-        {
-            await ExecuteStep($"read {step}");
-        }
-        
-        [When(@"^attempt (.+)$")]
-        public async Task WhenAttempt(string step)
-        {
-            await ExecuteStep($"attempt {step}");
-        }
-        
-        [When(@"^simulate (.+)$")]
-        public async Task WhenSimulate(string step)
-        {
-            await ExecuteStep($"simulate {step}");
-        }
-        
-        [When(@"^fill (.+)$")]
-        public async Task WhenFill(string step)
-        {
-            await ExecuteStep($"fill {step}");
-        }
-        
-        [When(@"^send (.+)$")]
-        public async Task WhenSend(string step)
-        {
-            await ExecuteStep($"send {step}");
-        }
-        
-        [When(@"^spawn (.+)$")]
-        public async Task WhenSpawn(string step)
-        {
-            await ExecuteStep($"spawn {step}");
-        }
-        
-        [When(@"^start (.+)$")]
-        public async Task WhenStart(string step)
-        {
-            await ExecuteStep($"start {step}");
-        }
-        
-        [When(@"^create (.+)$")]
-        public async Task WhenCreate(string step)
-        {
-            await ExecuteStep($"create {step}");
-        }
-        
-        [When(@"^dispose (.+)$")]
-        public async Task WhenDispose(string step)
-        {
-            await ExecuteStep($"dispose {step}");
-        }
-        
-        [When(@"^do not (.+)$")]
-        public async Task WhenDoNot(string step)
-        {
-            await ExecuteStep($"do not {step}");
-        }
-        
-        [When(@"^acquire (.+)$")]
-        public async Task WhenAcquire(string step)
-        {
-            await ExecuteStep($"acquire {step}");
-        }
-        
-        [When(@"^commit (.+)$")]
-        public async Task WhenCommit(string step)
-        {
-            await ExecuteStep($"commit {step}");
-        }
-        
-        [When(@"^test (.+)$")]
-        public async Task WhenTest(string step)
-        {
-            await ExecuteStep($"test {step}");
-        }
-        
-        [When(@"^monitor (.+)$")]
-        public async Task WhenMonitor(string step)
-        {
-            await ExecuteStep($"monitor {step}");
-        }
-        
-        [When(@"^measure (.+)$")]
-        public async Task WhenMeasure(string step)
-        {
-            await ExecuteStep($"measure {step}");
-        }
-        
-        [When(@"^compare (.+)$")]
-        public async Task WhenCompare(string step)
-        {
-            await ExecuteStep($"compare {step}");
-        }
-        
-        [When(@"^reach (.+)$")]
-        public async Task WhenReach(string step)
-        {
-            await ExecuteStep($"reach {step}");
-        }
-        
-        [When(@"^cleanup (.+)$")]
-        public async Task WhenCleanup(string step)
-        {
-            await ExecuteStep($"cleanup {step}");
-        }
-        
-        [When(@"^both (.+)$")]
-        public async Task WhenBoth(string step)
-        {
-            await ExecuteStep($"both {step}");
-        }
-        
-        [When(@"^kill (.+)$")]
-        public async Task WhenKill(string step)
-        {
-            await ExecuteStep($"kill {step}");
-        }
-        
-        [When(@"^graceful (.+)$")]
-        public async Task WhenGraceful(string step)
-        {
-            await ExecuteStep($"graceful {step}");
-        }
-        
-        [When(@"^test continuous_free_bytes calculation with:$")]
-        public async Task WhenTestContinuousFreeBytes(TechTalk.SpecFlow.Table table)
-        {
-            await ExecuteStep($"test continuous_free_bytes calculation with: [table]");
-        }
-
-        // Then steps - more specific patterns to avoid ambiguity  
-        [Then(@"^read (.+)$")]
-        public async Task ThenRead(string step)
-        {
-            await ExecuteStep($"read {step}");
-        }
-        
-        [Then(@"^write (.+)$")]
-        public async Task ThenWrite(string step)
-        {
-            await ExecuteStep($"write {step}");
-        }
-        
-        [Then(@"^frame (.+)$")]
-        public async Task ThenFrame(string step)
-        {
-            await ExecuteStep($"frame {step}");
-        }
-        
-        [Then(@"^signal (.+)$")]
-        public async Task ThenSignal(string step)
-        {
-            await ExecuteStep($"signal {step}");
-        }
-        
-        [Then(@"^all (.+)$")]
-        public async Task ThenAll(string step)
-        {
-            await ExecuteStep($"all {step}");
-        }
-        
-        [Then(@"^next (.+)$")]
-        public async Task ThenNext(string step)
-        {
-            await ExecuteStep($"next {step}");
-        }
-        
-        [Then(@"^buffer (.+)$")]
-        public async Task ThenBuffer(string step)
-        {
-            await ExecuteStep($"buffer {step}");
-        }
-        
-        [Then(@"^writer should (.+)$")]
-        public async Task ThenWriterShould(string step)
-        {
-            await ExecuteStep($"writer should {step}");
-        }
-        
-        [Then(@"^reader should (.+)$")]
-        public async Task ThenReaderShould(string step)
-        {
-            await ExecuteStep($"reader should {step}");
-        }
-        
-        [Then(@"^wait (.+)$")]
-        public async Task ThenWait(string step)
-        {
-            await ExecuteStep($"wait {step}");
-        }
-        
-        [Then(@"^connection should (.+)$")]
-        public async Task ThenConnectionShould(string step)
-        {
-            await ExecuteStep($"connection should {step}");
-        }
-        
-        [Then(@"^metadata (.+)$")]
-        public async Task ThenMetadata(string step)
-        {
-            await ExecuteStep($"metadata {step}");
-        }
-        
-        [Then(@"^second (.+)$")]
-        public async Task ThenSecond(string step)
-        {
-            await ExecuteStep($"second {step}");
-        }
-        
-        [Then(@"^original (.+)$")]
-        public async Task ThenOriginal(string step)
-        {
-            await ExecuteStep($"original {step}");
-        }
-        
-        [Then(@"^corrupt (.+)$")]
-        public async Task ThenCorrupt(string step)
-        {
-            await ExecuteStep($"corrupt {step}");
-        }
-        
-        [Then(@"^error should (.+)$")]
-        public async Task ThenErrorShould(string step)
-        {
-            await ExecuteStep($"error should {step}");
-        }
-        
-        [Then(@"^throw (.+)$")]
-        public async Task ThenThrow(string step)
-        {
-            await ExecuteStep($"throw {step}");
-        }
-        
-        [Then(@"^stale (.+)$")]
-        public async Task ThenStale(string step)
-        {
-            await ExecuteStep($"stale {step}");
-        }
-        
-        [Then(@"^old (.+)$")]
-        public async Task ThenOld(string step)
-        {
-            await ExecuteStep($"old {step}");
-        }
-        
-        [Then(@"^new (.+)$")]
-        public async Task ThenNew(string step)
-        {
-            await ExecuteStep($"new {step}");
-        }
-        
-        [Then(@"^creation should (.+)$")]
-        public async Task ThenCreationShould(string step)
-        {
-            await ExecuteStep($"creation should {step}");
-        }
-        
-        [Then(@"^appropriate (.+)$")]
-        public async Task ThenAppropriate(string step)
-        {
-            await ExecuteStep($"appropriate {step}");
-        }
-        
-        [Then(@"^partial (.+)$")]
-        public async Task ThenPartial(string step)
-        {
-            await ExecuteStep($"partial {step}");
-        }
-        
-        [Then(@"^client should (.+)$")]
-        public async Task ThenClientShould(string step)
-        {
-            await ExecuteStep($"client should {step}");
-        }
-        
-        [Then(@"^server should (.+)$")]
-        public async Task ThenServerShould(string step)
-        {
-            await ExecuteStep($"server should {step}");
-        }
-        
-        [Then(@"^response should (.+)$")]
-        public async Task ThenResponseShould(string step)
-        {
-            await ExecuteStep($"response should {step}");
-        }
-        
-        [Then(@"^responses should (.+)$")]
-        public async Task ThenResponsesShould(string step)
-        {
-            await ExecuteStep($"responses should {step}");
-        }
-        
-        [Then(@"^each (.+)$")]
-        public async Task ThenEach(string step)
-        {
-            await ExecuteStep($"each {step}");
-        }
-        
-        [Then(@"^no (.+)$")]
-        public async Task ThenNo(string step)
-        {
-            await ExecuteStep($"no {step}");
-        }
-        
-        [Then(@"^total (.+)$")]
-        public async Task ThenTotal(string step)
-        {
-            await ExecuteStep($"total {step}");
-        }
-        
-        [Then(@"^verify (.+)$")]
-        public async Task ThenVerify(string step)
-        {
-            await ExecuteStep($"verify {step}");
-        }
-        
-        [Then(@"^system (.+)$")]
-        public async Task ThenSystem(string step)
-        {
-            await ExecuteStep($"system {step}");
-        }
-        
-        [Then(@"^only (.+)$")]
-        public async Task ThenOnly(string step)
-        {
-            await ExecuteStep($"only {step}");
-        }
-        
-        [Then(@"^other (.+)$")]
-        public async Task ThenOther(string step)
-        {
-            await ExecuteStep($"other {step}");
-        }
-        
-        [Then(@"^calculations should (.+)$")]
-        public async Task ThenCalculationsShould(string step)
-        {
-            await ExecuteStep($"calculations should {step}");
-        }
-        
-        [Then(@"^both (.+)$")]
-        public async Task ThenBoth(string step)
-        {
-            await ExecuteStep($"both {step}");
-        }
-        
-        [Then(@"^mutable (.+)$")]
-        public async Task ThenMutable(string step)
-        {
-            await ExecuteStep($"mutable {step}");
-        }
-        
-        [Then(@"^immutable (.+)$")]
-        public async Task ThenImmutable(string step)
-        {
-            await ExecuteStep($"immutable {step}");
-        }
-        
-        [Then(@"^continue (.+)$")]
-        public async Task ThenContinue(string step)
-        {
-            await ExecuteStep($"continue {step}");
-        }
-        
-        [Then(@"^complete (.+)$")]
-        public async Task ThenComplete(string step)
-        {
-            await ExecuteStep($"complete {step}");
-        }
-        
-        [Then(@"^detect (.+)$")]
-        public async Task ThenDetect(string step)
-        {
-            await ExecuteStep($"detect {step}");
-        }
-        
-        [Then(@"^attempt (.+)$")]
-        public async Task ThenAttempt(string step)
-        {
-            await ExecuteStep($"attempt {step}");
-        }
-        
-        [Then(@"^permission (.+)$")]
-        public async Task ThenPermission(string step)
-        {
-            await ExecuteStep($"permission {step}");
-        }
-        
-        [Then(@"^report (.+)$")]
-        public async Task ThenReport(string step)
-        {
-            await ExecuteStep($"report {step}");
-        }
-        
-        [Then(@"^calculate (.+)$")]
-        public async Task ThenCalculate(string step)
-        {
-            await ExecuteStep($"calculate {step}");
-        }
-        
-        [Then(@"^expect (.+)$")]
-        public async Task ThenExpect(string step)
-        {
-            await ExecuteStep($"expect {step}");
-        }
-        
-        [Then(@"^measure (.+)$")]
-        public async Task ThenMeasure(string step)
-        {
-            await ExecuteStep($"measure {step}");
-        }
-        
-        [Then(@"^monitor (.+)$")]
-        public async Task ThenMonitor(string step)
-        {
-            await ExecuteStep($"monitor {step}");
-        }
-        
-        [Then(@"^ensure (.+)$")]
-        public async Task ThenEnsure(string step)
-        {
-            await ExecuteStep($"ensure {step}");
-        }
-        
-        [Then(@"^handle (.+)$")]
-        public async Task ThenHandle(string step)
-        {
-            await ExecuteStep($"handle {step}");
-        }
-        
-        [Then(@"^test (.+)$")]
-        public async Task ThenTest(string step)
-        {
-            await ExecuteStep($"test {step}");
-        }
-        
-        [Then(@"^proper (.+)$")]
-        public async Task ThenProper(string step)
-        {
-            await ExecuteStep($"proper {step}");
-        }
-        
-        [Then(@"^coalesced (.+)$")]
-        public async Task ThenCoalesced(string step)
-        {
-            await ExecuteStep($"coalesced {step}");
-        }
-        
-        [Then(@"^semaphore (.+)$")]
-        public async Task ThenSemaphore(string step)
-        {
-            await ExecuteStep($"semaphore {step}");
-        }
-        
-        [Then(@"^after each (.+)$")]
-        public async Task ThenAfterEach(string step)
-        {
-            await ExecuteStep($"after each {step}");
+            await ExecuteStepWithParsing("then", step);
         }
 
         #endregion
 
         #region Private Methods
 
-        private async Task ExecuteStep(string step)
+        private async Task ExecuteStepWithParsing(string stepType, string fullStep)
         {
-            var currentTarget = GetCurrentTarget();
-            if (string.IsNullOrEmpty(currentTarget))
+            _outputHelper.WriteLine($"[GenericSteps] ExecuteStepWithParsing: stepType={stepType}, fullStep='{fullStep}'");
+            
+            // Check if this is a context-switching step
+            if (TryHandleContextSwitch(stepType, fullStep))
             {
-                throw new InvalidOperationException("No target process set. Use 'Given/When/Then the [role] is '[target]'' first.");
+                _outputHelper.WriteLine($"[GenericSteps] Context switch handled for step: {fullStep}");
+                return;
             }
 
-            var rpc = GetRpcConnection(currentTarget);
-            var stepType = _scenarioContext.StepContext.StepInfo.StepInstance.StepDefinitionKeyword.ToString().ToLower();
+            // Execute the step on the current target
+            if (string.IsNullOrEmpty(_currentTarget))
+            {
+                _outputHelper.WriteLine($"[GenericSteps] ERROR: No target process set. Current target is empty.");
+                throw new InvalidOperationException("No target process set. Use 'the [role] is '[target]'' first.");
+            }
+
+            _outputHelper.WriteLine($"[GenericSteps] Getting RPC connection for target: {_currentTarget}");
+            var rpc = GetRpcConnection(_currentTarget);
 
             var request = new
             {
                 stepType,
-                step,
+                step = fullStep,
                 context = new
                 {
                     scenarioId = _scenarioContext.ScenarioInfo.Title,
@@ -654,7 +81,13 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
 
             try
             {
-                var result = await rpc.InvokeAsync<StepResult>("executeStep", request);
+                _outputHelper.WriteLine($"[GenericSteps] Invoking executeStep via JSON-RPC with request: stepType={request.stepType}, step={request.step}");
+                
+                // Add timeout to prevent hanging
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                var result = await rpc.InvokeWithCancellationAsync<StepResult>("executeStep", new[] { request }, cts.Token);
+                
+                _outputHelper.WriteLine($"[GenericSteps] JSON-RPC response received: Success={result.Success}, Error={result.Error}");
                 
                 if (!result.Success)
                 {
@@ -676,16 +109,40 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
             }
         }
 
-        private string GetCurrentTarget()
+        private bool TryHandleContextSwitch(string stepType, string step)
         {
-            var keyword = _scenarioContext.StepContext.StepInfo.StepInstance.StepDefinitionKeyword;
-            return keyword switch
+            // Pattern: "the {role} is '{target}'"
+            var match = System.Text.RegularExpressions.Regex.Match(step, @"^the (reader|writer|server|client) is '([^']+)'$");
+            if (match.Success)
             {
-                StepDefinitionKeyword.Given => _currentGivenTarget,
-                StepDefinitionKeyword.When => _currentWhenTarget,
-                StepDefinitionKeyword.Then => _currentThenTarget,
-                _ => ""
-            };
+                var role = match.Groups[1].Value;
+                var target = match.Groups[2].Value;
+                _outputHelper.WriteLine($"[GenericSteps] Context switch detected: role={role}, target={target}");
+
+                if (IsConfiguredTarget(target))
+                {
+                    _outputHelper.WriteLine($"[GenericSteps] Target '{target}' is configured. Setting as current target.");
+                    _currentTarget = target;
+                    EnsureProcessStarted(target).Wait();
+                    return true;
+                }
+                else
+                {
+                    _outputHelper.WriteLine($"[GenericSteps] Target '{target}' is NOT configured. Available targets: {string.Join(", ", _configuration.Targets.Keys)}");
+                }
+            }
+
+            // Handle special background steps that don't need a target
+            if (step == "the test mode is configured" || 
+                step == "benchmark environment is prepared" ||
+                step == "stress test environment is prepared")
+            {
+                // These are just setup steps, store in context
+                _scenarioContext["testMode"] = _configuration.TestMode;
+                return true;
+            }
+
+            return false;
         }
 
         private bool IsConfiguredTarget(string target)
@@ -697,7 +154,10 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
         {
             if (!_processes.ContainsKey(target))
             {
+                _outputHelper.WriteLine($"[GenericSteps] Starting process for target: {target}");
                 var targetConfig = _configuration.Targets[target];
+                _outputHelper.WriteLine($"[GenericSteps] Process config: executable={targetConfig.Executable}, args={targetConfig.Arguments}, workdir={targetConfig.WorkingDirectory}");
+                
                 var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
@@ -708,20 +168,49 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
                         CreateNoWindow = true,
                         RedirectStandardInput = true,
                         RedirectStandardOutput = true,
-                        RedirectStandardError = true
+                        RedirectStandardError = true,
+                        WorkingDirectory = targetConfig.WorkingDirectory ?? Environment.CurrentDirectory
                     }
                 };
 
-                process.Start();
+                // Capture stderr output
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        _outputHelper.WriteLine($"[GenericSteps] Process {target} stderr: {e.Data}");
+                    }
+                };
+
+                _outputHelper.WriteLine($"[GenericSteps] Starting process...");
+                try
+                {
+                    process.Start();
+                    process.BeginErrorReadLine();
+                    _outputHelper.WriteLine($"[GenericSteps] Process started with PID: {process.Id}");
+                }
+                catch (Exception ex)
+                {
+                    _outputHelper.WriteLine($"[GenericSteps] ERROR starting process: {ex.Message}");
+                    throw;
+                }
                 
+                _outputHelper.WriteLine($"[GenericSteps] Creating JSON-RPC connection...");
                 var rpc = new JsonRpcClass(process.StandardInput.BaseStream, process.StandardOutput.BaseStream);
                 rpc.StartListening();
+                _outputHelper.WriteLine($"[GenericSteps] JSON-RPC connection established and listening.");
 
                 _processes[target] = new ProcessContext { Process = process, Rpc = rpc };
                 _rpcConnections[target] = rpc;
 
                 // Give the process time to initialize
-                await Task.Delay(500);
+                _outputHelper.WriteLine($"[GenericSteps] Waiting {_configuration.InitializationDelay}ms for process initialization...");
+                await Task.Delay(_configuration.InitializationDelay);
+                _outputHelper.WriteLine($"[GenericSteps] Process initialization complete for target: {target}");
+            }
+            else
+            {
+                _outputHelper.WriteLine($"[GenericSteps] Process already running for target: {target}");
             }
         }
 
@@ -750,26 +239,38 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
 
         private TestConfiguration LoadConfiguration()
         {
-            // For now, return a hardcoded configuration
-            // In a real implementation, this would load from a JSON file
+            var configPath = Path.Combine(AppContext.BaseDirectory, "testconfig.json");
+            if (File.Exists(configPath))
+            {
+                var json = File.ReadAllText(configPath);
+                return JsonSerializer.Deserialize<TestConfiguration>(json) ?? new TestConfiguration();
+            }
+
+            // Default configuration for development
             return new TestConfiguration
             {
+                TestMode = "separate-process",
+                DefaultTimeout = 5000,
+                InitializationDelay = 500,
                 Targets = new Dictionary<string, TargetConfiguration>
                 {
                     ["csharp"] = new TargetConfiguration
                     {
                         Executable = "dotnet",
-                        Arguments = "run --project ../ZeroBuffer.ProtocolTests -- serve"
+                        Arguments = "run --project ZeroBuffer.ProtocolTests.csproj -- serve",
+                        WorkingDirectory = "."
                     },
                     ["python"] = new TargetConfiguration
                     {
                         Executable = "python",
-                        Arguments = "../../python/protocol_tests.py serve"
+                        Arguments = "protocol_tests.py serve",
+                        WorkingDirectory = "../../python"
                     },
                     ["cpp"] = new TargetConfiguration
                     {
-                        Executable = "../../cpp/build/zerobuffer_tests",
-                        Arguments = "serve"
+                        Executable = "./zerobuffer_tests",
+                        Arguments = "serve",
+                        WorkingDirectory = "../../cpp/build"
                     }
                 }
             };
@@ -801,6 +302,7 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
             }
             _processes.Clear();
             _rpcConnections.Clear();
+            _currentTarget = "";
         }
 
         #endregion
@@ -815,6 +317,9 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
 
         private class TestConfiguration
         {
+            public string TestMode { get; set; } = "separate-process";
+            public int DefaultTimeout { get; set; } = 5000;
+            public int InitializationDelay { get; set; } = 500;
             public Dictionary<string, TargetConfiguration> Targets { get; set; } = new();
         }
 
@@ -822,6 +327,7 @@ namespace ZeroBuffer.ProtocolTests.StepDefinitions
         {
             public string Executable { get; set; } = "";
             public string Arguments { get; set; } = "";
+            public string? WorkingDirectory { get; set; }
         }
 
         private class StepResult
