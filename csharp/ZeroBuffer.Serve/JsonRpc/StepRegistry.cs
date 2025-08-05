@@ -40,7 +40,8 @@ public class StepRegistry
         {
             RegisterStepsFromType(type);
         }
-        
+        _logger.LogDebug("Steps registered from: {TypeName}", String.Join(", ", bindingTypes.Select(x=>x.Name)));
+
         // Log summary
         _logger.LogInformation("Step discovery complete: Given={Given}, When={When}, Then={Then}",
             _steps[StepType.Given].Count,
@@ -50,7 +51,7 @@ public class StepRegistry
     
     private void RegisterStepsFromType(Type type)
     {
-        _logger.LogDebug("Registering steps from type: {TypeName}", type.Name);
+       
         
         foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -88,8 +89,7 @@ public class StepRegistry
         };
         
         _steps[stepType].Add(stepInfo);
-        _logger.LogDebug("Registered {StepType} step: {Pattern} -> {Type}.{Method}",
-            stepType, pattern, declaringType.Name, method.Name);
+        //_logger.LogDebug("Registered {StepType} step: {Pattern} -> {Type}.{Method}",stepType, pattern, declaringType.Name, method.Name);
     }
     
     public async Task<StepResponse> ExecuteStepAsync(string stepTypeStr, string stepText)

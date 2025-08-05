@@ -6,8 +6,8 @@
       "workingDirectory": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer"
     },
     "python": {
-      "executable": "python",
-      "arguments": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/python/zerobuffer_serve.py",
+      "executable": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/python/zerobuffer-serve",
+      "arguments": "",
       "workingDirectory": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer"
     },
     "cpp": {

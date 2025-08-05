@@ -79,6 +79,9 @@ namespace ZeroBuffer.Serve.Features
         {
 #line 4
     #line hidden
+#line 5
+        testRunner.Given("the test mode is configured", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
         }
         
         void System.IDisposable.Dispose()
@@ -94,7 +97,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 3.2 - Concurrent Initialization Race", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 6
+#line 7
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -107,19 +110,19 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 7
-        testRunner.Given("two readers \'csharp\' and \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 8
+        testRunner.Given("two \'reader\' processes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 9
+#line 10
         testRunner.When("both simultaneously attempt to create buffer \'race-test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 11
+#line 12
         testRunner.Then("only one should succeed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 12
+#line 13
         testRunner.And("other should receive appropriate error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 13
+#line 14
         testRunner.And("no resource corruption should occur", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -134,7 +137,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 3.3 - Writer Before Reader", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 15
+#line 16
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -147,16 +150,16 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 16
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
 #line 17
-        testRunner.And("attempt to connect to non-existent buffer \'no-reader\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Given("the system is ready", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 19
-        testRunner.Then("connection should fail with appropriate error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.When("a \'writer\' process attempts to connect to non-existent buffer \'no-reader\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 20
+#line 21
+        testRunner.Then("the connection should fail with appropriate error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line hidden
+#line 22
         testRunner.And("error should indicate no shared memory found", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -171,7 +174,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 4.3 - Zero Metadata Configuration", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 22
+#line 24
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -184,29 +187,21 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 23
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
-#line 24
-        testRunner.And("create buffer \'test-no-metadata\' with metadata size \'0\' and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 26
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 25
+        testRunner.Given("the \'reader\' process creates buffer \'test-no-metadata\' with metadata size \'0\' and" +
+                        " payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 27
-        testRunner.And("connect to buffer \'test-no-metadata\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("the \'writer\' process connects to buffer \'test-no-metadata\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 28
-        testRunner.And("write frames without metadata", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process writes frames without metadata", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 30
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'reader\' process should read frames successfully", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 31
-        testRunner.And("read frames successfully", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 32
-        testRunner.And("system should work without metadata", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the system should work without metadata", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -220,7 +215,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 10.5 - Writer Death During Read", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 34
+#line 33
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -233,38 +228,23 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 35
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 34
+        testRunner.Given("the \'reader\' process creates buffer \'test-writer-death-read\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 36
-        testRunner.And("create buffer \'test-writer-death-read\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("the \'writer\' process connects to buffer \'test-writer-death-read\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 38
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.And("the \'reader\' process waits on semaphore for data", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 39
-        testRunner.And("connect to buffer \'test-writer-death-read\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 41
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 40
+        testRunner.And("the \'writer\' process crashes while reader blocked", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 42
-        testRunner.And("wait on semaphore for data", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Then("the \'reader\' process should detect writer death after timeout \'5\' seconds", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 44
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 45
-        testRunner.And("simulate crash while reader blocked", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 47
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 48
-        testRunner.And("detect writer death after timeout \'5\' seconds", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 49
-        testRunner.And("throw writer dead exception", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 43
+        testRunner.And("the \'reader\' process should throw writer dead exception", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -278,7 +258,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 10.6 - System Resource Exhaustion", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 51
+#line 45
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -291,19 +271,19 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 52
+#line 46
         testRunner.Given("create maximum allowed semaphores", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 54
+#line 48
         testRunner.When("attempt to create buffer \'test-sem-exhausted\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 56
-        testRunner.Then("creation should fail with system error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 50
+        testRunner.Then("the creation should fail with system error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 57
+#line 51
         testRunner.And("appropriate error handling should occur", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 58
+#line 52
         testRunner.And("partial resources should be cleaned up", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }

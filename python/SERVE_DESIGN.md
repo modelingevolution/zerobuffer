@@ -160,7 +160,9 @@ The server implements the following JSON-RPC methods over stdin/stdout:
 
 ### Step Definition Pattern
 
-Steps are defined using decorators that mimic SpecFlow/Gherkin syntax:
+Steps are defined using decorators that mimic SpecFlow/Gherkin syntax. 
+
+**CRITICAL DESIGN PRINCIPLE**: Step definitions should NOT filter by process role. Harmony routes commands intelligently to the correct process, so each step definition should simply execute what it's asked to do.
 
 ```python
 from zerobuffer_serve.step_definitions import given, when, then
@@ -175,6 +177,7 @@ class BasicCommunicationSteps:
     @given(r"the '([^']+)' process creates buffer '([^']+)' with metadata size '(\d+)' and payload size '(\d+)'")
     async def create_buffer(self, process: str, buffer_name: str, metadata_size: str, payload_size: str):
         """Create a new ZeroBuffer with specified configuration"""
+        # NO ROLE FILTERING - Harmony routes this to the right process
         config = BufferConfig(
             metadata_size=int(metadata_size),
             payload_size=int(payload_size)
@@ -188,6 +191,7 @@ class BasicCommunicationSteps:
     @when(r"the '([^']+)' process connects to buffer '([^']+)'")
     async def connect_to_buffer(self, process: str, buffer_name: str):
         """Connect a writer to an existing buffer"""
+        # NO ROLE FILTERING - Just execute the step
         writer = Writer(buffer_name)
         self._writers[buffer_name] = writer
         

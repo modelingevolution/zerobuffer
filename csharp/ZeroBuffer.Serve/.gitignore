@@ -1,0 +1,5 @@
+# Ignore copied feature files (source of truth is in ZeroBuffer.Harmony.Tests)
+Features/*.feature
+
+# Keep step definitions and generated code
+!Features/*.feature.cs

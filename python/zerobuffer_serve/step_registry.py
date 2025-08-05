@@ -1,0 +1,314 @@
+"""
+Step registry for discovering and executing test steps
+
+Provides automatic discovery of step definitions using decorators.
+"""
+
+import asyncio
+import inspect
+import re
+from enum import Enum
+from typing import Dict, List, Callable, Any, Optional, Tuple, Match
+import logging
+
+from .models import StepInfo, StepResponse, TableData, LogEntry
+
+
+class StepType(Enum):
+    """Step types matching Gherkin keywords"""
+    GIVEN = "given"
+    WHEN = "when"
+    THEN = "then"
+
+
+class StepDefinitionInfo:
+    """Information about a registered step"""
+    
+    def __init__(
+        self,
+        pattern: str,
+        regex: re.Pattern,
+        method: Callable,
+        instance: Any,
+        step_type: StepType
+    ):
+        self.pattern = pattern
+        self.regex = regex
+        self.method = method
+        self.instance = instance
+        self.step_type = step_type
+
+
+class StepRegistry:
+    """Registry for step definitions with discovery and execution"""
+    
+    def __init__(self, logger: logging.Logger):
+        self._logger = logger
+        self._steps: Dict[StepType, List[StepDefinitionInfo]] = {
+            StepType.GIVEN: [],
+            StepType.WHEN: [],
+            StepType.THEN: []
+        }
+        self._instances: List[Any] = []
+        
+    def register_instance(self, instance: Any):
+        """Register an instance containing step definitions"""
+        self._instances.append(instance)
+        self._logger.debug(f"Registered instance: {instance.__class__.__name__}")
+        
+    def discover_steps(self):
+        """Discover all step definitions from registered instances"""
+        for instance in self._instances:
+            self._discover_steps_from_instance(instance)
+            
+        # Log summary
+        self._logger.info(
+            f"Step discovery complete: Given={len(self._steps[StepType.GIVEN])}, "
+            f"When={len(self._steps[StepType.WHEN])}, "
+            f"Then={len(self._steps[StepType.THEN])}"
+        )
+        
+    def _discover_steps_from_instance(self, instance: Any):
+        """Discover steps from a single instance"""
+        class_name = instance.__class__.__name__
+        self._logger.debug(f"Discovering steps from: {class_name}")
+        
+        # Inspect all methods
+        for name, method in inspect.getmembers(instance, inspect.ismethod):
+            # Check for step decorators
+            if hasattr(method, '_step_definitions'):
+                for step_def in method._step_definitions:
+                    self._register_step(
+                        step_type=step_def['type'],
+                        pattern=step_def['pattern'],
+                        method=method,
+                        instance=instance
+                    )
+                    
+    def _register_step(
+        self,
+        step_type: StepType,
+        pattern: str,
+        method: Callable,
+        instance: Any
+    ):
+        """Register a single step definition"""
+        # Compile regex
+        regex = re.compile(f"^{pattern}$")
+        
+        step_info = StepDefinitionInfo(
+            pattern=pattern,
+            regex=regex,
+            method=method,
+            instance=instance,
+            step_type=step_type
+        )
+        
+        self._steps[step_type].append(step_info)
+        
+        self._logger.debug(
+            f"Registered {step_type.value} step: {pattern} -> "
+            f"{instance.__class__.__name__}.{method.__name__}"
+        )
+        
+    def get_all_steps(self) -> List[StepInfo]:
+        """Get all registered steps for discovery"""
+        result = []
+        
+        for step_type, steps in self._steps.items():
+            for step in steps:
+                result.append(StepInfo(
+                    type=step_type.value,
+                    pattern=step.pattern
+                ))
+                
+        return sorted(result, key=lambda x: (x.type, x.pattern))
+        
+    async def execute_step(
+        self,
+        step_type: str,
+        step_text: str,
+        parameters: Optional[Dict[str, Any]] = None,
+        table: Optional[TableData] = None
+    ) -> StepResponse:
+        """Execute a step by matching it to a definition"""
+        try:
+            self._logger.debug(f"Executing step: {step_type} {step_text}")
+            
+            # Parse step type
+            if step_type.lower() == "and":
+                # For "and" steps, try all types
+                matching_step, match = self._find_matching_step_any_type(step_text)
+            else:
+                try:
+                    typed_step_type = StepType(step_type.lower())
+                    matching_step, match = self._find_matching_step(typed_step_type, step_text)
+                except ValueError:
+                    # Invalid step type, try all
+                    matching_step, match = self._find_matching_step_any_type(step_text)
+                    
+            if not matching_step or not match:
+                error = f"No matching step definition found for: {step_type} {step_text}"
+                self._logger.warning(error)
+                return StepResponse(success=False, error=error)
+                
+            # Execute the step
+            return await self._execute_step_method(matching_step, match, parameters, table)
+            
+        except Exception as e:
+            self._logger.error(f"Error executing step: {e}", exc_info=True)
+            return StepResponse(success=False, error=str(e))
+            
+    def _find_matching_step(
+        self,
+        step_type: StepType,
+        step_text: str
+    ) -> Tuple[Optional[StepDefinitionInfo], Optional[Match]]:
+        """Find a matching step definition of a specific type"""
+        for step in self._steps[step_type]:
+            match = step.regex.match(step_text)
+            if match:
+                return step, match
+        return None, None
+        
+    def _find_matching_step_any_type(
+        self,
+        step_text: str
+    ) -> Tuple[Optional[StepDefinitionInfo], Optional[Match]]:
+        """Find a matching step definition of any type"""
+        for step_type in StepType:
+            step, match = self._find_matching_step(step_type, step_text)
+            if step:
+                self._logger.debug(f"Found matching {step_type.value} step for 'and' step")
+                return step, match
+        return None, None
+        
+    async def _execute_step_method(
+        self,
+        step_info: StepDefinitionInfo,
+        match: Match,
+        parameters: Optional[Dict[str, Any]],
+        table: Optional[TableData]
+    ) -> StepResponse:
+        """Execute a step method with parameters"""
+        try:
+            # Extract parameters from regex groups
+            method_params = self._extract_parameters(step_info.method, match, parameters, table)
+            
+            # Execute the method
+            if asyncio.iscoroutinefunction(step_info.method):
+                result = await step_info.method(*method_params)
+            else:
+                result = step_info.method(*method_params)
+                
+            # Log success
+            self._logger.info(f"Step executed: {step_info.method.__name__}")
+            
+            return StepResponse(
+                success=True,
+                logs=[LogEntry(level="INFO", message=f"Step executed: {step_info.method.__name__}")]
+            )
+            
+        except Exception as e:
+            self._logger.error(f"Error executing step method: {e}", exc_info=True)
+            return StepResponse(
+                success=False,
+                error=str(e),
+                logs=[LogEntry(level="ERROR", message=str(e))]
+            )
+            
+    def _extract_parameters(
+        self,
+        method: Callable,
+        match: Match,
+        extra_params: Optional[Dict[str, Any]],
+        table: Optional[TableData]
+    ) -> List[Any]:
+        """Extract parameters for method call"""
+        sig = inspect.signature(method)
+        params = list(sig.parameters.keys())
+        
+        # Skip 'self' parameter
+        if params and params[0] == 'self':
+            params = params[1:]
+            
+        result = []
+        
+        # Add regex group matches
+        for i, param in enumerate(params):
+            if i < len(match.groups()):
+                # Get value from regex match
+                value = match.group(i + 1)
+                # Convert type if needed
+                result.append(self._convert_parameter(value, sig.parameters[param].annotation))
+            elif param == 'table' and table:
+                # Special handling for table parameter
+                result.append(table)
+            elif param == 'parameters' and extra_params:
+                # Special handling for parameters dict
+                result.append(extra_params)
+            elif sig.parameters[param].default != inspect.Parameter.empty:
+                # Use default value
+                result.append(sig.parameters[param].default)
+            else:
+                # No value available
+                result.append(None)
+                
+        return result
+        
+    def _convert_parameter(self, value: str, param_type: type) -> Any:
+        """Convert string parameter to appropriate type"""
+        if param_type == str or param_type == inspect.Parameter.empty:
+            return value
+        elif param_type == int:
+            return int(value)
+        elif param_type == float:
+            return float(value)
+        elif param_type == bool:
+            return value.lower() in ('true', 'yes', '1')
+        else:
+            # Try to convert, fall back to string
+            try:
+                return param_type(value)
+            except:
+                return value
+
+
+# Step decorators
+def given(pattern: str):
+    """Decorator for Given steps"""
+    def decorator(func):
+        if not hasattr(func, '_step_definitions'):
+            func._step_definitions = []
+        func._step_definitions.append({
+            'type': StepType.GIVEN,
+            'pattern': pattern
+        })
+        return func
+    return decorator
+
+
+def when(pattern: str):
+    """Decorator for When steps"""
+    def decorator(func):
+        if not hasattr(func, '_step_definitions'):
+            func._step_definitions = []
+        func._step_definitions.append({
+            'type': StepType.WHEN,
+            'pattern': pattern
+        })
+        return func
+    return decorator
+
+
+def then(pattern: str):
+    """Decorator for Then steps"""
+    def decorator(func):
+        if not hasattr(func, '_step_definitions'):
+            func._step_definitions = []
+        func._step_definitions.append({
+            'type': StepType.THEN,
+            'pattern': pattern
+        })
+        return func
+    return decorator

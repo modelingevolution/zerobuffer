@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using TechTalk.SpecFlow;
+using ZeroBuffer;
 using ZeroBuffer.Serve.JsonRpc;
 
 namespace ZeroBuffer.Serve.StepDefinitions;
@@ -18,6 +19,27 @@ public class BasicCommunicationSteps
     {
         _testContext = testContext;
         _logger = logger;
+    }
+    
+    private string GetUniqueBufferName(string baseName)
+    {
+        // Get PID and feature ID from test context
+        var pid = Environment.ProcessId;
+        if (_testContext.TryGetData<int>("harmony_host_pid", out var hostPid))
+        {
+            pid = hostPid;
+        }
+        
+        var featureId = "unknown";
+        if (_testContext.TryGetData<string>("harmony_feature_id", out var harmonyFeatureId))
+        {
+            featureId = harmonyFeatureId;
+        }
+        
+        // Create unique buffer name: baseName-pid-featureId
+        var uniqueName = $"{baseName}-{pid}-{featureId}";
+        _logger.LogDebug("Created unique buffer name: {UniqueName} from base: {BaseName}", uniqueName, baseName);
+        return uniqueName;
     }
     
     [Given(@"the test environment is initialized")]
@@ -56,8 +78,9 @@ public class BasicCommunicationSteps
     [Given(@"creates buffer '([^']+)' with metadata size '(\d+)' and payload size '(\d+)'")]
     public void GivenCreateBufferWithSizes(string bufferName, int metadataSize, int payloadSize)
     {
-        _logger.LogInformation("Creating buffer '{BufferName}' with metadata size {MetadataSize} and payload size {PayloadSize}", 
-            bufferName, metadataSize, payloadSize);
+        var uniqueBufferName = GetUniqueBufferName(bufferName);
+        _logger.LogInformation("Creating buffer '{BufferName}' (unique: '{UniqueBufferName}') with metadata size {MetadataSize} and payload size {PayloadSize}", 
+            bufferName, uniqueBufferName, metadataSize, payloadSize);
         
         var config = new BufferConfig
         {
@@ -65,18 +88,33 @@ public class BasicCommunicationSteps
             PayloadSize = payloadSize
         };
         
-        var reader = new Reader(bufferName, config);
+        var reader = new Reader(uniqueBufferName, config);
         _readers[bufferName] = reader;
         _testContext.SetData($"buffer_{bufferName}", reader);
         _testContext.SetData("current_reader", reader);
+        
+        // Store the mapping from base name to unique name
+        _testContext.SetData($"buffer_name_mapping_{bufferName}", uniqueBufferName);
     }
     
-    [When(@"connect to buffer '([^']+)'")]
+    [When(@"connects to buffer '([^']+)'")]
     public void WhenConnectToBuffer(string bufferName)
     {
-        _logger.LogInformation("Connecting to buffer '{BufferName}'", bufferName);
+        // Get the unique buffer name that was created
+        string uniqueBufferName;
+        if (_testContext.TryGetData<string>($"buffer_name_mapping_{bufferName}", out var mappedName))
+        {
+            uniqueBufferName = mappedName;
+        }
+        else
+        {
+            // If no mapping exists, create a unique name
+            uniqueBufferName = GetUniqueBufferName(bufferName);
+        }
         
-        var writer = new Writer(bufferName);
+        _logger.LogInformation("Connecting to buffer '{BufferName}' (unique: '{UniqueBufferName}')", bufferName, uniqueBufferName);
+        
+        var writer = new Writer(uniqueBufferName);
         _writers[bufferName] = writer;
         _testContext.SetData($"writer_{bufferName}", writer);
         _testContext.SetData("current_writer", writer);
@@ -95,11 +133,12 @@ public class BasicCommunicationSteps
         catch (KeyNotFoundException)
         {
             // Fallback to dictionary
-            writer = _writers.Values.FirstOrDefault();
-            if (writer == null)
+            var writerFromDict = _writers.Values.FirstOrDefault();
+            if (writerFromDict == null)
             {
                 throw new InvalidOperationException("No writer available");
             }
+            writer = writerFromDict;
         }
         
         // Get metadata buffer for zero-copy write
@@ -129,11 +168,12 @@ public class BasicCommunicationSteps
         catch (KeyNotFoundException)
         {
             // Fallback to dictionary
-            writer = _writers.Values.FirstOrDefault();
-            if (writer == null)
+            var writerFromDict = _writers.Values.FirstOrDefault();
+            if (writerFromDict == null)
             {
                 throw new InvalidOperationException("No writer available");
             }
+            writer = writerFromDict;
         }
         
         var data = new byte[size];
@@ -184,11 +224,12 @@ public class BasicCommunicationSteps
         catch (KeyNotFoundException)
         {
             // Fallback to dictionary
-            reader = _readers.Values.FirstOrDefault();
-            if (reader == null)
+            var readerFromDict = _readers.Values.FirstOrDefault();
+            if (readerFromDict == null)
             {
                 throw new InvalidOperationException("No reader available");
             }
+            reader = readerFromDict;
         }
         
         var frame = reader.ReadFrame();
@@ -225,11 +266,12 @@ public class BasicCommunicationSteps
         catch (KeyNotFoundException)
         {
             // Fallback to dictionary
-            reader = _readers.Values.FirstOrDefault();
-            if (reader == null)
+            var readerFromDict = _readers.Values.FirstOrDefault();
+            if (readerFromDict == null)
             {
                 throw new InvalidOperationException("No reader available");
             }
+            reader = readerFromDict;
         }
         
         var frame = reader.ReadFrame();
@@ -594,5 +636,174 @@ public class BasicCommunicationSteps
         }
         
         _logger.LogInformation("Read frame with data: {Data}", data);
+    }
+    
+    [When(@"writes frame matching exactly payload size minus header")]
+    public void WhenWritesFrameMatchingExactlyPayloadSizeMinusHeader()
+    {
+        var writer = _testContext.GetData<Writer>("current_writer");
+        
+        // Get the buffer configuration to know the payload size
+        // Frame header size is typically 16 bytes (8 bytes for size + 8 bytes for sequence)
+        const int frameHeaderSize = 16;
+        
+        // Default to test context payload size or 100MB
+        int maxFrameSize = 104857600 - frameHeaderSize; // 100MB minus header
+        
+        // Try to get the actual payload size from context if available
+        if (_testContext.TryGetData<int>("payload_size", out var payloadSize))
+        {
+            maxFrameSize = payloadSize - frameHeaderSize;
+        }
+        
+        var data = new byte[maxFrameSize];
+        // Fill with test pattern
+        for (int i = 0; i < Math.Min(1024, data.Length); i++)
+        {
+            data[i] = (byte)(i % 256);
+        }
+        
+        writer.WriteFrame(data);
+        _logger.LogInformation("Wrote frame matching exactly payload size minus header: {Size} bytes", maxFrameSize);
+    }
+    
+    [Then(@"should read exactly the maximum frame")]
+    public void ThenShouldReadExactlyTheMaximumFrame()
+    {
+        var reader = _testContext.GetData<Reader>("current_reader");
+        var frame = reader.ReadFrame();
+        
+        // Expected size is payload size minus frame header
+        const int frameHeaderSize = 16;
+        int expectedSize = 104857600 - frameHeaderSize;
+        
+        if (_testContext.TryGetData<int>("payload_size", out var payloadSize))
+        {
+            expectedSize = payloadSize - frameHeaderSize;
+        }
+        
+        if (frame.Size != expectedSize)
+        {
+            throw new InvalidOperationException($"Expected frame size {expectedSize}, got {frame.Size}");
+        }
+        
+        _logger.LogInformation("Successfully read maximum frame of size {Size}", frame.Size);
+    }
+    
+    [When(@"writes '(\d+)' frames rapidly")]
+    public void WhenWritesFramesRapidly(int count)
+    {
+        var writer = _testContext.GetData<Writer>("current_writer");
+        
+        var data = new byte[1024];
+        for (int i = 0; i < data.Length; i++)
+        {
+            data[i] = (byte)(i % 256);
+        }
+        
+        for (int i = 0; i < count; i++)
+        {
+            writer.WriteFrame(data);
+        }
+        
+        _logger.LogInformation("Wrote {Count} frames rapidly", count);
+    }
+    
+    [Then(@"should read '(\d+)' frames correctly")]
+    public void ThenShouldReadFramesCorrectly(int count)
+    {
+        var reader = _testContext.GetData<Reader>("current_reader");
+        
+        for (int i = 0; i < count; i++)
+        {
+            var frame = reader.ReadFrame();
+            if (frame.Size != 1024)
+            {
+                throw new InvalidOperationException($"Frame {i}: expected size 1024, got {frame.Size}");
+            }
+        }
+        
+        _logger.LogInformation("Successfully read {Count} frames", count);
+    }
+    
+    [When(@"attempts to write metadata again with size '(\d+)'")]
+    public void WhenAttemptsToWriteMetadataAgainWithSize(int size)
+    {
+        var writer = _testContext.GetData<Writer>("current_writer");
+        
+        try
+        {
+            // This should fail because metadata can only be written once
+            var buffer = writer.GetMetadataBuffer(size);
+            for (int i = 0; i < size; i++)
+            {
+                buffer[i] = (byte)(i % 256);
+            }
+            writer.CommitMetadata();
+            
+            // If we get here, the test should fail
+            throw new InvalidOperationException("Expected metadata write to fail but it succeeded");
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Metadata already written"))
+        {
+            // This is expected - store the exception for verification
+            _testContext.SetData("metadata_rewrite_exception", ex);
+            _logger.LogInformation("Metadata rewrite correctly rejected: {Message}", ex.Message);
+        }
+    }
+    
+    [Then(@"should reject with metadata already written error")]
+    public void ThenShouldRejectWithMetadataAlreadyWrittenError()
+    {
+        if (!_testContext.TryGetData<Exception>("metadata_rewrite_exception", out var exception))
+        {
+            throw new InvalidOperationException("Expected metadata rewrite to be rejected but no exception was thrown");
+        }
+        
+        if (!exception.Message.Contains("Metadata already written"))
+        {
+            throw new InvalidOperationException($"Expected 'Metadata already written' error but got: {exception.Message}");
+        }
+        
+        _logger.LogInformation("Metadata rewrite correctly rejected");
+    }
+    
+    [When(@"writes frames continuously")]
+    public void WhenWritesFramesContinuously()
+    {
+        var writer = _testContext.GetData<Writer>("current_writer");
+        
+        // Write frames continuously until buffer is full or timeout
+        var data = new byte[1024];
+        for (int i = 0; i < data.Length; i++)
+        {
+            data[i] = (byte)(i % 256);
+        }
+        
+        int count = 0;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
+        try
+        {
+            while (stopwatch.ElapsedMilliseconds < 5000 && count < 10000) // 5 second timeout or 10k frames
+            {
+                writer.WriteFrame(data);
+                count++;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation("Stopped writing after {Count} frames: {Reason}", count, ex.Message);
+        }
+        
+        _testContext.SetData("continuous_write_count", count);
+        _logger.LogInformation("Wrote {Count} frames continuously", count);
+    }
+    
+    [When(@"writes continuously at high speed")]  
+    public void WhenWritesContinuouslyAtHighSpeed()
+    {
+        // Similar to writes continuously but with minimal delay
+        WhenWritesFramesContinuously();
     }
 }

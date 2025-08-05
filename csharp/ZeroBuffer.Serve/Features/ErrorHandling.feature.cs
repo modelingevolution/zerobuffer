@@ -79,6 +79,9 @@ namespace ZeroBuffer.Serve.Features
         {
 #line 4
     #line hidden
+#line 5
+        testRunner.Given("the test mode is configured", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
         }
         
         void System.IDisposable.Dispose()
@@ -94,7 +97,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 4.1 - Metadata Write-Once Enforcement", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 6
+#line 7
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -107,33 +110,27 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 7
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
 #line 8
-        testRunner.And("create buffer \'test-metadata-once\' with metadata size \'1024\' and payload size \'10" +
-                        "240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Given("the \'reader\' process creates buffer \'test-metadata-once\' with metadata size \'1024" +
+                        "\' and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 10
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.When("the \'writer\' process connects to buffer \'test-metadata-once\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 11
-        testRunner.And("connect to buffer \'test-metadata-once\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process writes metadata with size \'500\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 12
-        testRunner.And("write metadata with size \'500\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process writes frame with data \'test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 13
-        testRunner.And("write frame with data \'test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process attempts to write metadata again with size \'200\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 14
-        testRunner.And("attempt to write metadata again with size \'200\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 15
+        testRunner.Then("the second metadata write should fail", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 16
-        testRunner.Then("second metadata write should fail", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 17
-        testRunner.And("original metadata should remain unchanged", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the original metadata should remain unchanged", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -147,7 +144,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 4.2 - Metadata Size Overflow", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 19
+#line 18
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -160,24 +157,18 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 20
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 19
+        testRunner.Given("the \'reader\' process creates buffer \'test-metadata-overflow\' with metadata size \'" +
+                        "1024\' and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 21
-        testRunner.And("create buffer \'test-metadata-overflow\' with metadata size \'1024\' and payload size" +
-                        " \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("the \'writer\' process connects to buffer \'test-metadata-overflow\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 23
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 22
+        testRunner.And("the \'writer\' process attempts to write metadata with size \'2048\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 24
-        testRunner.And("connect to buffer \'test-metadata-overflow\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 25
-        testRunner.And("attempt to write metadata with size \'2048\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 27
-        testRunner.Then("metadata write should fail with size error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the metadata write should fail with size error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -191,7 +182,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 5.1 - Corrupted OIEB Detection", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 29
+#line 26
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -204,32 +195,23 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
+#line 27
+        testRunner.Given("the \'reader\' process creates buffer \'test-corrupt-oieb\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 29
+        testRunner.When("the \'writer\' process connects to buffer \'test-corrupt-oieb\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line hidden
 #line 30
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+        testRunner.And("the \'writer\' process writes frame with data \'valid\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 31
-        testRunner.And("create buffer \'test-corrupt-oieb\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 33
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 32
+        testRunner.And("the test corrupts OIEB field \'operation_size\' to wrong value", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 34
-        testRunner.And("connect to buffer \'test-corrupt-oieb\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("a second \'writer\' process attempts to connect to buffer \'test-corrupt-oieb\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 35
-        testRunner.And("write frame with data \'valid\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 37
-        testRunner.Then("corrupt OIEB field \'operation_size\' to wrong value", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 39
-        testRunner.When("the writer is \'cpp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 40
-        testRunner.And("attempt to connect to buffer \'test-corrupt-oieb\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 42
-        testRunner.Then("connection should fail with invalid OIEB error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 36
+        testRunner.Then("the connection should fail with invalid OIEB error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -243,7 +225,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 5.2 - Invalid Frame Header Detection", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 44
+#line 38
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -256,32 +238,23 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 45
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 39
+        testRunner.Given("the \'reader\' process creates buffer \'test-invalid-header\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 41
+        testRunner.When("the \'writer\' process connects to buffer \'test-invalid-header\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line hidden
+#line 42
+        testRunner.And("the \'writer\' process writes frame with data \'test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 44
+        testRunner.And("the test corrupts frame header \'payload_size\' to \'0\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 46
-        testRunner.And("create buffer \'test-invalid-header\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("the \'reader\' process attempts to read frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 48
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 49
-        testRunner.And("connect to buffer \'test-invalid-header\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 50
-        testRunner.And("write frame with data \'test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 52
-        testRunner.Then("corrupt frame header \'payload_size\' to \'0\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 54
-        testRunner.When("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 55
-        testRunner.And("attempt to read frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 57
-        testRunner.Then("read should fail with invalid frame size error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the read should fail with invalid frame size error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -295,7 +268,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 5.3 - Reader Death During Write", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 59
+#line 50
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -308,42 +281,30 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 60
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 51
+        testRunner.Given("the \'reader\' process creates buffer \'test-reader-death\' with metadata size \'0\' an" +
+                        "d payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 53
+        testRunner.When("the \'writer\' process connects to buffer \'test-reader-death\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line hidden
+#line 54
+        testRunner.And("the \'writer\' process starts writing large frame of \'8192\' bytes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 56
+        testRunner.And("the \'reader\' process crashes while write in progress", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 58
+        testRunner.And("the \'writer\' process completes write operation", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 59
+        testRunner.And("the \'writer\' process attempts next operation", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 61
-        testRunner.And("create buffer \'test-reader-death\' with metadata size \'0\' and payload size \'10240\'" +
-                        "", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Then("the \'writer\' process should detect reader death", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 63
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 64
-        testRunner.And("connect to buffer \'test-reader-death\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 65
-        testRunner.And("start writing large frame of \'8192\' bytes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 67
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 68
-        testRunner.And("simulate crash while write in progress", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 70
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 71
-        testRunner.And("complete write operation", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 72
-        testRunner.And("attempt next operation", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 74
-        testRunner.Then("writer should detect reader death", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 75
-        testRunner.And("throw reader dead exception", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 62
+        testRunner.And("the \'writer\' process should throw reader dead exception", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -357,7 +318,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 6.1 - Sequence Number Gap Detection", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 77
+#line 64
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -370,47 +331,38 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
+#line 65
+        testRunner.Given("the \'reader\' process creates buffer \'test-sequence-gap\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 67
+        testRunner.When("the \'writer\' process connects to buffer \'test-sequence-gap\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line hidden
+#line 68
+        testRunner.And("the \'writer\' process writes frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 69
+        testRunner.And("the \'writer\' process writes frame with sequence \'2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 70
+        testRunner.And("the \'writer\' process writes frame with sequence \'3\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 72
+        testRunner.Then("the \'reader\' process should read frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line hidden
+#line 73
+        testRunner.And("the \'reader\' process should read frame with sequence \'2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 75
+        testRunner.When("the test corrupts next frame sequence to \'5\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line hidden
+#line 76
+        testRunner.And("the \'reader\' process attempts to read frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
 #line 78
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+        testRunner.Then("the read should fail with sequence error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 79
-        testRunner.And("create buffer \'test-sequence-gap\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 81
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 82
-        testRunner.And("connect to buffer \'test-sequence-gap\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 83
-        testRunner.And("write frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 84
-        testRunner.And("write frame with sequence \'2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 85
-        testRunner.And("write frame with sequence \'3\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 87
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 88
-        testRunner.And("read frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 89
-        testRunner.And("read frame with sequence \'2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 91
-        testRunner.When("corrupt next frame sequence to \'5\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 92
-        testRunner.And("attempt to read frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 94
-        testRunner.Then("read should fail with sequence error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 95
-        testRunner.And("error should show expected \'4\' got \'5\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the error should show expected \'4\' got \'5\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -424,7 +376,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 7.1 - Partial Initialization Failure", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 97
+#line 81
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -437,19 +389,19 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 98
+#line 82
         testRunner.Given("attempt to create buffer \'test-partial-init\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 99
-        testRunner.And("simulate semaphore creation failure", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 83
+        testRunner.And("the test simulates semaphore creation failure", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 101
-        testRunner.Then("buffer creation should fail", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 85
+        testRunner.Then("the buffer creation should fail", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 102
-        testRunner.And("shared memory should be cleaned up", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 86
+        testRunner.And("the shared memory should be cleaned up", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 103
+#line 87
         testRunner.And("no resources should be leaked", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -464,7 +416,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 7.2 - System Resource Exhaustion", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 105
+#line 89
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -477,17 +429,17 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 106
+#line 90
         testRunner.Given("create maximum allowed shared memory segments", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 108
+#line 92
         testRunner.When("attempt to create one more buffer \'test-exhausted\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 110
-        testRunner.Then("creation should fail with system error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 94
+        testRunner.Then("the creation should fail with system error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 111
-        testRunner.And("appropriate error message should be returned", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 95
+        testRunner.And("an appropriate error message should be returned", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -501,7 +453,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 8.1 - Stale Resource Cleanup", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 113
+#line 97
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -514,29 +466,26 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 114
+#line 98
         testRunner.Given("manually create stale lock file for \'stale-test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 115
+#line 99
         testRunner.And("create orphaned shared memory for \'stale-test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 116
+#line 100
         testRunner.And("create orphaned semaphores for \'stale-test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 118
-        testRunner.When("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 102
+        testRunner.When("the \'reader\' process attempts to create buffer \'stale-test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 119
-        testRunner.And("attempt to create buffer \'stale-test\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 104
+        testRunner.Then("the stale resources should be detected", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 121
-        testRunner.Then("stale resources should be detected", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 105
+        testRunner.And("the old resources should be cleaned up", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 122
-        testRunner.And("old resources should be cleaned up", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 123
-        testRunner.And("new buffer should be created successfully", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 106
+        testRunner.And("the new buffer should be created successfully", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();

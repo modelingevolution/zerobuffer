@@ -81,6 +81,9 @@ namespace ZeroBuffer.Serve.Features
         {
 #line 5
     #line hidden
+#line 6
+        testRunner.Given("the test mode is configured", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
         }
         
         void System.IDisposable.Dispose()
@@ -98,7 +101,7 @@ namespace ZeroBuffer.Serve.Features
                     "linux"};
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 8.1 - Linux Shared Memory Verification", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 8
+#line 9
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -111,28 +114,25 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 9
+#line 10
         testRunner.Given("the platform is \'Linux\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 10
-        testRunner.And("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 11
-        testRunner.And("create buffer \'test-linux-shm\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 13
-        testRunner.Then("verify shared memory entry exists in \'/dev/shm/\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 12
+        testRunner.And("the \'reader\' process creates buffer \'test-linux-shm\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 14
-        testRunner.And("verify proper named semaphores created", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Then("verify shared memory entry exists in \'/dev/shm/\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 15
+        testRunner.And("verify proper named semaphores created", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 16
         testRunner.And("test with buffer names containing special characters", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 17
+#line 18
         testRunner.When("gracefully shutdown", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 19
+#line 20
         testRunner.Then("verify proper cleanup in \'/dev/shm/\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
@@ -149,7 +149,7 @@ namespace ZeroBuffer.Serve.Features
                     "windows"};
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 8.2 - Windows Named Objects Verification", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 22
+#line 23
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -162,28 +162,25 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 23
+#line 24
         testRunner.Given("the platform is \'Windows\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 24
-        testRunner.And("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 25
-        testRunner.And("create buffer \'test-windows-objects\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 27
-        testRunner.Then("verify CreateFileMapping with proper naming", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 26
+        testRunner.And("the \'reader\' process creates buffer \'test-windows-objects\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 28
-        testRunner.And("test Global vs Local namespace for different contexts", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Then("verify CreateFileMapping with proper naming", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 29
+        testRunner.And("test Global vs Local namespace for different contexts", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 30
         testRunner.And("verify semaphore limits and max count", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 31
+#line 32
         testRunner.When("test across different user sessions", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 33
+#line 34
         testRunner.Then("verify proper isolation or sharing as expected", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
@@ -198,7 +195,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 8.3 - Cross-Platform Name Compatibility", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 35
+#line 36
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -211,11 +208,8 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 36
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
 #line 37
-        testRunner.And("create buffer \'test-name-compat-123\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process creates buffer \'test-name-compat-123\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 39
         testRunner.Then("verify name contains only alphanumeric and dash", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
@@ -255,27 +249,24 @@ namespace ZeroBuffer.Serve.Features
     this.FeatureBackground();
 #line hidden
 #line 47
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+        testRunner.And("the \'reader\' process creates buffer \'test-lock-semantics\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 48
-        testRunner.And("create buffer \'test-lock-semantics\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 50
+#line 49
         testRunner.Then("verify lock file exists at correct location", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 51
+#line 50
         testRunner.And("verify lock file is actually locked", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 53
+#line 52
         testRunner.When("kill reader process", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 55
+#line 54
         testRunner.Then("new reader can acquire lock after detecting stale", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 57
+#line 56
         testRunner.When("graceful shutdown", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 59
+#line 58
         testRunner.Then("verify lock file is removed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
@@ -290,7 +281,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.4 - Semaphore Naming Convention", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 61
+#line 60
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -315,13 +306,13 @@ namespace ZeroBuffer.Serve.Features
                 table7.AddRow(new string[] {
                             "very_long_buffer_name_that_tests_maximum_length_limits",
                             "max length"});
-#line 62
+#line 61
         testRunner.Given("create buffers with various names:", ((string)(null)), table7, "Given ");
 #line hidden
-#line 68
+#line 67
         testRunner.Then("verify semaphores created as \'sem-w-{name}\' and \'sem-r-{name}\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 69
+#line 68
         testRunner.And("verify both Linux and Windows naming rules respected", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -338,7 +329,7 @@ namespace ZeroBuffer.Serve.Features
                     "permission-test"};
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 10.7 - Permission Errors", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 72
+#line 71
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -351,22 +342,23 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 73
+#line 72
         testRunner.Given("the reader is \'user1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 74
-        testRunner.And("create buffer \'test-permissions\' with restrictive permissions", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 73
+        testRunner.And("the \'reader\' process creates buffer \'test-permissions\' with restrictive permissio" +
+                        "ns", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 76
+#line 75
         testRunner.When("the writer is \'user2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 77
-        testRunner.And("attempt to connect without permissions", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 76
+        testRunner.And("another writer attempts to connect without permissions", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 79
+#line 78
         testRunner.Then("permission denied error should be handled", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 80
+#line 79
         testRunner.And("no resource corruption should occur", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }

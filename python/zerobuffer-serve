@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# ZeroBuffer Python Serve - Harmony-compatible shell wrapper
+# This executable is called by Harmony to run Python tests
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Change to the script directory to ensure relative imports work
+cd "$SCRIPT_DIR"
+
+# Activate virtual environment if it exists
+if [[ -d "$SCRIPT_DIR/venv" ]]; then
+    source "$SCRIPT_DIR/venv/bin/activate"
+fi
+
+# Export Python path to include the current directory
+export PYTHONPATH="$SCRIPT_DIR:${PYTHONPATH:-}"
+
+# Run the Python serve application, passing all arguments through
+exec python zerobuffer_serve.py "$@"

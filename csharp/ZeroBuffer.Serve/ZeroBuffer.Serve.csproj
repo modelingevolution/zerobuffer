@@ -26,4 +26,24 @@
     </None>
   </ItemGroup>
 
+  <!-- Pre-build target to copy feature files from ZeroBuffer.Harmony.Tests -->
+  <Target Name="CopyFeatureFiles" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <SourceFeaturesPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../ZeroBuffer.Harmony.Tests/Features'))</SourceFeaturesPath>
+      <TargetFeaturesPath>$(MSBuildProjectDirectory)/Features</TargetFeaturesPath>
+    </PropertyGroup>
+    
+    <!-- Create Features directory if it doesn't exist -->
+    <MakeDir Directories="$(TargetFeaturesPath)" />
+    
+    <!-- Copy all feature files -->
+    <ItemGroup>
+      <FeatureFiles Include="$(SourceFeaturesPath)/*.feature" />
+    </ItemGroup>
+    
+    <Copy SourceFiles="@(FeatureFiles)" DestinationFolder="$(TargetFeaturesPath)" SkipUnchangedFiles="true" />
+    
+    <Message Text="Copied feature files from $(SourceFeaturesPath) to $(TargetFeaturesPath)" Importance="high" />
+  </Target>
+
 </Project>

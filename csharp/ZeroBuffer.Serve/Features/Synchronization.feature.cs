@@ -79,6 +79,9 @@ namespace ZeroBuffer.Serve.Features
         {
 #line 4
     #line hidden
+#line 5
+        testRunner.Given("the test mode is configured", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
         }
         
         void System.IDisposable.Dispose()
@@ -94,7 +97,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 6.2 - Burst Write Performance", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 6
+#line 7
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -107,34 +110,26 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 7
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
 #line 8
-        testRunner.And("create buffer \'test-burst\' with metadata size \'0\' and payload size \'102400\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Given("the \'reader\' process creates buffer \'test-burst\' with metadata size \'0\' and paylo" +
+                        "ad size \'102400\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 10
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.When("the \'writer\' process connects to buffer \'test-burst\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 11
-        testRunner.And("connect to buffer \'test-burst\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process writes \'50\' frames of size \'1024\' as fast as possible", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 12
-        testRunner.And("write \'50\' frames of size \'1024\' as fast as possible", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 13
+        testRunner.And("the \'reader\' process waits \'1\' second before reading", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 14
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 15
-        testRunner.And("wait \'1\' second before reading", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process reads all \'50\' frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 16
-        testRunner.And("read all \'50\' frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 18
         testRunner.Then("all frames should be received correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 19
+#line 17
         testRunner.And("data integrity should be maintained", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -149,7 +144,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 6.3 - Slow Reader Flow Control", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 21
+#line 19
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -162,34 +157,26 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
+#line 20
+        testRunner.Given("the \'reader\' process creates buffer \'test-slow-reader\' with metadata size \'0\' and" +
+                        " payload size \'51200\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
 #line 22
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+        testRunner.When("the \'writer\' process connects to buffer \'test-slow-reader\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 23
-        testRunner.And("create buffer \'test-slow-reader\' with metadata size \'0\' and payload size \'51200\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process writes frames continuously", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 25
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 26
-        testRunner.And("connect to buffer \'test-slow-reader\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process reads one frame every \'100\' ms", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 27
-        testRunner.And("write frames continuously", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Then("the \'writer\' process should block when buffer full", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 29
-        testRunner.And("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 30
-        testRunner.And("read one frame every \'100\' ms", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 32
-        testRunner.Then("writer should block when buffer full", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 33
+#line 28
         testRunner.And("no frames should be lost", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 34
+#line 29
         testRunner.And("flow control should work correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -204,7 +191,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 6.4 - Semaphore Signal Ordering", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 36
+#line 31
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -217,32 +204,23 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 37
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 32
+        testRunner.Given("the \'reader\' process creates buffer \'test-semaphore\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 34
+        testRunner.When("the \'writer\' process connects to buffer \'test-semaphore\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line hidden
+#line 35
+        testRunner.And("the \'writer\' process writes frame and signal", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 36
+        testRunner.And("the \'writer\' process immediately writes another frame before reader wakes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 38
-        testRunner.And("create buffer \'test-semaphore\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Then("the \'reader\' process should process both frames correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 40
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 41
-        testRunner.And("connect to buffer \'test-semaphore\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 42
-        testRunner.And("write frame and signal", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 43
-        testRunner.And("immediately write another frame before reader wakes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 45
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 46
-        testRunner.And("process both frames correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 47
-        testRunner.And("semaphore count should reflect pending frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 39
+        testRunner.And("the semaphore count should reflect pending frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -256,7 +234,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 7.3 - Memory Barrier Verification", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 49
+#line 41
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -269,34 +247,25 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 50
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 42
+        testRunner.Given("the \'reader\' process creates buffer \'test-memory-barrier\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 51
-        testRunner.And("create buffer \'test-memory-barrier\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 44
+        testRunner.When("the \'writer\' process connects to buffer \'test-memory-barrier\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 53
-        testRunner.When("the writer is \'cpp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 45
+        testRunner.And("the \'writer\' process writes complex structure with multiple fields", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 54
-        testRunner.And("connect to buffer \'test-memory-barrier\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 46
+        testRunner.And("the system ensures memory barriers are in place", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 55
-        testRunner.And("write complex structure with multiple fields", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 48
+        testRunner.Then("the \'reader\' process should read structure after semaphore signal", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 56
-        testRunner.And("ensure memory barriers are in place", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 58
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 59
-        testRunner.And("read structure after semaphore signal", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 60
+#line 49
         testRunner.And("all fields should be fully visible", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 61
+#line 50
         testRunner.And("no partially visible writes should occur", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -311,7 +280,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 7.4 - Pattern Validation", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 63
+#line 52
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -324,37 +293,29 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 64
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 53
+        testRunner.Given("the \'reader\' process creates buffer \'test-pattern\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 65
-        testRunner.And("create buffer \'test-pattern\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 55
+        testRunner.When("the \'writer\' process connects to buffer \'test-pattern\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 67
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 56
+        testRunner.And("the \'writer\' process writes frame with size \'1\' using incrementing pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 68
-        testRunner.And("connect to buffer \'test-pattern\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 57
+        testRunner.And("the \'writer\' process writes frame with size \'1024\' using incrementing pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 69
-        testRunner.And("write frame with size \'1\' using incrementing pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 58
+        testRunner.And("the \'writer\' process writes frame with size \'1048576\' using incrementing pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 70
-        testRunner.And("write frame with size \'1024\' using incrementing pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 59
+        testRunner.And("the \'writer\' process writes frame with size \'10485760\' using incrementing pattern" +
+                        "", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 71
-        testRunner.And("write frame with size \'1048576\' using incrementing pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 61
+        testRunner.Then("the \'reader\' process should validate each byte matches expected pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 72
-        testRunner.And("write frame with size \'10485760\' using incrementing pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 74
-        testRunner.Then("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 75
-        testRunner.And("validate each byte matches expected pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 76
+#line 62
         testRunner.And("no data corruption should be detected", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -369,7 +330,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 11.1 - Alternating Frame Sizes", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 78
+#line 64
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -382,31 +343,26 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 79
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 65
+        testRunner.Given("the \'reader\' process creates buffer \'test-alternating\' with metadata size \'0\' and" +
+                        " payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 80
-        testRunner.And("create buffer \'test-alternating\' with metadata size \'0\' and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 67
+        testRunner.When("the \'writer\' process connects to buffer \'test-alternating\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 82
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 68
+        testRunner.And("the \'writer\' process writes large frame using \'90%\' of buffer", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 83
-        testRunner.And("connect to buffer \'test-alternating\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 69
+        testRunner.And("the \'writer\' process writes small frame of \'1\' byte", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 84
-        testRunner.And("write large frame using \'90%\' of buffer", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 70
+        testRunner.And("the \'writer\' process attempts to write large frame again", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 85
-        testRunner.And("write small frame of \'1\' byte", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 86
-        testRunner.And("attempt to write large frame again", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 88
+#line 72
         testRunner.Then("proper wrap-around handling should occur", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 89
+#line 73
         testRunner.And("no deadlocks should happen", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -421,7 +377,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 11.2 - Semaphore Signal Coalescing", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 91
+#line 75
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -434,35 +390,26 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 92
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 76
+        testRunner.Given("the \'reader\' process creates buffer \'test-coalesce\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 93
-        testRunner.And("create buffer \'test-coalesce\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 78
+        testRunner.When("the \'writer\' process connects to buffer \'test-coalesce\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 95
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 79
+        testRunner.And("the \'writer\' process writes \'10\' frames rapidly without reader consuming", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 96
-        testRunner.And("connect to buffer \'test-coalesce\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 81
+        testRunner.Then("the semaphore count should represent pending frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 97
-        testRunner.And("write \'10\' frames rapidly without reader consuming", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 83
+        testRunner.When("the \'reader\' process wakes and processes all frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 99
-        testRunner.Then("semaphore count should represent pending frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 101
-        testRunner.When("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 102
-        testRunner.And("wake and process all frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 104
+#line 85
         testRunner.Then("all frames should be read correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 105
-        testRunner.And("coalesced signals should be handled properly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 86
+        testRunner.And("the coalesced signals should be handled properly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -476,7 +423,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 12.1 - Rapid Create Destroy Cycles", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 107
+#line 88
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -489,25 +436,22 @@ namespace ZeroBuffer.Serve.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 108
+#line 89
         testRunner.Given("perform \'1000\' iterations of:", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 109
-        testRunner.When("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 91
+        testRunner.When("the \'reader\' process creates buffer \'test-rapid-cycle\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 110
-        testRunner.And("create buffer \'test-rapid-cycle\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 92
+        testRunner.And("the \'reader\' process destroys buffer", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 111
-        testRunner.And("destroy buffer", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 113
+#line 94
         testRunner.Then("no resource leaks should occur", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 114
+#line 95
         testRunner.And("lock files should be properly cleaned", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 115
+#line 96
         testRunner.And("system should remain stable", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }

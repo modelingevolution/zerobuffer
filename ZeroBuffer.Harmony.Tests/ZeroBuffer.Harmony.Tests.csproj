@@ -51,7 +51,7 @@
   <!-- MSBuild target to generate tests before build -->
   <Target Name="GenerateHarmonyTests" BeforeTargets="BeforeBuild">
     <PropertyGroup>
-      <FeaturesPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../modules/harmony/ModelingEvolution.Harmony/Features'))</FeaturesPath>
+      <FeaturesPath>$(MSBuildProjectDirectory)/Features</FeaturesPath>
       <GeneratedPath>$(MSBuildProjectDirectory)/Generated</GeneratedPath>
     </PropertyGroup>
     

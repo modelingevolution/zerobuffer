@@ -86,8 +86,29 @@ public class BenchmarksSteps
         // This is handled by the process orchestration system
     }
     
-    [Given(@"create buffer '([^']+)' with large config")]
-    public void GivenCreateBufferWithLargeConfig(string bufferName)
+    [Given(@"creates buffer '([^']+)' with default config")]
+    public void GivenCreatesBufferWithDefaultConfig(string bufferName)
+    {
+        _logger.LogInformation("Creating buffer '{BufferName}' with default configuration for latency benchmarking", bufferName);
+        
+        // Default configuration for latency testing
+        var config = new BufferConfig
+        {
+            MetadataSize = 1024,
+            PayloadSize = 102400  // 100KB payload buffer
+        };
+        
+        var reader = new Reader(bufferName, config);
+        _readers[bufferName] = reader;
+        _testContext.SetData($"buffer_{bufferName}", reader);
+        _testContext.SetData("current_reader", reader);
+        
+        _logger.LogInformation("Created buffer '{BufferName}' with {MetadataSize} metadata and {PayloadSize} payload", 
+            bufferName, config.MetadataSize, config.PayloadSize);
+    }
+    
+    [Given(@"creates buffer '([^']+)' with large config")]
+    public void GivenCreatesBufferWithLargeConfig(string bufferName)
     {
         _logger.LogInformation("Creating buffer '{BufferName}' with large configuration for throughput benchmarking", bufferName);
         

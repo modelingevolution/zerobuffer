@@ -82,6 +82,9 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     #line hidden
 #line 6
+        testRunner.Given("the test mode is configured", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 7
         testRunner.And("benchmark environment is prepared", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
         }
@@ -99,7 +102,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 15.1 - Latency Benchmark", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 8
+#line 9
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -112,17 +115,11 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 9
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
 #line 10
-        testRunner.And("create buffer \'bench-latency\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Given("the \'reader\' process creates buffer \'bench-latency\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 12
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 13
-        testRunner.And("connect to buffer \'bench-latency\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("the \'writer\' process connects to buffer \'bench-latency\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
                 TechTalk.SpecFlow.Table table1 = new TechTalk.SpecFlow.Table(new string[] {
                             "size",
@@ -144,10 +141,10 @@ namespace ZeroBuffer.Serve.Features
                             "10MB",
                             "10000",
                             "low milliseconds"});
-#line 15
+#line 14
         testRunner.Then("measure latency for frame sizes:", ((string)(null)), table1, "Then ");
 #line hidden
-#line 22
+#line 21
         testRunner.And("report Min, Max, Mean, P50, P90, P99, P99.9", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -162,7 +159,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 15.2 - Throughput Benchmark", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 24
+#line 23
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -175,17 +172,11 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 25
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 24
+        testRunner.Given("the \'reader\' process creates buffer \'bench-throughput\' with large config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 26
-        testRunner.And("create buffer \'bench-throughput\' with large config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 28
-        testRunner.When("the writer is \'python\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 29
-        testRunner.And("connect to buffer \'bench-throughput\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("the \'writer\' process connects to buffer \'bench-throughput\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
                 TechTalk.SpecFlow.Table table2 = new TechTalk.SpecFlow.Table(new string[] {
                             "size",
@@ -202,13 +193,13 @@ namespace ZeroBuffer.Serve.Features
                 table2.AddRow(new string[] {
                             "10MB",
                             "frames/sec, MB/sec"});
-#line 31
+#line 28
         testRunner.Then("measure throughput for \'60\' seconds with frame sizes:", ((string)(null)), table2, "Then ");
 #line hidden
-#line 38
+#line 35
         testRunner.And("report CPU usage percentage", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 39
+#line 36
         testRunner.And("expect to saturate memory bandwidth", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -223,7 +214,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 15.3 - Wrap-Around Overhead Benchmark", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 41
+#line 38
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -236,19 +227,19 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 42
+#line 39
         testRunner.Given("buffer size is \'1.5x\' frame size to force wrap", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 44
+#line 41
         testRunner.When("measure performance with wrap-around", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 45
+#line 42
         testRunner.And("measure performance without wrap-around", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 47
+#line 44
         testRunner.Then("calculate overhead percentage", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 48
+#line 45
         testRunner.And("expect less than \'5%\' performance impact", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -263,7 +254,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 15.4 - Memory Barrier Cost Benchmark", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 50
+#line 47
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -276,16 +267,16 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 51
+#line 48
         testRunner.Given("measure atomic fence operations", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 53
+#line 50
         testRunner.When("compare with and without memory barriers", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 55
+#line 52
         testRunner.Then("verify data integrity maintained", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 56
+#line 53
         testRunner.And("expect less than \'100\' ns per barrier", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -300,7 +291,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 15.5 - Semaphore Signaling Overhead", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 58
+#line 55
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -313,7 +304,7 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
-#line 59
+#line 56
         testRunner.Given("measure sem_post/sem_wait operation cost", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
                 TechTalk.SpecFlow.Table table3 = new TechTalk.SpecFlow.Table(new string[] {
@@ -334,10 +325,10 @@ namespace ZeroBuffer.Serve.Features
                 table3.AddRow(new string[] {
                             "100kHz",
                             "measurable"});
-#line 61
+#line 58
         testRunner.When("test at rates:", ((string)(null)), table3, "When ");
 #line hidden
-#line 69
+#line 66
         testRunner.Then("report CPU usage and latency impact", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
@@ -352,7 +343,7 @@ namespace ZeroBuffer.Serve.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 15.6 - Buffer Utilization Under Load", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 71
+#line 68
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -365,25 +356,22 @@ namespace ZeroBuffer.Serve.Features
 #line 5
     this.FeatureBackground();
 #line hidden
+#line 69
+        testRunner.Given("the \'reader\' process creates buffer \'bench-utilization\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 70
+        testRunner.And("the \'writer\' process is configured to be faster than reader", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
 #line 72
-        testRunner.Given("the reader is \'csharp\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
-#line 73
-        testRunner.And("create buffer \'bench-utilization\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 74
-        testRunner.And("writer is faster than reader", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 76
         testRunner.When("monitor buffer utilization over time", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 78
+#line 74
         testRunner.Then("verify degradation detection at \'80%\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 79
+#line 75
         testRunner.And("report time to degradation", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 80
+#line 76
         testRunner.And("report recovery time", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }

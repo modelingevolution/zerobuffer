@@ -429,5 +429,16 @@ namespace ZeroBuffer
             _writeSemaphore?.Dispose();
             _readSemaphore?.Dispose();
         }
+        
+        /// <summary>
+        /// Get the current OIEB state (for testing purposes)
+        /// </summary>
+        internal unsafe OIEB GetOIEB()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Writer));
+                
+            return _sharedMemory.ReadRef<OIEB>(0);
+        }
     }
 }

@@ -19,16 +19,14 @@ public class StressTestsTests : HarmonyTestBase
     public StressTestsTests(ITestOutputHelper output) : base(output) { }
 
     #region Static Test Data
-    private static readonly string Test_10_1_Partial_Initialization_Failures_reader_cpp_Json = @"{""TestId"":""cpp-test-10-1---partial-initialization-failures"",""FeatureId"":11,""ScenarioName"":""Test 10.1 - Partial Initialization Failures"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp""},""Background"":[{""Type"":""Given"",""Text"":""the test mode is configured"",""Process"":null,""ProcessedText"":""the test mode is configured"",""Parameters"":{}},{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""the reader is \u0027csharp\u0027"",""Process"":""reader"",""ProcessedText"":"""",""Parameters"":{}},{""Type"":""Given"",""Text"":""create shared memory successfully for \u0027test-partial\u0027"",""Process"":""reader"",""ProcessedText"":""create shared memory successfully for \u0027test-partial\u0027"",""Parameters"":{}},{""Type"":""When"",""Text"":""simulate failure creating sem-w semaphore"",""Process"":null,""ProcessedText"":""simulate failure creating sem-w semaphore"",""Parameters"":{}},{""Type"":""Then"",""Text"":""reader should clean up shared memory"",""Process"":null,""ProcessedText"":""reader should clean up shared memory"",""Parameters"":{}},{""Type"":""Then"",""Text"":""throw appropriate exception"",""Process"":""reader"",""ProcessedText"":""throw appropriate exception"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify no resources leaked"",""Process"":""reader"",""ProcessedText"":""verify no resources leaked"",""Parameters"":{}}]}";
-    private static readonly string Test_12_3_Rapid_Create_Destroy_Under_Load_reader_cpp_Json = @"{""TestId"":""cpp-test-12-3---rapid-create-destroy-under-load"",""FeatureId"":11,""ScenarioName"":""Test 12.3 - Rapid Create Destroy Under Load"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp""},""Background"":[{""Type"":""Given"",""Text"":""the test mode is configured"",""Process"":null,""ProcessedText"":""the test mode is configured"",""Parameters"":{}},{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""spawn writer attempting connections continuously"",""Process"":null,""ProcessedText"":""spawn writer attempting connections continuously"",""Parameters"":{}},{""Type"":""When"",""Text"":""the reader is \u0027csharp\u0027"",""Process"":""reader"",""ProcessedText"":"""",""Parameters"":{}},{""Type"":""When"",""Text"":""create and destroy buffer \u00271000\u0027 times"",""Process"":""reader"",""ProcessedText"":""create and destroy buffer \u00271000\u0027 times"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify no resource leaks"",""Process"":null,""ProcessedText"":""verify no resource leaks"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify lock files cleaned up"",""Process"":""reader"",""ProcessedText"":""verify lock files cleaned up"",""Parameters"":{}},{""Type"":""Then"",""Text"":""handle writer connection attempts gracefully"",""Process"":""reader"",""ProcessedText"":""handle writer connection attempts gracefully"",""Parameters"":{}}]}";
+    private static readonly string Test_10_1_Partial_Initialization_Failures_reader_cpp_Json = @"{""TestId"":""cpp-test-10-1---partial-initialization-failures"",""FeatureId"":11,""ScenarioName"":""Test 10.1 - Partial Initialization Failures"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp""},""Background"":[{""Type"":""Given"",""Text"":""the test mode is configured"",""Process"":null,""ProcessedText"":""the test mode is configured"",""Parameters"":{}},{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""the test creates shared memory successfully for \u0027test-partial\u0027"",""Process"":null,""ProcessedText"":""the test creates shared memory successfully for \u0027test-partial\u0027"",""Parameters"":{}},{""Type"":""When"",""Text"":""simulate failure creating sem-w semaphore"",""Process"":null,""ProcessedText"":""simulate failure creating sem-w semaphore"",""Parameters"":{}},{""Type"":""Then"",""Text"":""the \u0027reader\u0027 process should clean up shared memory"",""Process"":""reader"",""ProcessedText"":""should clean up shared memory"",""Parameters"":{}},{""Type"":""Then"",""Text"":""the \u0027reader\u0027 process should throw appropriate exception"",""Process"":""reader"",""ProcessedText"":""should throw appropriate exception"",""Parameters"":{}},{""Type"":""Then"",""Text"":""the test should verify no resources leaked"",""Process"":""reader"",""ProcessedText"":""the test should verify no resources leaked"",""Parameters"":{}}]}";
 
     #endregion
 
     #region Scenarios Collection
     public static IEnumerable<ScenarioExecution> Scenarios => new[]
     {
-        DeserializeScenarioStatic(Test_10_1_Partial_Initialization_Failures_reader_cpp_Json),
-        DeserializeScenarioStatic(Test_12_3_Rapid_Create_Destroy_Under_Load_reader_cpp_Json)
+        DeserializeScenarioStatic(Test_10_1_Partial_Initialization_Failures_reader_cpp_Json)
     };
     #endregion
 
@@ -40,16 +38,6 @@ public class StressTestsTests : HarmonyTestBase
     [Trait("Feature", "StressTests")]    public async Task Test_10_1_Partial_Initialization_Failures_reader_cpp()
     {
         var scenario = DeserializeScenario(Test_10_1_Partial_Initialization_Failures_reader_cpp_Json);
-        await ExecuteScenarioAsync(scenario);
-    }
-
-    [Fact(DisplayName = "Test 12.3 - Rapid Create Destroy Under Load [reader=cpp]")]
-    [Trait("Scenario", "Test 12.3 - Rapid Create Destroy Under Load")]
-    [Trait("Platform", "cpp")]
-    [Trait("Uses", "cpp")]
-    [Trait("Feature", "StressTests")]    public async Task Test_12_3_Rapid_Create_Destroy_Under_Load_reader_cpp()
-    {
-        var scenario = DeserializeScenario(Test_12_3_Rapid_Create_Destroy_Under_Load_reader_cpp_Json);
         await ExecuteScenarioAsync(scenario);
     }
 

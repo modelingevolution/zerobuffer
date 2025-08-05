@@ -185,7 +185,20 @@
       "Bash(do sed -i '/Given the test mode is configured/d' \"$f\")",
       "Bash(done)",
       "Bash(./ZeroBuffer.Serve --help)",
-      "Bash(dotnet script:*)"
+      "Bash(dotnet script:*)",
+      "Bash(./test_venv/bin/pip install -e . --quiet)",
+      "Bash(./test_venv/bin/pip install pydantic --quiet)",
+      "Bash(./test_venv/bin/pip install posix-ipc --quiet)",
+      "Bash(./test_venv/bin/python:*)",
+      "Bash(/mnt/d/source/modelingevolution/streamer/src/zerobuffer/fix-platform-steps.sh)",
+      "Bash(./test_zerobuffer_integration.py)",
+      "Bash(./run_harmony_test.py)",
+      "Bash(touch:*)",
+      "Bash(touch:*)",
+      "Bash(../venv/bin/python -m pytest test_basic_communication.py::TestBasicCommunication::test_1_1_simple_write_read_cycle -v -s)",
+      "Bash(./venv/bin/pip install pytest-asyncio --quiet)",
+      "Bash(../venv/bin/python -m pytest test_basic_communication.py -v)",
+      "Bash(venv/bin/python -m pytest tests/test_basic_communication.py::TestBasicCommunication::test_1_2_multiple_frames_sequential -v -s --tb=short)"
     ],
     "deny": []
   }

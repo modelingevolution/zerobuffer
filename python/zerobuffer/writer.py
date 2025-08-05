@@ -15,7 +15,6 @@ from .exceptions import (
     ZeroBufferException,
     ReaderDeadException,
     WriterAlreadyConnectedException,
-    BufferFullException,
     FrameTooLargeException,
     InvalidFrameSizeException,
     MetadataAlreadyWrittenException
@@ -194,7 +193,6 @@ class Writer(LoggerMixin):
             InvalidFrameSizeException: If data is empty
             FrameTooLargeException: If frame is too large for buffer
             ReaderDeadException: If reader process died
-            BufferFullException: If buffer is full after timeout
         """
         if len(data) == 0:
             raise InvalidFrameSizeException()
@@ -224,12 +222,12 @@ class Writer(LoggerMixin):
                     # We have enough space
                     break
                 
-                # Wait for reader to free space
+                # Wait for reader to free space (blocking)
                 if not self._sem_read.acquire(timeout=5.0):
                     # Timeout - check if reader is alive
                     if not self._is_reader_connected(oieb):
                         raise ReaderDeadException()
-                    # Continue waiting
+                    # Continue waiting (no exception, just keep blocking)
             
             # Check if we need to wrap
             continuous_free = self._get_continuous_free_space(oieb)
@@ -296,7 +294,6 @@ class Writer(LoggerMixin):
             InvalidFrameSizeException: If data is empty
             FrameTooLargeException: If frame is too large for buffer
             ReaderDeadException: If reader process died
-            BufferFullException: If buffer is full after timeout
         """
         if not isinstance(data, memoryview):
             raise TypeError("write_frame_zero_copy requires memoryview for zero-copy operation")
@@ -322,7 +319,6 @@ class Writer(LoggerMixin):
             InvalidFrameSizeException: If size is zero
             FrameTooLargeException: If frame is too large for buffer
             ReaderDeadException: If reader process died
-            BufferFullException: If buffer is full after timeout
         """
         if size == 0:
             raise InvalidFrameSizeException()
@@ -353,6 +349,7 @@ class Writer(LoggerMixin):
                 if not self._sem_read.acquire(timeout=5.0):
                     if not self._is_reader_connected(oieb):
                         raise ReaderDeadException()
+                    # Continue waiting (no exception, just keep blocking)
             
             # Handle wrap-around if needed
             continuous_free = self._get_continuous_free_space(oieb)

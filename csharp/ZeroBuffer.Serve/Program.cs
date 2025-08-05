@@ -28,6 +28,8 @@ services.AddSingleton<IStepExecutor, RegistryBasedStepExecutor>();
 
 // Register step definition classes
 services.AddTransient<BasicCommunicationSteps>();
+services.AddTransient<ProcessLifecycleStepsStub>();
+services.AddTransient<DuplexChannelStepsStub>();
 // Add more step classes as they are created...
 
 services.AddSingleton<ZeroBufferServe>();

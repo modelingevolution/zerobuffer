@@ -478,5 +478,16 @@ namespace ZeroBuffer
             // 2. The system is restarted
             // 3. Manual cleanup is performed
         }
+        
+        /// <summary>
+        /// Get the current OIEB state (for testing purposes)
+        /// </summary>
+        internal unsafe OIEB GetOIEB()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Reader));
+                
+            return _sharedMemory.ReadRef<OIEB>(0);
+        }
     }
 }
