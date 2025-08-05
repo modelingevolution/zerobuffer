@@ -104,3 +104,5 @@ vcpkg_installed/
 /ZeroBuffer.Harmony.Tests/bin/
 /ZeroBuffer.Harmony.Tests/CodeGeneration/obj/
 /ZeroBuffer.Harmony.Tests/CodeGeneration/bin/
+/python/test_venv2/bin
+/python/test_venv2
