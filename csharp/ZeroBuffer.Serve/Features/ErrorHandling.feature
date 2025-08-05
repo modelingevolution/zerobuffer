@@ -2,7 +2,6 @@ Feature: Error Handling and Recovery Tests
     Tests for error conditions, corruption detection, and recovery scenarios
     
     Background:
-        Given the test mode is configured
         
     Scenario: Test 4.1 - Metadata Write-Once Enforcement
         Given the reader is 'csharp'

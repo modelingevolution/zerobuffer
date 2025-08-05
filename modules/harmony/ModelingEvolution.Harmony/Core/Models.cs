@@ -12,6 +12,7 @@ public class ScenarioDefinition
     public List<string> Tags { get; init; } = new();
     public Dictionary<string, string> Metadata { get; init; } = new();
     public string? FeatureFile { get; set; }
+    public int FeatureId { get; set; }
 }
 
 /// <summary>

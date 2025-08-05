@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelingEvolution.Harmony",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelingEvolution.Harmony.Tests", "..\modules\harmony\ModelingEvolution.Harmony.Tests\ModelingEvolution.Harmony.Tests.csproj", "{C5613208-DC25-AA54-3A51-A02D23BCE458}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer", "..\csharp\ZeroBuffer\ZeroBuffer.csproj", "{B24D4536-8679-B29D-4787-B06E34C2ADE2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Serve", "..\csharp\ZeroBuffer.Serve\ZeroBuffer.Serve.csproj", "{CF0EF038-08E0-078A-291C-88038EE4CBF0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +31,14 @@ Global
 		{C5613208-DC25-AA54-3A51-A02D23BCE458}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C5613208-DC25-AA54-3A51-A02D23BCE458}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C5613208-DC25-AA54-3A51-A02D23BCE458}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B24D4536-8679-B29D-4787-B06E34C2ADE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B24D4536-8679-B29D-4787-B06E34C2ADE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B24D4536-8679-B29D-4787-B06E34C2ADE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B24D4536-8679-B29D-4787-B06E34C2ADE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF0EF038-08E0-078A-291C-88038EE4CBF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF0EF038-08E0-078A-291C-88038EE4CBF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF0EF038-08E0-078A-291C-88038EE4CBF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF0EF038-08E0-078A-291C-88038EE4CBF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

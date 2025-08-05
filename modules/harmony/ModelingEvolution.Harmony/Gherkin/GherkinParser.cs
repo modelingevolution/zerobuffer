@@ -47,6 +47,7 @@ public class GherkinParser : IGherkinParser
             {
                 var scenarioDefinition = ParseScenario(scenario, background);
                 scenarioDefinition.FeatureFile = featureFileName;
+                scenarioDefinition.FeatureId = FeatureIdMapper.GetFeatureId(featureFileName);
                 yield return scenarioDefinition;
             }
             // Skip ScenarioOutline for now - not supported in newer Gherkin versions

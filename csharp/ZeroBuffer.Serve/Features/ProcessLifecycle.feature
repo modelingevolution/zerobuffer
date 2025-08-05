@@ -2,7 +2,6 @@ Feature: Process Lifecycle Tests
     Tests for process crash detection and recovery scenarios
     
     Background:
-        Given the test mode is configured
         
     Scenario: Test 2.1 - Writer Crash Detection
         Given the reader is 'csharp'

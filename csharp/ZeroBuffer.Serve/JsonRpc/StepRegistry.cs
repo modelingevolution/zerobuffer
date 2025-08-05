@@ -54,23 +54,23 @@ public class StepRegistry
         
         foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
         {
-            // Check for Given attribute
-            var givenAttr = method.GetCustomAttribute<GivenAttribute>();
-            if (givenAttr != null)
+            // Check for Given attributes (can be multiple)
+            var givenAttrs = method.GetCustomAttributes<GivenAttribute>();
+            foreach (var givenAttr in givenAttrs)
             {
                 RegisterStep(StepType.Given, givenAttr.Regex, type, method);
             }
             
-            // Check for When attribute
-            var whenAttr = method.GetCustomAttribute<WhenAttribute>();
-            if (whenAttr != null)
+            // Check for When attributes (can be multiple)
+            var whenAttrs = method.GetCustomAttributes<WhenAttribute>();
+            foreach (var whenAttr in whenAttrs)
             {
                 RegisterStep(StepType.When, whenAttr.Regex, type, method);
             }
             
-            // Check for Then attribute
-            var thenAttr = method.GetCustomAttribute<ThenAttribute>();
-            if (thenAttr != null)
+            // Check for Then attributes (can be multiple)
+            var thenAttrs = method.GetCustomAttributes<ThenAttribute>();
+            foreach (var thenAttr in thenAttrs)
             {
                 RegisterStep(StepType.Then, thenAttr.Regex, type, method);
             }

@@ -97,6 +97,9 @@ public class ScenarioCountTest : TestBase
         public Task StartProcessAsync(string processName, string platform, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
             
+        public Task StartProcessAsync(string processName, string platform, int hostPid, int featureId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+            
         public Task StopProcessAsync(string processName)
             => Task.CompletedTask;
             

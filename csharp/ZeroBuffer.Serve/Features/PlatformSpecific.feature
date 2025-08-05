@@ -3,7 +3,6 @@ Feature: Platform-Specific Tests
     Tests for platform-specific behavior and resource management
     
     Background:
-        Given the test mode is configured
         
     @linux
     Scenario: Test 8.1 - Linux Shared Memory Verification

@@ -6,6 +6,7 @@ namespace ModelingEvolution.Harmony.ProcessManagement;
 public interface IProcessManager : IDisposable
 {
     Task StartProcessAsync(string processName, string platform, CancellationToken cancellationToken = default);
+    Task StartProcessAsync(string processName, string platform, int hostPid, int featureId, CancellationToken cancellationToken = default);
     Task StopProcessAsync(string processName);
     Task StopAllProcessesAsync();
     Task<bool> IsProcessRunningAsync(string processName);

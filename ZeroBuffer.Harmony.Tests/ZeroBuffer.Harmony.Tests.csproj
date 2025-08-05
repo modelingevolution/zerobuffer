@@ -24,9 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../modules/harmony/ModelingEvolution.Harmony/ModelingEvolution.Harmony.csproj" />
-    <ProjectReference Include="../csharp/ZeroBuffer/ZeroBuffer.csproj" />
-    <ProjectReference Include="../csharp/ZeroBuffer.Serve/ZeroBuffer.Serve.csproj" />
+    <ProjectReference Include="..\modules\harmony\ModelingEvolution.Harmony\ModelingEvolution.Harmony.csproj" />
+    <ProjectReference Include="..\csharp\ZeroBuffer\ZeroBuffer.csproj" />
+    <ProjectReference Include="..\csharp\ZeroBuffer.Serve\ZeroBuffer.Serve.csproj" />
   </ItemGroup>
 
   <ItemGroup>

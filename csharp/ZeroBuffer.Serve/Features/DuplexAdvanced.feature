@@ -2,7 +2,6 @@ Feature: Advanced Duplex Channel Tests
     Advanced tests for duplex channel mutable/immutable modes and cleanup
     
     Background:
-        Given the test mode is configured
         
     Scenario: Test 14.5 - Mutable vs Immutable Server
         Given the server is 'csharp'

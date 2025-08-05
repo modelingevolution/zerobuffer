@@ -2,7 +2,6 @@ Feature: Edge Cases and Boundary Conditions
     Tests for edge cases, minimum/maximum values, and boundary conditions
     
     Background:
-        Given the test mode is configured
         
     Scenario: Test 11.3 - Zero-Sized Metadata Block
         Given the reader is 'csharp'

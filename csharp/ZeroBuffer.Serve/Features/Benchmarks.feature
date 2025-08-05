@@ -3,7 +3,6 @@ Feature: Performance Benchmark Tests
     Performance benchmarks for latency, throughput, and overhead measurements
     
     Background:
-        Given the test mode is configured
         And benchmark environment is prepared
         
     Scenario: Test 15.1 - Latency Benchmark

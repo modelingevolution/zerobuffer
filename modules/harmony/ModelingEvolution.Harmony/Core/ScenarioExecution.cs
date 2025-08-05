@@ -127,10 +127,12 @@ public class ScenarioExecution
     private async Task StartProcessesAsync(IProcessManager processManager, CancellationToken cancellationToken)
     {
         var processes = ExtractProcessNames();
+        var hostPid = Environment.ProcessId;
+        var featureId = Scenario.FeatureId;
         
         foreach (var (processName, platform) in Platforms.GetMappings(processes))
         {
-            await processManager.StartProcessAsync(processName, platform, cancellationToken);
+            await processManager.StartProcessAsync(processName, platform, hostPid, featureId, cancellationToken);
         }
     }
     

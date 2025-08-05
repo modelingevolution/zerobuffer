@@ -4,11 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelingEvolution.Harmony.Core;
 using ModelingEvolution.Harmony.Execution;
 using ModelingEvolution.Harmony.ProcessManagement;
 using Xunit.Abstractions;
+using Xunit.Extensions.Logging;
 
 namespace ZeroBuffer.Harmony.Tests;
 
@@ -25,8 +27,13 @@ public abstract class HarmonyTestBase
     {
         Output = output;
         
-        // Initialize with real implementations
-        var loggerFactory = NullLoggerFactory.Instance;
+        // Create xUnit logger factory
+        var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.AddXunit(output);
+            builder.SetMinimumLevel(LogLevel.Debug);
+        });
+        
         ProcessManager = new ProcessManager(GetConfiguration(), loggerFactory);
         StepExecutor = new StepExecutor(ProcessManager, loggerFactory);
     }
@@ -72,7 +79,8 @@ public abstract class HarmonyTestBase
             {
                 Steps = data.Background.Select(DeserializeStep).ToList()
             } : null,
-            Steps = data.Steps.Select(DeserializeStep).ToList()
+            Steps = data.Steps.Select(DeserializeStep).ToList(),
+            FeatureId = data.FeatureId
         };
         
         // Reconstruct PlatformCombination
@@ -95,53 +103,38 @@ public abstract class HarmonyTestBase
     
     private static MultiprocessConfiguration GetConfiguration()
     {
-        // Load from harmony-config.json if available
         var configPath = Path.Combine(AppContext.BaseDirectory, "harmony-config.json");
-        if (File.Exists(configPath))
+        if (!File.Exists(configPath))
         {
-            var json = File.ReadAllText(configPath);
-            return JsonSerializer.Deserialize<MultiprocessConfiguration>(json) 
-                ?? CreateDefaultConfiguration();
+            throw new FileNotFoundException($"Configuration file not found: {configPath}");
         }
         
-        return CreateDefaultConfiguration();
+        var json = File.ReadAllText(configPath);
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        
+        var config = JsonSerializer.Deserialize<MultiprocessConfiguration>(json, options);
+        if (config == null)
+        {
+            throw new InvalidOperationException($"Failed to deserialize configuration from: {configPath}");
+        }
+        
+        if (config.Platforms == null || config.Platforms.Count == 0)
+        {
+            throw new InvalidOperationException($"No platforms configured in: {configPath}");
+        }
+        
+        return config;
     }
     
-    private static MultiprocessConfiguration CreateDefaultConfiguration()
-    {
-        return new MultiprocessConfiguration
-        {
-            FeaturesPath = "Features",
-            DefaultTimeoutMs = 30000,
-            ProcessInitializationDelayMs = 1000,
-            Platforms = new Dictionary<string, PlatformConfiguration>
-            {
-                ["csharp"] = new()
-                {
-                    Executable = "dotnet",
-                    Arguments = "run --project ../../../csharp/ZeroBuffer.Serve/ZeroBuffer.Serve.csproj",
-                    WorkingDirectory = "."
-                },
-                ["python"] = new()
-                {
-                    Executable = "python",
-                    Arguments = "../../../python/zerobuffer_serve.py",
-                    WorkingDirectory = "."
-                },
-                ["cpp"] = new()
-                {
-                    Executable = "../../../cpp/build/zerobuffer-serve",
-                    Arguments = "",
-                    WorkingDirectory = "."
-                }
-            }
-        };
-    }
     
     // Data classes for deserialization
     protected class ScenarioData
     {
         public string TestId { get; set; } = "";
+        public int FeatureId { get; set; }
         public string ScenarioName { get; set; } = "";
         public string? ScenarioDescription { get; set; }
         public List<string>? Tags { get; set; }

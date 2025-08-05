@@ -2,7 +2,6 @@ Feature: Performance and Edge Case Tests
     Tests for buffer performance, edge cases, and boundary conditions
     
     Background:
-        Given the test mode is configured
         
     Scenario: Test 3.1 - Exact Buffer Fit
         Given the reader is 'csharp'

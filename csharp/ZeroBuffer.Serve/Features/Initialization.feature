@@ -2,7 +2,6 @@ Feature: Initialization and Resource Management Tests
     Tests for buffer initialization, resource cleanup, and lifecycle management
     
     Background:
-        Given the test mode is configured
         
     Scenario: Test 3.2 - Concurrent Initialization Race
         Given two readers 'csharp' and 'python'

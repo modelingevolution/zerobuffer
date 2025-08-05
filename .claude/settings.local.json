@@ -180,7 +180,12 @@
       "Bash(dotnet list:*)",
       "Bash(dotnet sln add:*)",
       "Bash(../run-single-test.sh)",
-      "Bash(./test-serve-directly.sh:*)"
+      "Bash(./test-serve-directly.sh:*)",
+      "Bash(for:*)",
+      "Bash(do sed -i '/Given the test mode is configured/d' \"$f\")",
+      "Bash(done)",
+      "Bash(./ZeroBuffer.Serve --help)",
+      "Bash(dotnet script:*)"
     ],
     "deny": []
   }

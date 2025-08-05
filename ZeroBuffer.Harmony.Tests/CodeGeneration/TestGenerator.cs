@@ -209,6 +209,7 @@ public class TestGenerator
         var data = new
         {
             TestId = scenario.TestId,
+            FeatureId = scenario.Scenario.FeatureId,
             ScenarioName = scenario.Scenario.Name,
             ScenarioDescription = scenario.Scenario.Description,
             Tags = scenario.Scenario.Tags,

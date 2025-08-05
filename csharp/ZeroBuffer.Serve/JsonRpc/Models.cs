@@ -2,19 +2,17 @@ namespace ZeroBuffer.Serve.JsonRpc;
 
 public class InitializeRequest
 {
+    // Harmony ProcessManager parameters
+    public int HostPid { get; set; }
+    public int FeatureId { get; set; }
+    
+    // Test context parameters
     public string Role { get; set; } = string.Empty;
     public string Platform { get; set; } = string.Empty;
     public string Scenario { get; set; } = string.Empty;
     public string TestRunId { get; set; } = string.Empty;
 }
 
-public class InitializeResponse
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public string Version { get; set; } = "1.0.0";
-    public List<string> Capabilities { get; set; } = new();
-}
 
 public class StepRequest
 {

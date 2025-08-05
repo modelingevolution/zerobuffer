@@ -22,6 +22,11 @@ public class ProcessManager : IProcessManager, IDisposable
     
     public async Task StartProcessAsync(string processName, string platform, CancellationToken cancellationToken = default)
     {
+        await StartProcessAsync(processName, platform, 0, 0, cancellationToken);
+    }
+
+    public async Task StartProcessAsync(string processName, string platform, int hostPid, int featureId, CancellationToken cancellationToken = default)
+    {
         var key = $"{processName}:{platform}";
         
         if (_processes.ContainsKey(key))
@@ -35,7 +40,8 @@ public class ProcessManager : IProcessManager, IDisposable
             throw new InvalidOperationException($"Platform '{platform}' not configured");
         }
         
-        _logger.LogInformation("Starting process {ProcessName} on platform {Platform}", processName, platform);
+        _logger.LogInformation("Starting process {ProcessName} on platform {Platform} with HostPid={HostPid}, FeatureId={FeatureId}", 
+            processName, platform, hostPid, featureId);
         
         var startInfo = new ProcessStartInfo
         {
@@ -49,16 +55,27 @@ public class ProcessManager : IProcessManager, IDisposable
             RedirectStandardError = true
         };
         
+        // Add environment variables for resource isolation
         foreach (var env in platformConfig.EnvironmentVariables)
         {
             startInfo.EnvironmentVariables[env.Key] = env.Value;
+        }
+        
+        // Pass Host PID and Feature ID as environment variables
+        if (hostPid > 0)
+        {
+            startInfo.EnvironmentVariables["HARMONY_HOST_PID"] = hostPid.ToString();
+        }
+        if (featureId > 0)
+        {
+            startInfo.EnvironmentVariables["HARMONY_FEATURE_ID"] = featureId.ToString();
         }
         
         var process = new Process { StartInfo = startInfo };
         process.Start();
         
         var connection = new ProcessConnection(processName, platform, process);
-        await connection.InitializeAsync(cancellationToken);
+        await connection.InitializeAsync(hostPid, featureId, cancellationToken);
         
         _processes[key] = new ProcessInfo
         {
@@ -166,14 +183,26 @@ public class ProcessConnection : IProcessConnection, IDisposable
     
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
+        await InitializeAsync(0, 0, cancellationToken);
+    }
+
+    public async Task InitializeAsync(int hostPid, int featureId, CancellationToken cancellationToken)
+    {
         _rpc = new JsonRpc(_process.StandardInput.BaseStream, _process.StandardOutput.BaseStream);
         _rpc.StartListening();
         
-        // Verify connection with health check
-        var result = await InvokeAsync<bool>("health", new { }, cancellationToken);
-        if (!result)
+        // Initialize process with resource isolation parameters
+        var initParams = new { hostPid, featureId };
+        var healthResult = await InvokeAsync<bool>("health", initParams, cancellationToken);
+        if (!healthResult)
         {
             throw new InvalidOperationException("Process health check failed");
+        }
+        
+        // Send initialization message with host PID and feature ID for resource isolation
+        if (hostPid > 0 && featureId > 0)
+        {
+            await InvokeAsync<bool>("initialize", initParams, cancellationToken);
         }
     }
     

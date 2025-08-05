@@ -2,7 +2,6 @@ Feature: Duplex Channel Tests
     Tests for bidirectional communication using duplex channels
     
     Background:
-        Given the test mode is configured
         
     Scenario: Test 14.1 - Basic Request-Response
         Given the server is 'csharp'

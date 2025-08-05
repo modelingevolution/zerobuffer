@@ -114,6 +114,16 @@ public class MultiprocessTests : TestBase, IDisposable
             return Task.CompletedTask;
         }
         
+        public Task StartProcessAsync(string processName, string platform, int hostPid, int featureId, CancellationToken cancellationToken = default)
+        {
+            var key = $"{processName}-{platform}";
+            if (!_connections.ContainsKey(key))
+            {
+                _connections[key] = new MockProcessConnection(processName, platform);
+            }
+            return Task.CompletedTask;
+        }
+        
         public Task StopProcessAsync(string processName)
         {
             var toRemove = _connections.Where(kvp => kvp.Value.ProcessName == processName).ToList();

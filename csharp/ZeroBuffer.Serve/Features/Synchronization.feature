@@ -2,7 +2,6 @@ Feature: Synchronization and Data Integrity Tests
     Tests for concurrent operations, synchronization, and data integrity
     
     Background:
-        Given the test mode is configured
         
     Scenario: Test 6.2 - Burst Write Performance
         Given the reader is 'csharp'

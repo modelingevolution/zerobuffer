@@ -11,4 +11,5 @@ public interface ITestContext
     void Cleanup();
     void SetData(string key, object value);
     T GetData<T>(string key);
+    bool TryGetData<T>(string key, out T value);
 }

@@ -4,7 +4,6 @@ Feature: Stress and Endurance Tests
     Long-running stress tests for stability and resource leak detection
     
     Background:
-        Given the test mode is configured
         And stress test environment is prepared
         
     Scenario: Test 9.3 - CPU Usage Monitoring

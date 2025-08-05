@@ -57,4 +57,16 @@ public class TestContext : ITestContext
         
         return (T)value;
     }
+    
+    public bool TryGetData<T>(string key, out T value)
+    {
+        if (_data.TryGetValue(key, out var obj) && obj is T typedValue)
+        {
+            value = typedValue;
+            return true;
+        }
+        
+        value = default(T)!;
+        return false;
+    }
 }
