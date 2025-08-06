@@ -26,9 +26,9 @@ This is the primary location for all feature files. All test scenarios should be
 - `Synchronization.feature` - Concurrent operations and data integrity
 - `PlatformSpecific.feature` - Platform-specific test scenarios
 
-### Automated Copy: `/csharp/ZeroBuffer.Serve/Features/`
+### Automated Copy: `/csharp/ZeroBuffer.Tests/Features/`
 
-Feature files in this location are automatically copied from `/ZeroBuffer.Harmony.Tests/Features/` during the build process. This ensures that the ZeroBuffer.Serve project (which implements the test steps) always has the latest feature definitions.
+Feature files in this location are automatically copied from `/ZeroBuffer.Harmony.Tests/Features/` during the build process. This ensures that the ZeroBuffer.Tests project always has the latest feature definitions for in-process testing.
 
 **Do not edit files in this location directly** - they will be overwritten during the next build.
 
@@ -41,11 +41,12 @@ Feature files in this location are automatically copied from `/ZeroBuffer.Harmon
 3. Generated tests are placed in the `/Generated` directory
 4. Tests execute by orchestrating processes defined in `harmony-config.json`
 
-### ZeroBuffer.Serve
+### ZeroBuffer.Tests
 
 1. Pre-build task copies all feature files from `/ZeroBuffer.Harmony.Tests/Features/`
-2. Copied files are placed in `/csharp/ZeroBuffer.Serve/Features/`
-3. The Serve project implements the step definitions that match the feature file steps
+2. Copied files are placed in `/csharp/ZeroBuffer.Tests/Features/`
+3. SpecFlow generates test classes from the feature files
+4. The Tests project implements the step definitions for in-process testing
 
 ## Feature File Convention
 
@@ -69,12 +70,14 @@ The platform selection is now handled by the test configuration (`harmony-config
 
 1. Create or modify feature files in `/ZeroBuffer.Harmony.Tests/Features/`
 2. Follow the process-based convention (use 'reader' and 'writer' process names)
-3. Implement corresponding step definitions in `/csharp/ZeroBuffer.Serve/StepDefinitions/`
+3. Implement corresponding step definitions in:
+   - `/csharp/ZeroBuffer.Tests/StepDefinitions/` for in-process tests
+   - Process-specific implementations for Harmony cross-process tests
 4. Build the solution - feature files will be automatically copied and tests generated
 
 ## Important Notes
 
 - Always maintain feature files in `/ZeroBuffer.Harmony.Tests/Features/`
-- Never edit feature files in `/csharp/ZeroBuffer.Serve/Features/` directly
+- Never edit feature files in `/csharp/ZeroBuffer.Tests/Features/` directly
 - Use the process-based convention for all new scenarios
 - Ensure step definitions match the exact text in feature files (including grammar)

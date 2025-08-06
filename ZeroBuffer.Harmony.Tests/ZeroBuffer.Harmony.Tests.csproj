@@ -47,6 +47,9 @@
   <ItemGroup>
     <Compile Include="Generated\**\*.generated.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Generated\" />
+  </ItemGroup>
   
   <!-- MSBuild target to generate tests before build -->
   <Target Name="GenerateHarmonyTests" BeforeTargets="BeforeBuild">

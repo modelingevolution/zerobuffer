@@ -110,7 +110,7 @@ public class StepExecutor : IStepExecutor
         {
             process = processName,
             stepType = step.Type.ToString().ToLowerInvariant(),
-            step = step.ProcessedText ?? step.Text,
+            step = step.Text,  // Send full text, not stripped version
             originalStep = step.Text,
             parameters = step.Parameters,
             isBroadcast

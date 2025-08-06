@@ -62,7 +62,7 @@ public class SimpleJsonRpcTests
                 {
                     process = step.Process,
                     stepType = step.Type.ToString().ToLowerInvariant(),
-                    step = step.ProcessedText ?? step.Text,
+                    step = step.Text,  // Send full text, not stripped version
                     originalStep = step.Text,
                     parameters = ExtractStepParameters(step.Text)
                 };
@@ -115,7 +115,7 @@ public class SimpleJsonRpcTests
             {
                 process = step.Process,
                 stepType = step.Type.ToString().ToLowerInvariant(),
-                step = step.ProcessedText ?? step.Text,
+                step = step.Text,  // Send full text, not stripped version
                 originalStep = step.Text,
                 parameters = ExtractStepParameters(step.Text)
             };

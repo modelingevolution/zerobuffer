@@ -19,25 +19,25 @@ public class StressTestsTests : HarmonyTestBase
     public StressTestsTests(ITestOutputHelper output) : base(output) { }
 
     #region Static Test Data
-    private static readonly string Test_10_1_Partial_Initialization_Failures_reader_cpp_Json = @"{""TestId"":""cpp-test-10-1---partial-initialization-failures"",""FeatureId"":11,""ScenarioName"":""Test 10.1 - Partial Initialization Failures"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp""},""Background"":[{""Type"":""Given"",""Text"":""the test mode is configured"",""Process"":null,""ProcessedText"":""the test mode is configured"",""Parameters"":{}},{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""the test creates shared memory successfully for \u0027test-partial\u0027"",""Process"":null,""ProcessedText"":""the test creates shared memory successfully for \u0027test-partial\u0027"",""Parameters"":{}},{""Type"":""When"",""Text"":""simulate failure creating sem-w semaphore"",""Process"":null,""ProcessedText"":""simulate failure creating sem-w semaphore"",""Parameters"":{}},{""Type"":""Then"",""Text"":""the \u0027reader\u0027 process should clean up shared memory"",""Process"":""reader"",""ProcessedText"":""should clean up shared memory"",""Parameters"":{}},{""Type"":""Then"",""Text"":""the \u0027reader\u0027 process should throw appropriate exception"",""Process"":""reader"",""ProcessedText"":""should throw appropriate exception"",""Parameters"":{}},{""Type"":""Then"",""Text"":""the test should verify no resources leaked"",""Process"":""reader"",""ProcessedText"":""the test should verify no resources leaked"",""Parameters"":{}}]}";
+    private static readonly string Test_11_1_Rapid_Create_Destroy_Cycles_reader_cpp_Json = @"{""TestId"":""cpp-test-11-1---rapid-create-destroy-cycles"",""FeatureId"":11,""ScenarioName"":""Test 11.1 - Rapid Create Destroy Cycles"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp""},""Background"":[{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""perform \u00271000\u0027 iterations of:"",""Process"":null,""ProcessedText"":""perform \u00271000\u0027 iterations of:"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027reader\u0027 process creates buffer \u0027test-rapid-cycle\u0027 with default config"",""Process"":""reader"",""ProcessedText"":""creates buffer \u0027test-rapid-cycle\u0027 with default config"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027reader\u0027 process destroys buffer"",""Process"":""reader"",""ProcessedText"":""destroys buffer"",""Parameters"":{}},{""Type"":""Then"",""Text"":""no resource leaks should occur"",""Process"":null,""ProcessedText"":""no resource leaks should occur"",""Parameters"":{}},{""Type"":""Then"",""Text"":""lock files should be properly cleaned"",""Process"":""reader"",""ProcessedText"":""lock files should be properly cleaned"",""Parameters"":{}},{""Type"":""Then"",""Text"":""system should remain stable"",""Process"":""reader"",""ProcessedText"":""system should remain stable"",""Parameters"":{}}]}";
 
     #endregion
 
     #region Scenarios Collection
     public static IEnumerable<ScenarioExecution> Scenarios => new[]
     {
-        DeserializeScenarioStatic(Test_10_1_Partial_Initialization_Failures_reader_cpp_Json)
+        DeserializeScenarioStatic(Test_11_1_Rapid_Create_Destroy_Cycles_reader_cpp_Json)
     };
     #endregion
 
     #region Test Methods
-    [Fact(DisplayName = "Test 10.1 - Partial Initialization Failures [reader=cpp]")]
-    [Trait("Scenario", "Test 10.1 - Partial Initialization Failures")]
+    [Fact(DisplayName = "Test 11.1 - Rapid Create Destroy Cycles [reader=cpp]")]
+    [Trait("Scenario", "Test 11.1 - Rapid Create Destroy Cycles")]
     [Trait("Platform", "cpp")]
     [Trait("Uses", "cpp")]
-    [Trait("Feature", "StressTests")]    public async Task Test_10_1_Partial_Initialization_Failures_reader_cpp()
+    [Trait("Feature", "11-StressTests")]    public async Task Test_11_1_Rapid_Create_Destroy_Cycles_reader_cpp()
     {
-        var scenario = DeserializeScenario(Test_10_1_Partial_Initialization_Failures_reader_cpp_Json);
+        var scenario = DeserializeScenario(Test_11_1_Rapid_Create_Destroy_Cycles_reader_cpp_Json);
         await ExecuteScenarioAsync(scenario);
     }
 

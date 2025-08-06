@@ -201,7 +201,18 @@
       "Bash(venv/bin/python -m pytest tests/test_basic_communication.py::TestBasicCommunication::test_1_2_multiple_frames_sequential -v -s --tb=short)",
       "Bash(do sed -i '1i using System;' \"$f\")",
       "Bash(do sed -i '2i using System.Collections.Generic;' \"$f\")",
-      "Bash(do sed:*)"
+      "Bash(do sed:*)",
+      "Bash(do)",
+      "Bash(if grep -q \"Given the test mode is configured\" \"$file\")",
+      "Bash(then)",
+      "Bash(fi)",
+      "Bash(diff:*)",
+      "Bash(dotnet msbuild:*)",
+      "Bash(# Extract step patterns from EdgeCasesSteps.cs\ngrep -E ''^\\s*\\[(Given|When|Then)\\(@\"\"'' ZeroBuffer.Tests/StepDefinitions/EdgeCasesSteps.cs | sed ''s/.*@\"\"//'' | sed ''s/\"\".*//'' > /tmp/step_definitions.txt\n\n# Check each pattern against the feature file\necho \"\"=== UNUSED STEP DEFINITIONS ===\"\"\nwhile IFS= read -r pattern; do\n    # Convert regex pattern to a searchable form\n    search_pattern=$(echo \"\"$pattern\"\" | sed ''s/\\\\(/(/g'' | sed ''s/\\\\)/)/g'' | sed \"\"s/\\\\\\''/''/g\"\")\n    if ! grep -qF \"\"$search_pattern\"\" ZeroBuffer.Tests/Features/EdgeCases.feature; then\n        echo \"\"UNUSED: $pattern\"\"\n    fi\ndone < /tmp/step_definitions.txt)",
+      "Bash(# Get unique steps from feature file\ngrep -E \"\"^\\s*(Given|When|Then|And)\"\" ZeroBuffer.Tests/Features/EdgeCases.feature | sed ''s/^\\s*//'' | sed ''s/^And //'' | sort -u > /tmp/feature_steps.txt\n\necho \"\"=== MISSING STEP DEFINITIONS ===\"\"\nwhile IFS= read -r step; do\n    # Remove the Given/When/Then prefix and get just the text\n    step_text=$(echo \"\"$step\"\" | sed ''s/^[^[:space:]]* //'')\n    \n    # Check if this step pattern exists in EdgeCasesSteps.cs\n    if ! grep -q \"\"$step_text\"\" ZeroBuffer.Tests/StepDefinitions/EdgeCasesSteps.cs; then\n        echo \"\"MISSING: $step\"\"\n    fi\ndone < /tmp/feature_steps.txt)",
+      "Bash(# Run test 11.4 and capture the actual error\ncd /mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp\ndotnet test ZeroBuffer.Tests/ZeroBuffer.Tests.csproj --filter \"\"FullyQualifiedName~Test11_4\"\" --no-build --verbosity normal 2>&1 | grep -E \"\"(No matching|Could not find|BindingException)\"\" -A 5)",
+      "Bash(# Check which steps from EdgeCases feature are not in EdgeCasesSteps but might be in other step files\necho \"\"=== Steps used in EdgeCases.feature ===\"\"\ngrep -E \"\"^\\s*(Given|When|Then|And)\"\" ZeroBuffer.Tests/Features/EdgeCases.feature | sed ''s/^\\s*//'' | sed ''s/^And //'' | while IFS= read -r step; do\n    step_text=$(echo \"\"$step\"\" | sed ''s/^[^[:space:]]* //'')\n    \n    if ! grep -q \"\"$step_text\"\" ZeroBuffer.Tests/StepDefinitions/EdgeCasesSteps.cs; then\n        echo \"\"NOT IN EdgeCasesSteps: $step\"\"\n        # Check if it''s in BasicCommunicationSteps\n        if grep -q \"\"$step_text\"\" ZeroBuffer.Tests/StepDefinitions/BasicCommunicationSteps.cs; then\n            echo \"\"  -> Found in BasicCommunicationSteps\"\"\n        else\n            echo \"\"  -> NOT FOUND ANYWHERE!\"\"\n        fi\n    fi\ndone | head -30)",
+      "Bash(# List all missing process-qualified steps that EdgeCasesSteps needs\necho \"\"=== Process-qualified steps needed in EdgeCasesSteps ===\"\"\necho \"\"\"\"\necho \"\"1. From feature: ''the reader process creates buffer test-free-space with specific configuration''\"\"\ngrep -n \"\"creates buffer.*with specific configuration\"\" ZeroBuffer.Tests/StepDefinitions/EdgeCasesSteps.cs\necho \"\"\"\"\necho \"\"2. From feature: ''the writer process should write wrap marker at current position''\"\"  \ngrep -n \"\"should write wrap marker at current position\"\" ZeroBuffer.Tests/StepDefinitions/EdgeCasesSteps.cs\necho \"\"\"\"\necho \"\"3. From feature: ''the reader process reads next frame''\"\"\ngrep -n \"\"reads next frame\"\" ZeroBuffer.Tests/StepDefinitions/EdgeCasesSteps.cs)"
     ],
     "deny": []
   }

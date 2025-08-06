@@ -113,6 +113,11 @@ public class TestGenerator
     private string ConvertToClassName(string featureFileName)
     {
         // Just return the feature file name as-is for the class name
+        if (featureFileName.Contains("-"))
+        {
+            string[] parts = featureFileName.Split('-');
+            return parts[1];
+        }
         return featureFileName;
     }
     

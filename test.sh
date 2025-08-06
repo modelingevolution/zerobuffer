@@ -1,25 +1,24 @@
 #!/bin/bash
 
 # Test script for running Harmony tests with platform filtering
-# Usage: ./test.sh csharp [edge [test-number]]
+# Usage: ./test.sh <platform> [test-number]
 # Examples:
 #   ./test.sh csharp         # Run all C#/C# tests
-#   ./test.sh csharp edge    # Run all C#/C# edge case tests
-#   ./test.sh csharp edge 11.3   # Run specific edge case test 11.3
+#   ./test.sh csharp 1.1     # Run specific test 1.1
+#   ./test.sh csharp 4.3     # Run specific edge case test 4.3
 
 set -e
 
 PLATFORM=$1
-TEST_TYPE=$2
-TEST_NUMBER=$3
+TEST_NUMBER=$2
 
 if [ -z "$PLATFORM" ]; then
-    echo "Usage: $0 <platform> [edge [test-number]]"
+    echo "Usage: $0 <platform> [test-number]"
     echo "Available platforms: csharp, cpp, python"
     echo "Examples:"
     echo "  $0 csharp         # Run all C#/C# tests"
-    echo "  $0 csharp edge    # Run all C#/C# edge case tests"
-    echo "  $0 csharp edge 11.3   # Run specific edge case test 11.3"
+    echo "  $0 csharp 1.1     # Run specific test 1.1"
+    echo "  $0 csharp 4.3     # Run specific edge case test 4.3"
     exit 1
 fi
 
@@ -49,18 +48,13 @@ case $PLATFORM in
         ;;
 esac
 
-# Enhance filter for edge cases if requested
-if [ "$TEST_TYPE" = "edge" ]; then
-    if [ -n "$TEST_NUMBER" ]; then
-        # Run specific edge case test
-        FILTER="$BASE_FILTER&FullyQualifiedName~EdgeCasesTests&DisplayName~\"Test $TEST_NUMBER\""
-        echo "Running specific edge case test: $TEST_NUMBER"
-    else
-        # Run all edge case tests
-        FILTER="$BASE_FILTER&FullyQualifiedName~EdgeCasesTests"
-        echo "Running all edge case tests"
-    fi
+# If test number is provided, run only that specific test
+if [ -n "$TEST_NUMBER" ]; then
+    # Run specific test by display name
+    FILTER="$BASE_FILTER&DisplayName~\"Test $TEST_NUMBER\""
+    echo "Running specific test: $TEST_NUMBER"
 else
+    # Run all tests for the platform
     FILTER="$BASE_FILTER"
 fi
 

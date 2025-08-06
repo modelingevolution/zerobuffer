@@ -5,21 +5,7 @@ namespace ModelingEvolution.Harmony.Core;
 /// </summary>
 public static class FeatureIdMapper
 {
-    private static readonly Dictionary<string, int> FeatureIdMap = new()
-    {
-        { "BasicCommunication", 1 },
-        { "Benchmarks", 2 },
-        { "DuplexAdvanced", 3 },
-        { "DuplexChannel", 4 },
-        { "EdgeCases", 5 },
-        { "ErrorHandling", 6 },
-        { "Initialization", 7 },
-        { "Performance", 8 },
-        { "PlatformSpecific", 9 },
-        { "ProcessLifecycle", 10 },
-        { "StressTests", 11 },
-        { "Synchronization", 12 }
-    };
+
 
     /// <summary>
     /// Gets the numeric ID for a feature file name
@@ -35,40 +21,18 @@ public static class FeatureIdMapper
         }
 
         // Remove .feature extension if present
-        var fileName = featureFileName.EndsWith(".feature") 
-            ? featureFileName[..^8] 
+        var fileName = featureFileName.EndsWith(".feature")
+            ? featureFileName[..^8]
             : featureFileName;
 
-        if (FeatureIdMap.TryGetValue(fileName, out var id))
-        {
-            return id;
-        }
+        // feature name is like 01-FeatureName.feature
+        string prefix = fileName.Contains('-') ? fileName.Split('-')[0] : string.Empty;
+        if (int.TryParse(prefix, out var value))
+            return value;
 
-        throw new ArgumentException($"No feature ID mapping found for '{fileName}'. Available features: {string.Join(", ", FeatureIdMap.Keys)}", nameof(featureFileName));
+        throw new ArgumentException(
+            $"No feature ID mapping found for '{fileName}'. Feature file name must start with a numeric prefix (e.g., '01-BasicCommunication')",
+            nameof(featureFileName));
     }
 
-    /// <summary>
-    /// Gets all mapped feature names
-    /// </summary>
-    public static IEnumerable<string> GetAllFeatureNames()
-    {
-        return FeatureIdMap.Keys;
-    }
-
-    /// <summary>
-    /// Gets the feature name for a given ID
-    /// </summary>
-    /// <param name="featureId">The feature ID</param>
-    /// <returns>The feature name</returns>
-    /// <exception cref="ArgumentException">Thrown when feature ID is not mapped</exception>
-    public static string GetFeatureName(int featureId)
-    {
-        var entry = FeatureIdMap.FirstOrDefault(kvp => kvp.Value == featureId);
-        if (entry.Key != null)
-        {
-            return entry.Key;
-        }
-
-        throw new ArgumentException($"No feature name found for ID {featureId}. Available IDs: {string.Join(", ", FeatureIdMap.Values)}", nameof(featureId));
-    }
 }

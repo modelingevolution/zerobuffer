@@ -176,7 +176,7 @@ public class StepRegistry
         try
         {
             // Create instance of the step class
-            var instance = ActivatorUtilities.CreateInstance(_serviceProvider, stepInfo.DeclaringType);
+            var instance = _serviceProvider.GetRequiredService(stepInfo.DeclaringType);
             
             // Extract parameters from regex groups
             var parameters = ExtractParameters(stepInfo.Method, match);

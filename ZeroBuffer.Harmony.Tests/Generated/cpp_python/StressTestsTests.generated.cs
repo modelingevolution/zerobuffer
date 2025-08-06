@@ -19,65 +19,26 @@ public class StressTestsTests : HarmonyTestBase
     public StressTestsTests(ITestOutputHelper output) : base(output) { }
 
     #region Static Test Data
-    private static readonly string Test_9_3_CPU_Usage_Monitoring_reader_cpp_writer_python_Json = @"{""TestId"":""cpp-python-test-9-3---cpu-usage-monitoring"",""FeatureId"":11,""ScenarioName"":""Test 9.3 - CPU Usage Monitoring"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp"",""writer"":""python""},""Background"":[{""Type"":""Given"",""Text"":""the test mode is configured"",""Process"":null,""ProcessedText"":""the test mode is configured"",""Parameters"":{}},{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""the \u0027reader\u0027 process creates buffer \u0027test-cpu-usage\u0027 with default config"",""Process"":""reader"",""ProcessedText"":""creates buffer \u0027test-cpu-usage\u0027 with default config"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027writer\u0027 process connects to buffer \u0027test-cpu-usage\u0027"",""Process"":""writer"",""ProcessedText"":""connects to buffer \u0027test-cpu-usage\u0027"",""Parameters"":{}},{""Type"":""Then"",""Text"":""monitor CPU usage during idle (blocked on semaphore)"",""Process"":null,""ProcessedText"":""monitor CPU usage during idle (blocked on semaphore)"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify near-zero CPU when waiting"",""Process"":""writer"",""ProcessedText"":""verify near-zero CPU when waiting"",""Parameters"":{}},{""Type"":""When"",""Text"":""transfer data actively"",""Process"":null,""ProcessedText"":""transfer data actively"",""Parameters"":{}},{""Type"":""Then"",""Text"":""monitor CPU during active transfer"",""Process"":null,""ProcessedText"":""monitor CPU during active transfer"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify efficient data copying"",""Process"":""writer"",""ProcessedText"":""verify efficient data copying"",""Parameters"":{}}]}";
-    private static readonly string Test_10_3_Invalid_Frame_Header_Variations_reader_cpp_writer_python_Json = @"{""TestId"":""cpp-python-test-10-3---invalid-frame-header-variations"",""FeatureId"":11,""ScenarioName"":""Test 10.3 - Invalid Frame Header Variations"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp"",""writer"":""python""},""Background"":[{""Type"":""Given"",""Text"":""the test mode is configured"",""Process"":null,""ProcessedText"":""the test mode is configured"",""Parameters"":{}},{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""the \u0027reader\u0027 process creates buffer \u0027test-frame-corruption\u0027 with default config"",""Process"":""reader"",""ProcessedText"":""creates buffer \u0027test-frame-corruption\u0027 with default config"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027writer\u0027 process connects to buffer \u0027test-frame-corruption\u0027"",""Process"":""writer"",""ProcessedText"":""connects to buffer \u0027test-frame-corruption\u0027"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027writer\u0027 process writes valid frame"",""Process"":""writer"",""ProcessedText"":""writes valid frame"",""Parameters"":{}},{""Type"":""Then"",""Text"":""test multiple corruption scenarios:"",""Process"":null,""ProcessedText"":""test multiple corruption scenarios:"",""Parameters"":{}}]}";
-    private static readonly string Test_10_4_Reader_Death_During_Active_Write_reader_cpp_writer_python_Json = @"{""TestId"":""cpp-python-test-10-4---reader-death-during-active-write"",""FeatureId"":11,""ScenarioName"":""Test 10.4 - Reader Death During Active Write"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp"",""writer"":""python""},""Background"":[{""Type"":""Given"",""Text"":""the test mode is configured"",""Process"":null,""ProcessedText"":""the test mode is configured"",""Parameters"":{}},{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""the \u0027reader\u0027 process creates buffer \u0027test-reader-death-write\u0027 with metadata size \u00270\u0027 and payload size \u002710240\u0027"",""Process"":""reader"",""ProcessedText"":""creates buffer \u0027test-reader-death-write\u0027 with metadata size \u00270\u0027 and payload size \u002710240\u0027"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027writer\u0027 process connects to buffer \u0027test-reader-death-write\u0027"",""Process"":""writer"",""ProcessedText"":""connects to buffer \u0027test-reader-death-write\u0027"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027writer\u0027 process starts writing large frame \u00278192\u0027 bytes"",""Process"":""writer"",""ProcessedText"":""starts writing large frame \u00278192\u0027 bytes"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027reader\u0027 process is killed while write in progress"",""Process"":""reader"",""ProcessedText"":""is killed while write in progress"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027writer\u0027 process detects reader death on next operation"",""Process"":""writer"",""ProcessedText"":""detects reader death on next operation"",""Parameters"":{}},{""Type"":""Then"",""Text"":""the \u0027writer\u0027 process should throw reader dead exception"",""Process"":""writer"",""ProcessedText"":""should throw reader dead exception"",""Parameters"":{}}]}";
-    private static readonly string Test_12_1_Long_Duration_Stress_Test_reader_cpp_writer_python_Json = @"{""TestId"":""cpp-python-test-12-1---long-duration-stress-test"",""FeatureId"":11,""ScenarioName"":""Test 12.1 - Long Duration Stress Test"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp"",""writer"":""python""},""Background"":[{""Type"":""Given"",""Text"":""the test mode is configured"",""Process"":null,""ProcessedText"":""the test mode is configured"",""Parameters"":{}},{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""the \u0027reader\u0027 process creates buffer \u0027test-long-duration\u0027 with default config"",""Process"":""reader"",""ProcessedText"":""creates buffer \u0027test-long-duration\u0027 with default config"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027writer\u0027 process connects to buffer \u0027test-long-duration\u0027"",""Process"":""writer"",""ProcessedText"":""connects to buffer \u0027test-long-duration\u0027"",""Parameters"":{}},{""Type"":""When"",""Text"":""the test runs continuous write-read for \u002724\u0027 hours"",""Process"":""writer"",""ProcessedText"":""the test runs continuous write-read for \u002724\u0027 hours"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify no resource leaks"",""Process"":null,""ProcessedText"":""verify no resource leaks"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify sequence numbers handle overflow"",""Process"":""writer"",""ProcessedText"":""verify sequence numbers handle overflow"",""Parameters"":{}},{""Type"":""Then"",""Text"":""monitor system resource usage"",""Process"":""writer"",""ProcessedText"":""monitor system resource usage"",""Parameters"":{}},{""Type"":""Then"",""Text"":""ensure stable operation throughout"",""Process"":""writer"",""ProcessedText"":""ensure stable operation throughout"",""Parameters"":{}}]}";
+    private static readonly string Test_11_3_Long_Duration_Stress_Test_reader_cpp_writer_python_Json = @"{""TestId"":""cpp-python-test-11-3---long-duration-stress-test"",""FeatureId"":11,""ScenarioName"":""Test 11.3 - Long Duration Stress Test"",""ScenarioDescription"":null,""Tags"":[],""Platforms"":{""reader"":""cpp"",""writer"":""python""},""Background"":[{""Type"":""Given"",""Text"":""stress test environment is prepared"",""Process"":null,""ProcessedText"":""stress test environment is prepared"",""Parameters"":{}}],""Steps"":[{""Type"":""Given"",""Text"":""the \u0027reader\u0027 process creates buffer \u0027test-long-duration\u0027 with default config"",""Process"":""reader"",""ProcessedText"":""creates buffer \u0027test-long-duration\u0027 with default config"",""Parameters"":{}},{""Type"":""When"",""Text"":""the \u0027writer\u0027 process connects to buffer \u0027test-long-duration\u0027"",""Process"":""writer"",""ProcessedText"":""connects to buffer \u0027test-long-duration\u0027"",""Parameters"":{}},{""Type"":""When"",""Text"":""the test runs continuous write-read for \u002724\u0027 hours"",""Process"":""writer"",""ProcessedText"":""the test runs continuous write-read for \u002724\u0027 hours"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify no resource leaks"",""Process"":null,""ProcessedText"":""verify no resource leaks"",""Parameters"":{}},{""Type"":""Then"",""Text"":""verify sequence numbers handle overflow"",""Process"":""writer"",""ProcessedText"":""verify sequence numbers handle overflow"",""Parameters"":{}},{""Type"":""Then"",""Text"":""monitor system resource usage"",""Process"":""writer"",""ProcessedText"":""monitor system resource usage"",""Parameters"":{}},{""Type"":""Then"",""Text"":""ensure stable operation throughout"",""Process"":""writer"",""ProcessedText"":""ensure stable operation throughout"",""Parameters"":{}}]}";
 
     #endregion
 
     #region Scenarios Collection
     public static IEnumerable<ScenarioExecution> Scenarios => new[]
     {
-        DeserializeScenarioStatic(Test_9_3_CPU_Usage_Monitoring_reader_cpp_writer_python_Json),
-        DeserializeScenarioStatic(Test_10_3_Invalid_Frame_Header_Variations_reader_cpp_writer_python_Json),
-        DeserializeScenarioStatic(Test_10_4_Reader_Death_During_Active_Write_reader_cpp_writer_python_Json),
-        DeserializeScenarioStatic(Test_12_1_Long_Duration_Stress_Test_reader_cpp_writer_python_Json)
+        DeserializeScenarioStatic(Test_11_3_Long_Duration_Stress_Test_reader_cpp_writer_python_Json)
     };
     #endregion
 
     #region Test Methods
-    [Fact(DisplayName = "Test 9.3 - CPU Usage Monitoring [reader=cpp, writer=python]")]
-    [Trait("Scenario", "Test 9.3 - CPU Usage Monitoring")]
+    [Fact(DisplayName = "Test 11.3 - Long Duration Stress Test [reader=cpp, writer=python]")]
+    [Trait("Scenario", "Test 11.3 - Long Duration Stress Test")]
     [Trait("Platform", "cpp/python")]
     [Trait("Uses", "cpp")]
     [Trait("Uses", "python")]
-    [Trait("Feature", "StressTests")]    public async Task Test_9_3_CPU_Usage_Monitoring_reader_cpp_writer_python()
+    [Trait("Feature", "11-StressTests")]    public async Task Test_11_3_Long_Duration_Stress_Test_reader_cpp_writer_python()
     {
-        var scenario = DeserializeScenario(Test_9_3_CPU_Usage_Monitoring_reader_cpp_writer_python_Json);
-        await ExecuteScenarioAsync(scenario);
-    }
-
-    [Fact(DisplayName = "Test 10.3 - Invalid Frame Header Variations [reader=cpp, writer=python]")]
-    [Trait("Scenario", "Test 10.3 - Invalid Frame Header Variations")]
-    [Trait("Platform", "cpp/python")]
-    [Trait("Uses", "cpp")]
-    [Trait("Uses", "python")]
-    [Trait("Feature", "StressTests")]    public async Task Test_10_3_Invalid_Frame_Header_Variations_reader_cpp_writer_python()
-    {
-        var scenario = DeserializeScenario(Test_10_3_Invalid_Frame_Header_Variations_reader_cpp_writer_python_Json);
-        await ExecuteScenarioAsync(scenario);
-    }
-
-    [Fact(DisplayName = "Test 10.4 - Reader Death During Active Write [reader=cpp, writer=python]")]
-    [Trait("Scenario", "Test 10.4 - Reader Death During Active Write")]
-    [Trait("Platform", "cpp/python")]
-    [Trait("Uses", "cpp")]
-    [Trait("Uses", "python")]
-    [Trait("Feature", "StressTests")]    public async Task Test_10_4_Reader_Death_During_Active_Write_reader_cpp_writer_python()
-    {
-        var scenario = DeserializeScenario(Test_10_4_Reader_Death_During_Active_Write_reader_cpp_writer_python_Json);
-        await ExecuteScenarioAsync(scenario);
-    }
-
-    [Fact(DisplayName = "Test 12.1 - Long Duration Stress Test [reader=cpp, writer=python]")]
-    [Trait("Scenario", "Test 12.1 - Long Duration Stress Test")]
-    [Trait("Platform", "cpp/python")]
-    [Trait("Uses", "cpp")]
-    [Trait("Uses", "python")]
-    [Trait("Feature", "StressTests")]    public async Task Test_12_1_Long_Duration_Stress_Test_reader_cpp_writer_python()
-    {
-        var scenario = DeserializeScenario(Test_12_1_Long_Duration_Stress_Test_reader_cpp_writer_python_Json);
+        var scenario = DeserializeScenario(Test_11_3_Long_Duration_Stress_Test_reader_cpp_writer_python_Json);
         await ExecuteScenarioAsync(scenario);
     }
 

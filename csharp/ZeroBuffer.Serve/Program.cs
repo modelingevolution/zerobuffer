@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using TechTalk.SpecFlow;
 using ZeroBuffer.Serve;
 using ZeroBuffer.Serve.JsonRpc;
 using ZeroBuffer.Serve.Logging;
@@ -33,12 +34,19 @@ services.AddSingleton<ZeroBuffer.Tests.Services.IBufferNamingService, ZeroBuffer
 services.AddSingleton<StepRegistry>();
 services.AddSingleton<IStepExecutor, RegistryBasedStepExecutor>();
 
-// Register step definition classes from ZeroBuffer.Tests
-services.AddTransient<BasicCommunicationSteps>();
-services.AddTransient<EdgeCasesSteps>();
-services.AddTransient<ProcessLifecycleStepsStub>();
-services.AddTransient<DuplexChannelStepsStub>();
-// Add more step classes as they are created...
+// Automatically discover and register all step definition classes as singletons
+var testsAssembly = typeof(BasicCommunicationSteps).Assembly;
+var stepDefinitionTypes = testsAssembly.GetTypes()
+    .Where(t => t.GetCustomAttribute<BindingAttribute>() != null && !t.IsAbstract && t.IsClass)
+    .ToList();
+
+Console.Error.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] Registering {stepDefinitionTypes.Count} step definition classes as singletons");
+
+foreach (var stepType in stepDefinitionTypes)
+{
+    services.AddSingleton(stepType);
+    Console.Error.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] Registered: {stepType.Name}");
+}
 
 services.AddSingleton<ZeroBufferServe>();
 
@@ -49,7 +57,6 @@ Console.Error.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] ZeroBuffer
 
 // Discover and register all steps from ZeroBuffer.Tests assembly
 var stepRegistry = serviceProvider.GetRequiredService<StepRegistry>();
-var testsAssembly = typeof(BasicCommunicationSteps).Assembly;
 stepRegistry.DiscoverSteps(testsAssembly);
 
 try

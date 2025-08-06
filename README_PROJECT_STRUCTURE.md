@@ -36,11 +36,17 @@ zerobuffer/
 │       ├── example_writer.cpp
 │       └── example_metadata.cpp
 │
-├── csharp/                     # C# Implementation (planned)
-│   └── README.md              # Placeholder for .NET implementation
+├── csharp/                     # C# Implementation (in progress)
+│   ├── ZeroBuffer/            # Core library
+│   ├── ZeroBuffer.Tests/      # In-process tests
+│   ├── ZeroBuffer.Benchmarks/ # Performance benchmarks
+│   └── README.md              # C# specific documentation
 │
-└── python/                     # Python Implementation (planned)
-    └── README.md              # Placeholder for Python implementation
+└── python/                     # Python Implementation (in progress)
+    ├── zerobuffer/            # Core library package
+    ├── tests/                 # Unit and integration tests
+    ├── benchmarks/            # Performance benchmarks
+    └── README.md              # Python specific documentation
 ```
 
 ## Protocol Implementation Status

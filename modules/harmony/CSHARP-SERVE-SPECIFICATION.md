@@ -46,9 +46,10 @@ zerobuffer/
     "params": {
         "process": "reader",
         "stepType": "given",
-        "step": "creates buffer 'test' with size '10240'",
+        "step": "the 'reader' process creates buffer 'test' with size '10240'",
         "originalStep": "the 'reader' process creates buffer 'test' with size '10240'",
         "parameters": {
+            "process": "reader",
             "buffer_name": "test",
             "size": "10240"
         },
@@ -182,36 +183,47 @@ public class BasicCommunicationSteps
         _context = context;
     }
     
-    // Note: Process context already stripped by orchestrator
-    [Given(@"creates buffer '(.*)' with size '(.*)'")]
-    public void GivenCreatesBuffer(string bufferName, int size)
+    // Steps must accept process parameter even if ignored
+    [Given(@"the '([^']+)' process creates buffer '([^']+)' with size '(\d+)'")]
+    public void GivenProcessCreatesBuffer(string process, string bufferName, int size)
     {
-        // Direct implementation - we only receive steps meant for us
+        // Process parameter accepted but not used - implementation is process-agnostic
         _context.CreateBuffer(bufferName, size);
     }
     
-    [When(@"connects to buffer '(.*)'")]
-    public void WhenConnectsToBuffer(string bufferName)
+    [When(@"the '([^']+)' process connects to buffer '([^']+)'")]
+    public void WhenProcessConnectsToBuffer(string process, string bufferName)
     {
+        // Process parameter accepted but not used
         var buffer = ZeroBuffer.OpenExisting(bufferName);
         _context.SetBuffer(bufferName, buffer);
     }
     
-    [When(@"writes '(.*)' to buffer '(.*)'")]
-    public void WhenWritesToBuffer(string data, string bufferName)
+    [When(@"the '([^']+)' process writes '([^']+)' to buffer '([^']+)'")]
+    public void WhenProcessWritesToBuffer(string process, string data, string bufferName)
     {
+        // Process parameter accepted but not used
         var buffer = _context.GetBuffer(bufferName);
         buffer.Write(Encoding.UTF8.GetBytes(data));
     }
     
-    [Then(@"should read '(.*)' from buffer '(.*)'")]
-    public void ThenShouldReadFromBuffer(string expectedData, string bufferName)
+    [Then(@"the '([^']+)' process should read '([^']+)' from buffer '([^']+)'")]
+    public void ThenProcessShouldReadFromBuffer(string process, string expectedData, string bufferName)
     {
+        // Process parameter accepted but not used
         var buffer = _context.GetBuffer(bufferName);
         var data = buffer.Read();
         var actualData = Encoding.UTF8.GetString(data);
         
         actualData.Should().Be(expectedData);
+    }
+    
+    // And steps without process parameter
+    [And(@"writes frame with size '(\d+)'")]
+    public void AndWritesFrameWithSize(int size)
+    {
+        var buffer = _context.GetCurrentBuffer();
+        buffer.WriteFrame(GenerateData(size));
     }
 }
 ```

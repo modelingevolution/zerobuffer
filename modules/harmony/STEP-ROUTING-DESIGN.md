@@ -40,7 +40,7 @@ public class StepExecutor : IStepExecutor
             new StepRequest
             {
                 StepType = step.Type.ToString().ToLower(),
-                Step = step.ProcessedText, // Already stripped of process context
+                Step = step.Text, // Send full text with process context
                 Parameters = step.Parameters,
                 Table = step.Table
             },
@@ -60,8 +60,9 @@ The Harmony orchestrator already extracts process context:
 // After extraction:
 var stepDefinition = new StepDefinition
 {
-    Process = "reader",                                    // Extracted
-    ProcessedText = "creates buffer 'test' with size '1024'", // Stripped
+    Text = "the 'reader' process creates buffer 'test' with size '1024'", // Full text
+    Process = "reader",                                    // Extracted for routing
+    ProcessedText = "creates buffer 'test' with size '1024'", // Still extracted but not used for sending
     Parameters = new Dictionary<string, object>
     {
         ["buffer_name"] = "test",
@@ -221,7 +222,7 @@ public class StepRouter
                 new
                 {
                     stepType = effectiveStepType.ToString().ToLower(),
-                    step = step.ProcessedText,
+                    step = step.Text,  // Send full text with process context
                     parameters = step.Parameters,
                     table = step.Table
                 });
