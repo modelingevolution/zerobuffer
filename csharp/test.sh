@@ -126,6 +126,24 @@ while [[ $# -gt 0 ]]; do
             dotnet test ZeroBuffer.Tests/ZeroBuffer.Tests.csproj --filter "Name~Test12_2_MemoryAlignmentVerification" -v $VERBOSITY $NO_BUILD
             exit $?
             ;;
+        3.1|3_1)
+            # Run specific test 3.1
+            echo -e "${YELLOW}Running Test 3.1 - Metadata Write-Once Enforcement${NC}"
+            dotnet test ZeroBuffer.Tests/ZeroBuffer.Tests.csproj --filter "FullyQualifiedName~Test3_1" -v $VERBOSITY $NO_BUILD
+            exit $?
+            ;;
+        3.2|3_2)
+            # Run specific test 3.2
+            echo -e "${YELLOW}Running Test 3.2 - Metadata Size Overflow${NC}"
+            dotnet test ZeroBuffer.Tests/ZeroBuffer.Tests.csproj --filter "FullyQualifiedName~Test3_2" -v $VERBOSITY $NO_BUILD
+            exit $?
+            ;;
+        3.3|3_3)
+            # Run specific test 3.3
+            echo -e "${YELLOW}Running Test 3.3 - Zero Metadata Configuration${NC}"
+            dotnet test ZeroBuffer.Tests/ZeroBuffer.Tests.csproj --filter "FullyQualifiedName~Test3_3" -v $VERBOSITY $NO_BUILD
+            exit $?
+            ;;
         *)
             # If not a flag, treat as test name filter
             SPECIFIC_TEST="$1"

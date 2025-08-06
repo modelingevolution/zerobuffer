@@ -201,7 +201,7 @@ public class StepRegistry
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing step method: {Method}", stepInfo.Method.Name);
+            _logger.LogError(ex, "Error executing step method: {Method} in {FeatureClass}", stepInfo.Method.Name, stepInfo.Method.DeclaringType!.Name);
             
             // Get the actual exception (unwrap TargetInvocationException)
             var actualException = ex is TargetInvocationException tie ? tie.InnerException ?? ex : ex;

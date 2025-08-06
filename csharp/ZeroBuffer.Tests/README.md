@@ -58,10 +58,11 @@ private string _currentBuffer;
 0. READ THE PREREQUISITES if you haven't!
 1. Read scenario in feature file; Try to understand it and assess if it make sense. If it doesn't make sense, ask for clarification.
 2. Identify required step definitions
-3. Implement each step with actual ZeroBuffer operations
-4. Run single test: `csharp/test.sh [test-number]`; DO NOT RUN ALL TESTS AT ONCE!
-5. Fix issues; If the test fails, it can mean that the implementation is incorrect. Investigate the failure, read the protocol documentaiton and try to fix the implementation. 
-6. Only if GREEN, run again with Harmony: `../../test.sh csharp [test-number]`; Fix any issues
+3. Analize if we need to exchange data betwen the processes, or we can simply relay on patterns. If we need to exchange data - stop working and tell me that.
+4. Implement each step with actual ZeroBuffer operations
+5. Run single test: `csharp/test.sh [test-number]`; DO NOT RUN ALL TESTS AT ONCE!
+6. Fix issues; If the test fails, it can mean that the implementation is incorrect. Investigate the failure, read the protocol documentaiton and try to fix the implementation. 
+7. Only if GREEN, run again with Harmony: `../../test.sh csharp [test-number]`; Fix any issues
 
 ### Troubleshooting
 

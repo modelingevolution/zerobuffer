@@ -24,11 +24,11 @@ Feature: Basic Communication Tests
         And the 'writer' process writes frame with sequence '2'
         And the 'writer' process writes frame with sequence '3'
 
-        Then the 'reader' process should read frame with sequence '1'
+        Then the 'reader' process should read frame with sequence '1';
         And the 'reader' process signals space available
-        And the 'reader' process should read frame with sequence '2'
+        And the 'reader' process should read frame with sequence '2';
         And the 'reader' process signals space available
-        And the 'reader' process should read frame with sequence '3'
+        And the 'reader' process should read frame with sequence '3';
         And the 'reader' process should verify all frames maintain sequential order
 
     Scenario: Test 1.3 - Buffer Full Handling
@@ -64,7 +64,7 @@ Feature: Basic Communication Tests
         And the 'writer' process writes frame with size '10240'
         And the 'writer' process writes frame with size '1'
 
-        Then the 'reader' process should read 4 frames with correct sizes in order
+        Then the 'reader' process should read 4 frames with sizes '100,1024,10240,1' in order
 
     Scenario: Test 1.6 - Metadata Update During Operation
         Given the 'reader' process creates buffer 'test-metadata-update' with metadata size '1024' and payload size '10240'

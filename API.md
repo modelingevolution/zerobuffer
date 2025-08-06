@@ -8,10 +8,11 @@
 ## Table of Contents
 1. [Core Principles](#core-principles)
 2. [Basic API Usage](#basic-api-usage)
-3. [CLI Commands](#cli-commands)
-4. [Typical Scenarios](#typical-scenarios)
-5. [Duplex Channel Design](#duplex-channel-design)
-6. [Implementation Roadmap](#implementation-roadmap)
+3. [Exceptions and Error Handling](#exceptions-and-error-handling)
+4. [CLI Commands](#cli-commands)
+5. [Typical Scenarios](#typical-scenarios)
+6. [Duplex Channel Design](#duplex-channel-design)
+7. [Implementation Roadmap](#implementation-roadmap)
 
 ## Core Principles
 
@@ -97,6 +98,9 @@ while (true) {
 // Writer (connects to buffer)
 using var writer = new Writer("buffer-name");
 
+// Configure write timeout (default: 5 seconds)
+writer.WriteTimeout = TimeSpan.FromSeconds(10);
+
 // Write frames
 byte[] data = new byte[1024];
 writer.WriteFrame(data);
@@ -133,6 +137,46 @@ writer = zerobuffer.Writer("buffer-name")
 data = bytes(1024)
 writer.write_frame(data)
 ```
+
+## Exceptions and Error Handling
+
+### C# Exceptions
+
+- **BufferNotFoundException**: Thrown when trying to connect to a non-existent buffer
+- **WriterAlreadyConnectedException**: Thrown when a writer is already connected to the buffer
+- **ReaderAlreadyConnectedException**: Thrown when a reader is already connected to the buffer
+- **BufferFullException**: Thrown when the writer cannot write because the buffer is full after the configured timeout
+  - Default timeout: 5 seconds
+  - Configurable via `Writer.WriteTimeout` property
+  - Writer waits on sem-r semaphore for the configured duration
+  - If space doesn't become available within timeout, BufferFullException is thrown
+- **ReaderDeadException**: Thrown when the writer detects the reader process has died
+- **WriterDeadException**: Thrown when the reader detects the writer process has died
+- **FrameTooLargeException**: Thrown when attempting to write a frame larger than the buffer's payload size
+
+### C++ Exceptions
+
+- **buffer_not_found_exception**: Buffer doesn't exist
+- **writer_already_connected_exception**: Writer already connected to buffer
+- **reader_already_connected_exception**: Reader already connected to buffer
+- **buffer_full_exception**: Buffer is full after configured timeout
+  - Default timeout: 5 seconds
+  - Configurable via writer constructor or setter method
+  - Writer waits on sem-r semaphore for the configured duration
+- **reader_dead_exception**: Reader process died
+- **writer_dead_exception**: Writer process died
+- **frame_too_large_exception**: Frame exceeds buffer size
+- Some operations also return invalid values (e.g., `Frame::invalid()`) for non-critical errors
+
+### Python Exceptions
+
+- **BufferNotFoundError**: Buffer doesn't exist
+- **WriterAlreadyConnectedError**: Writer already connected
+- **ReaderAlreadyConnectedError**: Reader already connected  
+- **BufferFullError**: Buffer is full after timeout
+- **ReaderDeadError**: Reader process died
+- **WriterDeadError**: Writer process died
+- **FrameTooLargeError**: Frame exceeds buffer size
 
 ## CLI Commands
 

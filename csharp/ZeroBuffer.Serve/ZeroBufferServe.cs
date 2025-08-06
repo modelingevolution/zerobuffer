@@ -41,8 +41,14 @@ public class ZeroBufferServe
         jsonRpc.AddLocalRpcMethod("cleanup", new Func<Task>(CleanupAsync));
         jsonRpc.AddLocalRpcMethod("shutdown", new Action(() => 
         {
-            _logger.LogInformation("Shutdown requested");
+            _logger.LogInformation("Shutdown requested - performing graceful shutdown");
             jsonRpc.Dispose();
+            Environment.Exit(0); // Graceful exit
+        }));
+        jsonRpc.AddLocalRpcMethod("crash", new Action(() => 
+        {
+            _logger.LogInformation("Crash requested - injecting segmentation fault");
+            InjectCrash();
         }));
         
         jsonRpc.StartListening();
@@ -149,6 +155,22 @@ public class ZeroBufferServe
         {
             _logger.LogError(ex, "Cleanup failed");
             throw;
+        }
+    }
+    
+    private unsafe void InjectCrash()
+    {
+        // Inject a segmentation fault using unsafe code
+        // This will cause the process to crash immediately
+        try
+        {
+            int* ptr = null;
+            *ptr = 42; // Null pointer dereference - will cause segfault
+        }
+        catch
+        {
+            // If the above doesn't work, force an unhandled exception
+            throw new AccessViolationException("Injected crash");
         }
     }
 }

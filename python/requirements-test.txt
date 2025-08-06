@@ -1,0 +1,18 @@
+# Test dependencies for ZeroBuffer Python
+
+# Core testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-timeout>=2.1.0
+pytest-mock>=3.11.0
+
+# BDD testing
+pytest-bdd>=7.0.0
+
+# Coverage
+pytest-cov>=4.0.0
+
+# For test data generation
+faker>=18.0.0
+
+# Platform-specific dependencies are in main requirements.txt

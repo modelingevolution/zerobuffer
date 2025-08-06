@@ -1,258 +1,277 @@
-#!/usr/bin/env bash
-# Test runner script for ZeroBuffer Python
-# DevOps best practices: parallel execution, coverage, reporting
+#!/bin/bash
 
-set -euo pipefail
+# Test runner script for ZeroBuffer Python BDD tests
+# Runs tests from feature files using pytest-bdd
 
-# Colors
+set -e
+
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'
+NC='\033[0m' # No Color
 
 # Script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-# Configuration
+# Default values
+FILTER=""
+VERBOSITY=""
+NO_BUILD=""
+SPECIFIC_TEST=""
 VENV_DIR="${VENV_DIR:-venv}"
-TEST_TYPE="${1:-all}"
-PYTEST_ARGS="${PYTEST_ARGS:-}"
-COVERAGE_MIN="${COVERAGE_MIN:-80}"
 
-# Logging functions
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+# Function to display usage
+usage() {
+    echo "Usage: $0 [options] [test-name]"
+    echo "Options:"
+    echo "  -f, --filter <pattern>    Filter tests by pattern (e.g., BasicCommunication)"
+    echo "  -v, --verbose             Use detailed verbosity"
+    echo "  -n, --no-build           Skip virtual environment check"
+    echo "  -h, --help               Display this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                       # Run all BDD tests"
+    echo "  $0 1.1                   # Run test 1.1 (Simple Write-Read Cycle)"
+    echo "  $0 BasicCommunication    # Run all BasicCommunication tests"
+    echo "  $0 -v edge              # Run edge case tests with verbose output"
+    echo "  $0 4.3                  # Run specific test 4.3"
+    echo "  $0 5.5 -v               # Run test 5.5 with verbose output"
+    echo ""
+    echo "Test Naming Convention:"
+    echo "  1.1 - Simple Write-Read Cycle"
+    echo "  1.2 - Multiple Frames Sequential"
+    echo "  1.3 - Buffer Full Handling"
+    echo "  1.4 - Zero-Copy Write Operations"
+    echo "  1.5 - Mixed Frame Sizes"
+    echo "  1.6 - Metadata Update During Operation"
+    echo "  4.3 - Zero-Sized Metadata Block"
+    echo "  4.4 - Minimum Buffer Sizes"
+    echo "  5.5 - Wrap-Around With Wasted Space"
+    echo "  ... (check feature files for full list)"
 }
 
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-log_test() {
-    echo -e "${BLUE}[TEST]${NC} $1"
-}
-
-# Check environment
-check_environment() {
-    if [[ ! -d "$VENV_DIR" ]]; then
-        log_error "Virtual environment not found. Run ./build.sh first."
-        exit 1
-    fi
-    
-    # Activate virtual environment
-    source "$VENV_DIR/bin/activate"
-    
-    # Check if pytest is installed
-    if ! command -v pytest &> /dev/null; then
-        log_error "pytest not found. Installing test dependencies..."
-        pip install -r requirements-dev.txt --quiet
-    fi
-}
-
-# Clean test artifacts
-clean_test_artifacts() {
-    log_info "Cleaning test artifacts..."
-    rm -rf .pytest_cache/
-    rm -rf htmlcov/
-    rm -f .coverage
-    rm -f coverage.xml
-    
-    # Clean shared memory artifacts (Linux/macOS)
-    if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "darwin"* ]]; then
-        # Clean up any stale shared memory segments
-        if command -v ipcrm &> /dev/null; then
-            ipcs -m | grep "$USER" | grep "test_" | awk '{print $2}' | xargs -r ipcrm -m 2>/dev/null || true
+# Check virtual environment
+check_venv() {
+    if [ -z "$NO_BUILD" ]; then
+        if [ ! -d "$VENV_DIR" ]; then
+            echo -e "${RED}Virtual environment not found. Run ./build.sh first.${NC}"
+            exit 1
         fi
         
-        # Clean up lock files
-        rm -rf /tmp/zerobuffer/test_* 2>/dev/null || true
+        # Check if pytest-bdd is installed
+        if ! "$VENV_DIR/bin/python" -c "import pytest_bdd" 2>/dev/null; then
+            echo -e "${YELLOW}Installing pytest-bdd...${NC}"
+            "$VENV_DIR/bin/pip" install -q pytest-bdd
+        fi
+        
+        # Copy and fix feature files
+        echo -e "${BLUE}Updating feature files...${NC}"
+        "$VENV_DIR/bin/python" copy_and_fix_features.py > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ Feature files updated${NC}"
+        else
+            echo -e "${YELLOW}Warning: Could not update feature files${NC}"
+        fi
     fi
 }
 
-# Run unit tests
-run_unit_tests() {
-    log_test "Running unit tests..."
-    
-    pytest tests/test_zerobuffer.py \
-        -v \
-        --tb=short \
-        --timeout=30 \
-        --color=yes \
-        $PYTEST_ARGS || return 1
-}
-
-# Run integration tests
-run_integration_tests() {
-    log_test "Running integration tests..."
-    
-    pytest tests/test_scenarios.py \
-        -v \
-        --tb=short \
-        --timeout=60 \
-        --color=yes \
-        $PYTEST_ARGS || return 1
-}
-
-# Run tests with coverage
-run_coverage() {
-    log_test "Running tests with coverage..."
-    
-    pytest tests/ \
-        --cov=zerobuffer \
-        --cov-report=term-missing \
-        --cov-report=html \
-        --cov-report=xml \
-        --cov-fail-under=$COVERAGE_MIN \
-        -v \
-        --tb=short \
-        --color=yes \
-        $PYTEST_ARGS || return 1
-    
-    log_info "Coverage report generated in htmlcov/index.html"
-}
-
-# Run performance tests
-run_performance_tests() {
-    log_test "Running performance tests..."
-    
-    # Run throughput test
-    pytest tests/test_scenarios.py::TestScenario11Performance::test_throughput \
-        -v \
-        -s \
-        --tb=short \
-        $PYTEST_ARGS || return 1
-}
-
-# Run linting
-run_lint() {
-    log_test "Running code quality checks..."
-    
-    # Check if linting tools are installed
-    if ! command -v flake8 &> /dev/null; then
-        pip install flake8 black isort mypy --quiet
-    fi
-    
-    # Run flake8
-    log_info "Running flake8..."
-    flake8 zerobuffer tests --max-line-length=120 --ignore=E203,W503 || true
-    
-    # Run black in check mode
-    log_info "Checking code formatting..."
-    black zerobuffer tests --check --line-length=120 || {
-        log_warn "Code formatting issues found. Run 'make format' to fix."
-    }
-    
-    # Run isort in check mode
-    log_info "Checking import ordering..."
-    isort zerobuffer tests --check-only || {
-        log_warn "Import ordering issues found. Run 'make format' to fix."
-    }
-}
-
-# Generate test report
-generate_report() {
-    log_info "Generating test report..."
-    
-    # Create reports directory
-    mkdir -p reports
-    
-    # Generate summary
-    cat > reports/test_summary.txt << EOF
-ZeroBuffer Python Test Report
-=============================
-Date: $(date)
-Python Version: $(python --version 2>&1)
-Platform: $(uname -s)
-
-Test Results:
-EOF
-    
-    # Add test results if available
-    if [[ -f .coverage ]]; then
-        echo -e "\nCoverage Summary:" >> reports/test_summary.txt
-        coverage report >> reports/test_summary.txt
-    fi
-    
-    log_info "Test report saved to reports/test_summary.txt"
-}
-
-# Main test execution
-main() {
-    log_info "ZeroBuffer Python Test Suite"
-    log_info "============================"
-    
-    # Check environment
-    check_environment
-    
-    # Clean artifacts
-    clean_test_artifacts
-    
-    # Track failures
-    failed=0
-    
-    case "$TEST_TYPE" in
-        unit)
-            run_unit_tests || failed=1
+# Map test numbers to scenario names
+get_scenario_name() {
+    case "$1" in
+        1.1|1_1)
+            echo "Test 1.1 - Simple Write-Read Cycle"
             ;;
-        integration)
-            run_integration_tests || failed=1
+        1.2|1_2)
+            echo "Test 1.2 - Multiple Frames Sequential"
             ;;
-        coverage)
-            run_coverage || failed=1
+        1.3|1_3)
+            echo "Test 1.3 - Buffer Full Handling"
             ;;
-        performance)
-            run_performance_tests || failed=1
+        1.4|1_4)
+            echo "Test 1.4 - Zero-Copy Write Operations"
             ;;
-        lint)
-            run_lint || failed=1
+        1.5|1_5)
+            echo "Test 1.5 - Mixed Frame Sizes"
             ;;
-        all)
-            log_info "Running all tests..."
-            run_unit_tests || failed=1
-            run_integration_tests || failed=1
-            run_coverage || failed=1
-            run_lint || failed=1
+        1.6|1_6)
+            echo "Test 1.6 - Metadata Update During Operation"
             ;;
-        quick)
-            log_info "Running quick test suite..."
-            PYTEST_ARGS="-x" run_unit_tests || failed=1
+        2.1|2_1)
+            echo "Test 2.1 - Clean Process Termination"
+            ;;
+        2.2|2_2)
+            echo "Test 2.2 - Unexpected Process Termination"
+            ;;
+        3.1|3_1)
+            echo "Test 3.1 - Writer Process Dies"
+            ;;
+        3.2|3_2)
+            echo "Test 3.2 - Reader Process Dies"
+            ;;
+        4.1|4_1)
+            echo "Test 4.1 - Single Frame Exact Buffer Size"
+            ;;
+        4.2|4_2)
+            echo "Test 4.2 - Frame Larger Than Buffer"
+            ;;
+        4.3|4_3)
+            echo "Test 4.3 - Zero-Sized Metadata Block"
+            ;;
+        4.4|4_4)
+            echo "Test 4.4 - Minimum Buffer Sizes"
+            ;;
+        4.5|4_5)
+            echo "Test 4.5 - Reader Slower Than Writer"
+            ;;
+        5.1|5_1)
+            echo "Test 5.1 - Header Corruption Detection"
+            ;;
+        5.2|5_2)
+            echo "Test 5.2 - Frame Data Corruption"
+            ;;
+        5.3|5_3)
+            echo "Test 5.3 - Sequence Number Validation"
+            ;;
+        5.4|5_4)
+            echo "Test 5.4 - Buffer State Recovery"
+            ;;
+        5.5|5_5)
+            echo "Test 5.5 - Wrap-Around With Wasted Space"
+            ;;
+        5.6|5_6)
+            echo "Test 5.6 - Continuous Free Space Calculation"
+            ;;
+        5.7|5_7)
+            echo "Test 5.7 - Maximum Frame Size"
             ;;
         *)
-            echo "Usage: $0 [all|unit|integration|coverage|performance|lint|quick]"
-            echo "  all         - Run all tests with coverage"
-            echo "  unit        - Run unit tests only"
-            echo "  integration - Run integration tests only"
-            echo "  coverage    - Run all tests with coverage report"
-            echo "  performance - Run performance benchmarks"
-            echo "  lint        - Run code quality checks"
-            echo "  quick       - Run unit tests, stop on first failure"
-            exit 1
+            echo "$1"
             ;;
     esac
-    
-    # Generate report
-    generate_report
-    
-    # Clean up after tests
-    clean_test_artifacts
-    
-    # Report results
-    if [[ $failed -eq 0 ]]; then
-        log_info "============================"
-        log_info "All tests passed! ✓"
-        exit 0
-    else
-        log_error "============================"
-        log_error "Some tests failed! ✗"
-        exit 1
-    fi
 }
 
-# Run main function
-main
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -f|--filter)
+            FILTER="$2"
+            shift 2
+            ;;
+        -v|--verbose)
+            VERBOSITY="-v -s"
+            shift
+            ;;
+        -n|--no-build)
+            NO_BUILD="true"
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        edge)
+            # Special handling for edge case tests - run them one by one
+            echo -e "${YELLOW}Running edge case tests one by one...${NC}"
+            TESTS=(
+                "4.3"  # Edge case - Zero-Sized Metadata Block
+                "4.4"  # Edge case - Minimum Buffer Sizes
+                "4.5"  # Edge case - Reader Slower Than Writer
+                "5.5"  # Corruption Detection - Wrap-Around With Wasted Space
+                "5.6"  # Corruption Detection - Continuous Free Space Calculation
+                "5.7"  # Corruption Detection - Maximum Frame Size
+            )
+            
+            check_venv
+            
+            for test in "${TESTS[@]}"; do
+                scenario=$(get_scenario_name "$test")
+                echo -e "\n${YELLOW}Running: $scenario${NC}"
+                if "$VENV_DIR/bin/pytest" tests/test_features_bdd.py -k "$scenario" $VERBOSITY; then
+                    echo -e "${GREEN}✓ $test passed${NC}"
+                else
+                    echo -e "${RED}✗ $test failed${NC}"
+                fi
+            done
+            exit 0
+            ;;
+        all)
+            # Run all BDD tests
+            check_venv
+            echo -e "${YELLOW}Running all BDD tests...${NC}"
+            "$VENV_DIR/bin/pytest" tests/test_features_bdd.py $VERBOSITY
+            exit $?
+            ;;
+        [0-9].[0-9]|[0-9]_[0-9]|[0-9][0-9].[0-9]|[0-9][0-9]_[0-9])
+            # Handle test number format (e.g., 1.1, 1_1, 12.1, 12_1)
+            SPECIFIC_TEST="$1"
+            shift
+            ;;
+        *)
+            # If not a flag, treat as test name filter
+            SPECIFIC_TEST="$1"
+            shift
+            ;;
+    esac
+done
+
+# Check virtual environment
+check_venv
+
+# Build test command
+if [ -n "$SPECIFIC_TEST" ]; then
+    # Check if it's a test number
+    if [[ "$SPECIFIC_TEST" =~ ^[0-9]+[._][0-9]+$ ]]; then
+        scenario=$(get_scenario_name "$SPECIFIC_TEST")
+        echo -e "${YELLOW}Running: $scenario${NC}"
+        # Use the test file directly if it exists
+        test_file="tests/test_scenario_${SPECIFIC_TEST//./_}.py"
+        if [ -f "$test_file" ]; then
+            CMD="$VENV_DIR/bin/pytest $test_file $VERBOSITY"
+        else
+            # Fall back to searching by scenario name (escape spaces for pytest -k)
+            scenario_escaped=$(echo "$scenario" | sed 's/ /_/g')
+            CMD="$VENV_DIR/bin/pytest tests/test_features_bdd.py -k \"$scenario_escaped\" $VERBOSITY"
+        fi
+    else
+        # Treat as a filter pattern
+        echo -e "${YELLOW}Running tests matching: $SPECIFIC_TEST${NC}"
+        CMD="$VENV_DIR/bin/pytest tests/test_features_bdd.py -k \"$SPECIFIC_TEST\" $VERBOSITY"
+    fi
+elif [ -n "$FILTER" ]; then
+    echo -e "${YELLOW}Running tests matching filter: $FILTER${NC}"
+    CMD="$VENV_DIR/bin/pytest tests/test_features_bdd.py -k \"$FILTER\" $VERBOSITY"
+else
+    echo -e "${YELLOW}Running all BDD tests...${NC}"
+    CMD="$VENV_DIR/bin/pytest tests/test_features_bdd.py $VERBOSITY"
+fi
+
+# Show feature file location
+FEATURE_DIR="../ZeroBuffer.Harmony.Tests/Features"
+if [ -d "$FEATURE_DIR" ]; then
+    echo -e "${BLUE}Reading features from: $FEATURE_DIR${NC}"
+else
+    FEATURE_DIR="../csharp/ZeroBuffer.Tests/Features"
+    if [ -d "$FEATURE_DIR" ]; then
+        echo -e "${BLUE}Reading features from: $FEATURE_DIR${NC}"
+    else
+        echo -e "${RED}Warning: Feature files not found${NC}"
+    fi
+fi
+
+# Execute the test command
+echo -e "${BLUE}Executing: $CMD${NC}"
+echo ""
+
+eval $CMD
+exit_code=$?
+
+if [ $exit_code -eq 0 ]; then
+    echo -e "\n${GREEN}Tests passed! ✓${NC}"
+else
+    echo -e "\n${RED}Tests failed! ✗${NC}"
+fi
+
+exit $exit_code

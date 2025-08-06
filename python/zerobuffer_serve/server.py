@@ -66,28 +66,17 @@ class ZeroBufferServe:
         
         while self._running:
             try:
-                # Read header line
-                header_line = await loop.run_in_executor(None, stdin.readline)
-                if not header_line:
+                # Read a line of JSON
+                line = await loop.run_in_executor(None, stdin.readline)
+                if not line:
                     break
                     
-                header = header_line.decode('utf-8').strip()
-                if not header.startswith('Content-Length:'):
+                # Decode and strip whitespace
+                request_text = line.decode('utf-8').strip()
+                if not request_text:
                     continue
                     
-                # Parse content length
-                content_length = int(header.split(':')[1].strip())
-                
-                # Read empty line
-                await loop.run_in_executor(None, stdin.readline)
-                
-                # Read content
-                content = await loop.run_in_executor(None, stdin.read, content_length)
-                if not content:
-                    break
-                    
                 # Parse and handle request
-                request_text = content.decode('utf-8')
                 self._logger.debug(f"Received request: {request_text}")
                 
                 response = await self._handle_request(request_text)
@@ -163,12 +152,9 @@ class ZeroBufferServe:
     
     async def _send_response(self, response: str):
         """Send JSON-RPC response to stdout"""
-        content = response.encode('utf-8')
-        header = f"Content-Length: {len(content)}\r\n\r\n".encode('utf-8')
-        
-        sys.stdout.buffer.write(header)
-        sys.stdout.buffer.write(content)
-        sys.stdout.buffer.flush()
+        # Write JSON response as a single line to stdout
+        sys.stdout.write(response + '\n')
+        sys.stdout.flush()
         
         self._logger.debug(f"Sent response: {response}")
     
@@ -281,7 +267,12 @@ class ZeroBufferServe:
             else:
                 raise ValueError(f"Invalid executeStep parameters: {params}")
         elif isinstance(params, dict):
-            # Direct named parameters
+            # Direct named parameters - handle different parameter names
+            # Map common variations to expected names
+            if 'type' in params and 'stepType' not in params:
+                params['stepType'] = params.pop('type')
+            if 'text' in params and 'step' not in params:
+                params['step'] = params.pop('text')
             request = StepRequest(**params)
         else:
             raise ValueError(f"Invalid executeStep parameters: {params}")

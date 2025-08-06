@@ -177,19 +177,19 @@ namespace ZeroBuffer.Tests.Features
         testRunner.And("the \'writer\' process writes frame with sequence \'3\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 27
-        testRunner.Then("the \'reader\' process should read frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'reader\' process should read frame with sequence \'1\';", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 28
         testRunner.And("the \'reader\' process signals space available", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 29
-        testRunner.And("the \'reader\' process should read frame with sequence \'2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process should read frame with sequence \'2\';", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 30
         testRunner.And("the \'reader\' process signals space available", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 31
-        testRunner.And("the \'reader\' process should read frame with sequence \'3\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process should read frame with sequence \'3\';", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 32
         testRunner.And("the \'reader\' process should verify all frames maintain sequential order", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
@@ -333,7 +333,7 @@ namespace ZeroBuffer.Tests.Features
         testRunner.And("the \'writer\' process writes frame with size \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 67
-        testRunner.Then("the \'reader\' process should read 4 frames with correct sizes in order", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'reader\' process should read 4 frames with sizes \'100,1024,10240,1\' in order", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             this.ScenarioCleanup();

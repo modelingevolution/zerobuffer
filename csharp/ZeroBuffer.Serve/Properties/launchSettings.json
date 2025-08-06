@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "ZeroBuffer.Serve": {
+      "commandName": "Project"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    }
+  }
+}

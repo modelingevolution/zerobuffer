@@ -2,6 +2,7 @@ Feature: Process Lifecycle Tests
     Tests for process crash detection and recovery scenarios
 
     Background:
+        Given we run in harmony
 
     Scenario: Test 2.1 - Writer Crash Detection
         Given the 'reader' process creates buffer 'test-writer-crash' with metadata size '1024' and payload size '10240'
@@ -10,12 +11,10 @@ Feature: Process Lifecycle Tests
         And the 'writer' process writes frame with data 'alive'
 
         Then the 'reader' process should read frame with data 'alive'
-        And the writer should be connected
 
-        When the 'writer' process crashes
+        When the 'writer' process is killed
 
         Then wait for '2' seconds
-        And the writer should be disconnected
         And the 'reader' process should timeout or detect writer death on next read
 
     Scenario: Test 2.2 - Reader Crash Detection

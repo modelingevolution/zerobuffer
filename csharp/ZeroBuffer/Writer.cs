@@ -23,6 +23,22 @@ namespace ZeroBuffer
         private bool _disposed;
         private bool _metadataWritten;
         private ulong _sequenceNumber = 1;
+        private TimeSpan _writeTimeout = TimeSpan.FromSeconds(5);
+
+        /// <summary>
+        /// Gets or sets the timeout for write operations when the buffer is full.
+        /// Default is 5 seconds.
+        /// </summary>
+        public TimeSpan WriteTimeout 
+        { 
+            get => _writeTimeout;
+            set 
+            {
+                if (value <= TimeSpan.Zero)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Write timeout must be positive");
+                _writeTimeout = value;
+            }
+        }
 
         public Writer(string name) : this(name, NullLogger<Writer>.Instance)
         {
@@ -298,7 +314,7 @@ namespace ZeroBuffer
                     break;
 
                 // Wait for reader to consume data
-                if (!_readSemaphore.Wait(TimeSpan.FromSeconds(5)))
+                if (!_readSemaphore.Wait(_writeTimeout))
                 {
                     // Timeout - check if reader died
                     if (oieb.ReaderPid == 0 || !ProcessExists(oieb.ReaderPid))

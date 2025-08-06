@@ -1,7 +1,7 @@
 """
 Step registry for discovering and executing test steps
 
-Provides automatic discovery of step definitions using decorators.
+Provides automatic discovery of step definitions using pytest-bdd decorators.
 """
 
 import asyncio
@@ -10,6 +10,14 @@ import re
 from enum import Enum
 from typing import Dict, List, Callable, Any, Optional, Tuple, Match
 import logging
+
+try:
+    from pytest_bdd import given, when, then, parsers
+    PYTEST_BDD_AVAILABLE = True
+except ImportError:
+    # Fallback for when pytest-bdd is not installed (e.g., in production Harmony mode)
+    PYTEST_BDD_AVAILABLE = False
+    # We'll discover steps differently in this case
 
 from .models import StepInfo, StepResponse, TableData, LogEntry
 
@@ -75,8 +83,17 @@ class StepRegistry:
         
         # Inspect all methods
         for name, method in inspect.getmembers(instance, inspect.ismethod):
-            # Check for step decorators
-            if hasattr(method, '_step_definitions'):
+            # Check for pytest-bdd decorators
+            step_info = self._extract_pytest_bdd_info(method)
+            if step_info:
+                self._register_step(
+                    step_type=step_info['type'],
+                    pattern=step_info['pattern'],
+                    method=method,
+                    instance=instance
+                )
+            # Fallback: check for old-style decorators (for backward compatibility)
+            elif hasattr(method, '_step_definitions'):
                 for step_def in method._step_definitions:
                     self._register_step(
                         step_type=step_def['type'],
@@ -84,6 +101,49 @@ class StepRegistry:
                         method=method,
                         instance=instance
                     )
+    
+    def _extract_pytest_bdd_info(self, method: Callable) -> Optional[Dict[str, Any]]:
+        """Extract pytest-bdd decorator information from a method"""
+        # pytest-bdd adds different attributes based on the decorator used
+        if hasattr(method, '_pytest_bdd_step_type'):
+            # This is a pytest-bdd decorated method
+            step_type_str = method._pytest_bdd_step_type
+            pattern = getattr(method, '_pytest_bdd_pattern', None)
+            
+            if pattern:
+                # Map pytest-bdd step type to our StepType enum
+                type_map = {
+                    'given': StepType.GIVEN,
+                    'when': StepType.WHEN,
+                    'then': StepType.THEN
+                }
+                step_type = type_map.get(step_type_str.lower())
+                if step_type:
+                    return {
+                        'type': step_type,
+                        'pattern': pattern
+                    }
+        
+        # Alternative: Check for parsers.re or parsers.parse patterns
+        # pytest-bdd might store patterns differently
+        for attr in ['_given', '_when', '_then']:
+            if hasattr(method, attr):
+                pattern_obj = getattr(method, attr)
+                if hasattr(pattern_obj, 'pattern'):
+                    # Extract regex pattern
+                    pattern = pattern_obj.pattern
+                    step_type_str = attr[1:]  # Remove leading underscore
+                    type_map = {
+                        'given': StepType.GIVEN,
+                        'when': StepType.WHEN,
+                        'then': StepType.THEN
+                    }
+                    return {
+                        'type': type_map[step_type_str],
+                        'pattern': pattern
+                    }
+        
+        return None
                     
     def _register_step(
         self,
@@ -274,7 +334,8 @@ class StepRegistry:
                 return value
 
 
-# Step decorators
+# Always use our own decorators for Harmony compatibility
+# These decorators ensure step discovery works correctly
 def given(pattern: str):
     """Decorator for Given steps"""
     def decorator(func):
@@ -286,7 +347,6 @@ def given(pattern: str):
         })
         return func
     return decorator
-
 
 def when(pattern: str):
     """Decorator for When steps"""
@@ -300,7 +360,6 @@ def when(pattern: str):
         return func
     return decorator
 
-
 def then(pattern: str):
     """Decorator for Then steps"""
     def decorator(func):
@@ -312,3 +371,15 @@ def then(pattern: str):
         })
         return func
     return decorator
+
+# Placeholder for parsers compatibility
+class parsers:
+    @staticmethod
+    def re(pattern: str):
+        """Regex parser - returns pattern as-is for Harmony"""
+        return pattern
+    
+    @staticmethod
+    def parse(pattern: str):
+        """Parse parser - returns pattern as-is for Harmony"""
+        return pattern

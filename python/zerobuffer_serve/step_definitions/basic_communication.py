@@ -10,11 +10,10 @@ from typing import Dict, Optional, List
 import uuid
 
 from zerobuffer import Reader, Writer, BufferConfig, Frame
-import time
 from zerobuffer.exceptions import ZeroBufferException
 
 from .base import BaseSteps
-from ..step_registry import given, when, then
+from ..step_registry import given, when, then, parsers
 
 
 class BasicCommunicationSteps(BaseSteps):
@@ -39,7 +38,7 @@ class BasicCommunicationSteps(BaseSteps):
         """Confirm all processes are ready"""
         self.logger.info("All processes ready")
         
-    @given(r"(?:the '([^']+)' process )?creates buffer '([^']+)' with metadata size '(\d+)' and payload size '(\d+)'")
+    @given(parsers.re(r"(?:the '(?P<process>[^']+)' process )?creates buffer '(?P<buffer_name>[^']+)' with metadata size '(?P<metadata_size>\d+)' and payload size '(?P<payload_size>\d+)'"))
     async def create_buffer(self, process: Optional[str], buffer_name: str, metadata_size: str, payload_size: str):
         """Create a new ZeroBuffer with specified configuration"""
             

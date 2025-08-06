@@ -43,6 +43,7 @@ public class ProcessManager : IProcessManager, IDisposable
         _logger.LogInformation("Starting process {ProcessName} on platform {Platform} with HostPid={HostPid}, FeatureId={FeatureId}", 
             processName, platform, hostPid, featureId);
         
+
         var startInfo = new ProcessStartInfo
         {
             FileName = platformConfig.Executable,
@@ -70,7 +71,12 @@ public class ProcessManager : IProcessManager, IDisposable
         {
             startInfo.EnvironmentVariables["HARMONY_FEATURE_ID"] = featureId.ToString();
         }
-        
+
+        if (!File.Exists(startInfo.FileName))
+            throw new Exception("Executable not exists! " + startInfo.FileName);
+        if(!Directory.Exists(startInfo.WorkingDirectory))
+            throw new Exception("Working directory not exists! " + startInfo.WorkingDirectory);
+
         var process = new Process { StartInfo = startInfo };
         process.Start();
         

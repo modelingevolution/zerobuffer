@@ -11,8 +11,8 @@ Feature: Error Handling and Recovery Tests
         And the 'writer' process writes frame with data 'test'
         And the 'writer' process attempts to write metadata again with size '200'
 
-        Then the second metadata write should fail
-        And the original metadata should remain unchanged
+        Then the 'writer' process verifies the second metadata write should fail
+        And the 'reader' process verifies the original metadata should remain unchanged
 
     Scenario: Test 3.2 - Metadata Size Overflow
         Given the 'reader' process creates buffer 'test-metadata-overflow' with metadata size '1024' and payload size '10240'
@@ -20,7 +20,7 @@ Feature: Error Handling and Recovery Tests
         When the 'writer' process connects to buffer 'test-metadata-overflow'
         And the 'writer' process attempts to write metadata with size '2048'
 
-        Then the metadata write should fail with size error
+        Then the 'writer' process verifies the metadata write should fail with size error
 
 
 
@@ -32,4 +32,4 @@ Feature: Error Handling and Recovery Tests
         And the 'writer' process writes frames without metadata
 
         Then the 'reader' process should read frames successfully
-        And the system should work without metadata
+        And the 'reader' process verifies the system should work without metadata

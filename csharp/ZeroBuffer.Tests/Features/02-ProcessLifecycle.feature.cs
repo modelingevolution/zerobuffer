@@ -79,6 +79,9 @@ namespace ZeroBuffer.Tests.Features
         {
 #line 4
     #line hidden
+#line 5
+        testRunner.Given("we run in harmony", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
         }
         
         void System.IDisposable.Dispose()
@@ -94,7 +97,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 2.1 - Writer Crash Detection", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 6
+#line 7
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -107,32 +110,26 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 7
+#line 8
         testRunner.Given("the \'reader\' process creates buffer \'test-writer-crash\' with metadata size \'1024\'" +
                         " and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 9
+#line 10
         testRunner.And("the \'writer\' process connects to buffer \'test-writer-crash\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 10
+#line 11
         testRunner.And("the \'writer\' process writes frame with data \'alive\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 12
+#line 13
         testRunner.Then("the \'reader\' process should read frame with data \'alive\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 13
-        testRunner.And("the writer should be connected", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
 #line 15
-        testRunner.When("the \'writer\' process crashes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.When("the \'writer\' process is killed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 17
         testRunner.Then("wait for \'2\' seconds", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 18
-        testRunner.And("the writer should be disconnected", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 19
         testRunner.And("the \'reader\' process should timeout or detect writer death on next read", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -147,7 +144,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 2.2 - Reader Crash Detection", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 21
+#line 20
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -160,29 +157,29 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 22
+#line 21
         testRunner.Given("the \'reader\' process creates buffer \'test-reader-crash\' with metadata size \'1024\'" +
                         " and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 24
+#line 23
         testRunner.And("the \'writer\' process connects to buffer \'test-reader-crash\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 25
+#line 24
         testRunner.And("the \'writer\' process writes frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 27
+#line 26
         testRunner.Then("the \'reader\' process should read frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 29
+#line 28
         testRunner.When("the \'writer\' process fills buffer completely", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 30
+#line 29
         testRunner.And("the \'reader\' process crashes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 32
+#line 31
         testRunner.Then("wait for \'2\' seconds", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 33
+#line 32
         testRunner.And("the \'writer\' process should detect reader death on next write", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -197,7 +194,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 2.3 - Reader Replacement After Crash", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 35
+#line 34
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -210,32 +207,32 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 36
+#line 35
         testRunner.Given("the \'reader\' process creates buffer \'test-reader-replace\' with metadata size \'102" +
                         "4\' and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 38
+#line 37
         testRunner.And("the \'writer\' process connects to buffer \'test-reader-replace\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 39
+#line 38
         testRunner.And("the \'writer\' process writes frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 41
+#line 40
         testRunner.Then("the \'reader\' process should read frame with sequence \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 43
+#line 42
         testRunner.When("the \'reader\' process crashes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 45
+#line 44
         testRunner.And("a new \'reader\' process connects to existing buffer \'test-reader-replace\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 47
+#line 46
         testRunner.And("the \'writer\' process writes frame with sequence \'2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 49
+#line 48
         testRunner.Then("the \'reader\' process should read frame with sequence \'2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 50
+#line 49
         testRunner.And("the buffer should continue functioning normally", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -250,7 +247,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 2.4 - Multiple Writer Rejection", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 52
+#line 51
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -263,17 +260,17 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 53
+#line 52
         testRunner.Given("the \'reader\' process creates buffer \'test-multi-writer\' with metadata size \'1024\'" +
                         " and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 55
+#line 54
         testRunner.And("the \'writer\' process connects to buffer \'test-multi-writer\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 57
+#line 56
         testRunner.When("a second \'writer\' process attempts to connect to buffer \'test-multi-writer\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 58
+#line 57
         testRunner.Then("the connection should fail with writer exists error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
@@ -288,7 +285,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 2.5 - Clean Shutdown Sequence", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 60
+#line 59
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -301,26 +298,26 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 61
+#line 60
         testRunner.Given("the \'reader\' process creates buffer \'test-shutdown\' with metadata size \'1024\' and" +
                         " payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 63
+#line 62
         testRunner.And("the \'writer\' process connects to buffer \'test-shutdown\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 64
+#line 63
         testRunner.And("the \'writer\' process writes frame with data \'final message\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 65
+#line 64
         testRunner.When("the \'writer\' process closes connection gracefully", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 67
+#line 66
         testRunner.Then("the \'reader\' process should read frame with data \'final message\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 68
+#line 67
         testRunner.And("the writer should be disconnected", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 69
+#line 68
         testRunner.And("the \'reader\' process cleanup should succeed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }

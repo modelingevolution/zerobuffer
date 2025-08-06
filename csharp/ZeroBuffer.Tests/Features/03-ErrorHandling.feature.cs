@@ -124,10 +124,10 @@ namespace ZeroBuffer.Tests.Features
         testRunner.And("the \'writer\' process attempts to write metadata again with size \'200\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 14
-        testRunner.Then("the second metadata write should fail", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'writer\' process verifies the second metadata write should fail", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 15
-        testRunner.And("the original metadata should remain unchanged", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process verifies the original metadata should remain unchanged", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -165,7 +165,7 @@ namespace ZeroBuffer.Tests.Features
         testRunner.And("the \'writer\' process attempts to write metadata with size \'2048\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 23
-        testRunner.Then("the metadata write should fail with size error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'writer\' process verifies the metadata write should fail with size error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -206,7 +206,7 @@ namespace ZeroBuffer.Tests.Features
         testRunner.Then("the \'reader\' process should read frames successfully", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 35
-        testRunner.And("the system should work without metadata", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process verifies the system should work without metadata", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
