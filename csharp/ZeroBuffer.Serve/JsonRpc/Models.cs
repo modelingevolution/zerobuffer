@@ -16,7 +16,8 @@ public class InitializeRequest
     public string Role { get; set; } = string.Empty;
     public string Platform { get; set; } = string.Empty;
     public string Scenario { get; set; } = string.Empty;
-    public string TestRunId { get; set; } = string.Empty;
+
+    public string TestRunId => $"{HostPid}_{FeatureId}";
 }
 
 

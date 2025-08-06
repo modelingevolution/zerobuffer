@@ -10,7 +10,7 @@
 // ------------------------------------------------------------------------------
 #region Designer generated code
 #pragma warning disable
-namespace ZeroBuffer.Serve.Features
+namespace ZeroBuffer.Tests.Features
 {
     using TechTalk.SpecFlow;
     using System;
@@ -33,7 +33,7 @@ namespace ZeroBuffer.Serve.Features
 #line 1 "PlatformSpecific.feature"
 #line hidden
         
-        public Platform_SpecificTestsFeature(Platform_SpecificTestsFeature.FixtureData fixtureData, ZeroBuffer_Serve_XUnitAssemblyFixture assemblyFixture, Xunit.Abstractions.ITestOutputHelper testOutputHelper)
+        public Platform_SpecificTestsFeature(Platform_SpecificTestsFeature.FixtureData fixtureData, ZeroBuffer_Tests_XUnitAssemblyFixture assemblyFixture, Xunit.Abstractions.ITestOutputHelper testOutputHelper)
         {
             this._testOutputHelper = testOutputHelper;
             this.TestInitialize();

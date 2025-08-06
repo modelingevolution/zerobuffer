@@ -1,50 +1,34 @@
-using System;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using TechTalk.SpecFlow;
+using System.Threading;
+using System;
 using TechTalk.SpecFlow.Assist;
+using TechTalk.SpecFlow;
+using ZeroBuffer.Tests;
+using ZeroBuffer.Tests.Services;
 using ZeroBuffer;
-using ZeroBuffer.Serve.JsonRpc;
 
-namespace ZeroBuffer.Serve.StepDefinitions;
+namespace ZeroBuffer.Tests.StepDefinitions;
 
 [Binding]
 public class EdgeCasesSteps
 {
     private readonly ITestContext _testContext;
     private readonly ILogger<EdgeCasesSteps> _logger;
+    private readonly IBufferNamingService _bufferNamingService;
     private readonly Dictionary<string, Writer> _writers = new();
     private readonly Dictionary<string, Reader> _readers = new();
     
-    public EdgeCasesSteps(ITestContext testContext, ILogger<EdgeCasesSteps> logger)
+    public EdgeCasesSteps(ITestContext testContext, ILogger<EdgeCasesSteps> logger, IBufferNamingService bufferNamingService)
     {
         _testContext = testContext;
         _logger = logger;
+        _bufferNamingService = bufferNamingService;
     }
     
-    private string GetUniqueBufferName(string baseName)
-    {
-        // Get PID and feature ID from test context
-        var pid = Environment.ProcessId;
-        if (_testContext.TryGetData<int>("harmony_host_pid", out var hostPid))
-        {
-            pid = hostPid;
-        }
-        
-        var featureId = "unknown";
-        if (_testContext.TryGetData<string>("harmony_feature_id", out var harmonyFeatureId))
-        {
-            featureId = harmonyFeatureId;
-        }
-        
-        // Create unique buffer name: baseName-pid-featureId
-        var uniqueName = $"{baseName}-{pid}-{featureId}";
-        _logger.LogDebug("Created unique buffer name: {UniqueName} from base: {BaseName}", uniqueName, baseName);
-        return uniqueName;
-    }
     
     [When(@"attempts to write metadata")]
     public void WhenAttemptsToWriteMetadata()
@@ -154,7 +138,7 @@ public class EdgeCasesSteps
     [Given(@"creates buffer '([^']+)' with minimum viable size '(\d+)'")]
     public void GivenCreatesBufferWithMinimumViableSize(string bufferName, int size)
     {
-        var uniqueBufferName = GetUniqueBufferName(bufferName);
+        var uniqueBufferName = _bufferNamingService.GetUniqueBufferName(bufferName);
         _logger.LogInformation("Creating buffer '{BufferName}' with minimum viable size {Size}", 
             bufferName, size);
         
@@ -334,7 +318,7 @@ public class EdgeCasesSteps
     [Given(@"creates buffer '([^']+)' with specific configuration")]
     public void GivenCreatesBufferWithSpecificConfiguration(string bufferName)
     {
-        var uniqueBufferName = GetUniqueBufferName(bufferName);
+        var uniqueBufferName = _bufferNamingService.GetUniqueBufferName(bufferName);
         
         // Create a buffer for testing free space calculations
         var config = new BufferConfig
@@ -818,7 +802,7 @@ public class EdgeCasesSteps
     [Given(@"creates buffer '([^']+)' with default config")]
     public void GivenCreatesBufferWithDefaultConfig(string bufferName)
     {
-        var uniqueBufferName = GetUniqueBufferName(bufferName);
+        var uniqueBufferName = _bufferNamingService.GetUniqueBufferName(bufferName);
         
         // Default configuration
         var config = new BufferConfig

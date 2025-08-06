@@ -10,7 +10,7 @@
 // ------------------------------------------------------------------------------
 #region Designer generated code
 #pragma warning disable
-namespace ZeroBuffer.Serve.Features
+namespace ZeroBuffer.Tests.Features
 {
     using TechTalk.SpecFlow;
     using System;
@@ -31,7 +31,7 @@ namespace ZeroBuffer.Serve.Features
 #line 1 "ErrorHandling.feature"
 #line hidden
         
-        public ErrorHandlingAndRecoveryTestsFeature(ErrorHandlingAndRecoveryTestsFeature.FixtureData fixtureData, ZeroBuffer_Serve_XUnitAssemblyFixture assemblyFixture, Xunit.Abstractions.ITestOutputHelper testOutputHelper)
+        public ErrorHandlingAndRecoveryTestsFeature(ErrorHandlingAndRecoveryTestsFeature.FixtureData fixtureData, ZeroBuffer_Tests_XUnitAssemblyFixture assemblyFixture, Xunit.Abstractions.ITestOutputHelper testOutputHelper)
         {
             this._testOutputHelper = testOutputHelper;
             this.TestInitialize();

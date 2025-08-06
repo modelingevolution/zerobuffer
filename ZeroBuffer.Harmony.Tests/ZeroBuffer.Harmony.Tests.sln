@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer", "..\csharp\Zer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Serve", "..\csharp\ZeroBuffer.Serve\ZeroBuffer.Serve.csproj", "{CF0EF038-08E0-078A-291C-88038EE4CBF0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Tests", "..\csharp\ZeroBuffer.Tests\ZeroBuffer.Tests.csproj", "{4B3A1B94-5D94-116D-4B6A-E7894043766D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{CF0EF038-08E0-078A-291C-88038EE4CBF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CF0EF038-08E0-078A-291C-88038EE4CBF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CF0EF038-08E0-078A-291C-88038EE4CBF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B3A1B94-5D94-116D-4B6A-E7894043766D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B3A1B94-5D94-116D-4B6A-E7894043766D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B3A1B94-5D94-116D-4B6A-E7894043766D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B3A1B94-5D94-116D-4B6A-E7894043766D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

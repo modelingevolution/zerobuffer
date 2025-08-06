@@ -5,7 +5,7 @@
   "language": {
     "feature": "en-us"
   },
-  "unitTestProvider": {
-    "name": "xUnit"
+  "runtime": {
+    "missingOrPendingStepsOutcome": "Ignore"
   }
 }

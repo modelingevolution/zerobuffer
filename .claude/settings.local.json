@@ -198,7 +198,10 @@
       "Bash(../venv/bin/python -m pytest test_basic_communication.py::TestBasicCommunication::test_1_1_simple_write_read_cycle -v -s)",
       "Bash(./venv/bin/pip install pytest-asyncio --quiet)",
       "Bash(../venv/bin/python -m pytest test_basic_communication.py -v)",
-      "Bash(venv/bin/python -m pytest tests/test_basic_communication.py::TestBasicCommunication::test_1_2_multiple_frames_sequential -v -s --tb=short)"
+      "Bash(venv/bin/python -m pytest tests/test_basic_communication.py::TestBasicCommunication::test_1_2_multiple_frames_sequential -v -s --tb=short)",
+      "Bash(do sed -i '1i using System;' \"$f\")",
+      "Bash(do sed -i '2i using System.Collections.Generic;' \"$f\")",
+      "Bash(do sed:*)"
     ],
     "deny": []
   }
