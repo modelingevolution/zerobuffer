@@ -113,3 +113,8 @@ vcpkg_installed/
 /cpp/tests/poc
 /cpp/ZeroBuffer.Cpp.Integration.Tests/obj
 /cpp/ZeroBuffer.Cpp.Integration.Tests/bin/Debug/net9.0
+/cpp/tests/generator/bin/Debug/net9.0
+/cpp/tests/generator/obj
+/tools/harmony-cpp-gen/bin/Debug/net9.0
+/tools/harmony-cpp-gen/obj
+/tools/harmony-cpp-gen/nupkg
