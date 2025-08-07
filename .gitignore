@@ -110,3 +110,6 @@ vcpkg_installed/
 /python/ZeroBuffer.Python.Integration.Tests/obj
 /python/ZeroBuffer.Python.Integration.Tests/bin/Debug/net9.0
 /test-jsonrpc/obj
+/cpp/tests/poc
+/cpp/ZeroBuffer.Cpp.Integration.Tests/obj
+/cpp/ZeroBuffer.Cpp.Integration.Tests/bin/Debug/net9.0
