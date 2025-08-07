@@ -33,6 +33,16 @@ cmake_minimum_required(VERSION 3.20)
 #         zerobuffer
 # )
 
+# Generated tests from feature files
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/CMakeLists.txt")
+    add_subdirectory(generated)
+    message(STATUS "Found generated tests - including them in build")
+else()
+    message(WARNING "No generated tests found. Run the generator first:")
+    message(WARNING "  harmony-cpp-gen --input ../ZeroBuffer.Harmony.Tests/Features --output tests/generated")
+    message(WARNING "  Or run: ./generate_tests.sh")
+endif()
+
 # Cross-platform test applications - only include if they exist
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cross-platform/test_writer.cpp" AND 
    EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cross-platform/test_reader.cpp")

@@ -1,8 +1,15 @@
 #include "step_registry.h"
 #include "test_context.h"
+#include "basic_communication_steps.h"
+// Add more step headers here as they are implemented
+// #include "edge_cases_steps.h"
+// #include "error_handling_steps.h"
+// #include "synchronization_steps.h"
+// etc.
 #include <zerobuffer/logger.h>
 #include <sstream>
 #include <algorithm>
+#include <cstdlib>
 
 namespace zerobuffer {
 namespace steps {
@@ -18,6 +25,34 @@ const std::unordered_map<std::string, std::string> StepRegistry::TYPE_PATTERNS =
 
 StepRegistry& StepRegistry::getInstance() {
     static StepRegistry instance;
+    
+    // Initialize logging on first access (for Google Test runs)
+    // When running via zerobuffer-serve, logging is already initialized
+    static bool logging_initialized = false;
+    if (!logging_initialized) {
+        // Check if logging is already initialized by trying to log at trace level
+        // If not initialized, this is safe and will just be ignored
+        ZEROBUFFER_LOG_TRACE("StepRegistry") << "Checking logging initialization";
+        
+        // Check for ZEROBUFFER_LOG_LEVEL environment variable
+        const char* log_level_env = std::getenv("ZEROBUFFER_LOG_LEVEL");
+        zerobuffer::severity_level log_level = zerobuffer::info;
+        
+        if (log_level_env) {
+            std::string level_str(log_level_env);
+            if (level_str == "TRACE") log_level = zerobuffer::trace;
+            else if (level_str == "DEBUG") log_level = zerobuffer::debug;
+            else if (level_str == "INFO") log_level = zerobuffer::info;
+            else if (level_str == "WARNING") log_level = zerobuffer::warning;
+            else if (level_str == "ERROR") log_level = zerobuffer::error;
+            else if (level_str == "FATAL") log_level = zerobuffer::fatal;
+        }
+        
+        zerobuffer::init_logging(log_level);
+        logging_initialized = true;
+        ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Logging initialized with level: " << log_level;
+    }
+    
     return instance;
 }
 
@@ -69,7 +104,12 @@ bool StepRegistry::executeStep(const std::string& stepText, TestContext& context
         }
     }
     
-    ZEROBUFFER_LOG_WARNING("StepRegistry") << "No matching pattern found for: " << stepText;
+    // Only log at INFO level when step is not found - this is important for users to see
+    ZEROBUFFER_LOG_INFO("StepRegistry") << "Step not found: " << stepText;
+    ZEROBUFFER_LOG_INFO("StepRegistry") << "Available steps (" << definitions_.size() << " registered):";
+    for (const auto& def : definitions_) {
+        ZEROBUFFER_LOG_INFO("StepRegistry") << "  - " << def.originalPattern;
+    }
     return false;
 }
 
@@ -164,6 +204,37 @@ std::vector<std::string> StepRegistry::extractParameterTypes(const std::string& 
     }
     
     return types;
+}
+
+void StepRegistry::registerAllSteps() {
+    // Clear any existing registrations to avoid duplicates
+    clear();
+    
+    ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Registering all available step definitions...";
+    
+    // Register all available step definition files
+    // As new step files are implemented, add their registration functions here
+    
+    // Basic Communication steps
+    registerBasicCommunicationSteps();
+    ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Registered BasicCommunication steps";
+    
+    // Future step definitions - uncomment as they are implemented:
+    // registerEdgeCasesSteps();
+    // registerErrorHandlingSteps();
+    // registerProcessLifecycleSteps();
+    // registerCorruptionDetectionSteps();
+    // registerSynchronizationSteps();
+    // registerSystemResourcesSteps();
+    // registerPlatformSpecificSteps();
+    // registerPerformanceMonitoringSteps();
+    // registerAdvancedErrorHandlingSteps();
+    // registerStressTestsSteps();
+    // registerProtocolComplianceSteps();
+    // registerDuplexChannelSteps();
+    // registerBenchmarksSteps();
+    
+    ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Step registration complete. Total steps: " << definitions_.size();
 }
 
 } // namespace steps

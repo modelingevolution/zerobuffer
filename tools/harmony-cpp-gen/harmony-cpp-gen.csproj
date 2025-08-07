@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>HarmonyCppGen</RootNamespace>
+    
+    <!-- Tool-specific properties -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>harmony-cpp-gen</ToolCommandName>
+    <PackageId>HarmonyCppGen</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>ModelingEvolution</Authors>
+    <Description>Generate C++ Google Test files from Gherkin feature files for Harmony integration</Description>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Gherkin" Version="29.0.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+</Project>

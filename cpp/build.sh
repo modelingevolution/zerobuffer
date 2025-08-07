@@ -2,13 +2,14 @@
 # Standard build script for zerobuffer
 # Usage: ./build.sh [Release|Debug] [clean]
 #
-# This script builds the minimal set of targets needed for Harmony integration:
+# This script builds the essential targets needed for Harmony integration:
 #   - Core ZeroBuffer library
 #   - zerobuffer-serve (JSON-RPC server for Harmony)
 #   - Cross-platform test executables (zerobuffer-test-reader/writer)
+#   - Generated tests (if tests/generated exists)
 #
-# To build ALL targets including tests, benchmarks, and examples, use:
-#   cmake .. -DBUILD_TESTS=ON -DBUILD_BENCHMARKS=ON -DBUILD_EXAMPLES=ON
+# To build ALL targets including benchmarks and examples, use:
+#   cmake .. -DBUILD_BENCHMARKS=ON -DBUILD_EXAMPLES=ON
 #
 # NOTE: Even minimal build may take 30-60 seconds depending on system performance
 
@@ -50,10 +51,10 @@ cd ${BUILD_DIR}
 
 # Configure
 echo -e "${YELLOW}Configuring CMake...${NC}"
-# Only build essential targets for Harmony integration
-# Tests, benchmarks, and examples are disabled by default for faster builds
+# Build essential targets for Harmony integration
+# Tests are now enabled by default to include generated tests
 cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-         -DBUILD_TESTS=OFF \
+         -DBUILD_TESTS=ON \
          -DBUILD_BENCHMARKS=OFF \
          -DBUILD_EXAMPLES=OFF \
          -DBUILD_SERVE=ON

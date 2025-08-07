@@ -68,6 +68,12 @@ public:
      */
     void clear();
     
+    /**
+     * Register all available step definitions
+     * This is the main entry point for step registration
+     */
+    void registerAllSteps();
+    
 private:
     StepRegistry() = default;
     ~StepRegistry() = default;

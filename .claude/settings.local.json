@@ -245,7 +245,19 @@
       "Bash(/mnt/d/source/modelingevolution/streamer/src/zerobuffer/cpp/build/serve/zerobuffer-serve --version)",
       "Bash(./test_regex)",
       "Bash(ZEROBUFFER_LOG_LEVEL=DEBUG ./test.sh cpp 1.1)",
-      "Bash(export ZEROBUFFER_LOG_LEVEL=DEBUG)"
+      "Bash(export ZEROBUFFER_LOG_LEVEL=DEBUG)",
+      "Bash(harmony-cpp-gen:*)",
+      "Bash(dotnet tool uninstall:*)",
+      "Bash(dotnet tool install:*)",
+      "Bash(./tests/generated/zerobuffer_generated_tests --gtest_list_tests)",
+      "Bash(./tests/generated/zerobuffer_generated_tests:*)",
+      "Bash(bash:*)",
+      "Bash(TEST_ARG=\"\")",
+      "Bash(TEST_TYPE=$TEST_ARG:-unit)",
+      "Bash(ZEROBUFFER_LOG_LEVEL=ERROR ./test.sh)",
+      "Bash(export ZEROBUFFER_LOG_LEVEL=ERROR)",
+      "Bash(ZEROBUFFER_LOG_LEVEL=INFO ./test.sh 1.1)",
+      "Bash(ZEROBUFFER_LOG_LEVEL=ERROR ./test.sh 1.1)"
     ],
     "deny": []
   }

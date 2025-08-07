@@ -22,7 +22,7 @@ void registerBasicCommunicationSteps() {
         [](TestContext& ctx, const std::vector<std::string>& params) {
             // Initialize/reset the test context
             ctx.reset();
-            ZEROBUFFER_LOG_INFO("Step") << "Test environment initialized";
+            ZEROBUFFER_LOG_DEBUG("Step") << "Test environment initialized";
         }
     );
     
@@ -32,7 +32,7 @@ void registerBasicCommunicationSteps() {
         [](TestContext& ctx, const std::vector<std::string>& params) {
             // This step is for compatibility with multi-process scenarios
             // In single-process tests, we don't need to do anything
-            ZEROBUFFER_LOG_INFO("Step") << "All processes ready";
+            ZEROBUFFER_LOG_DEBUG("Step") << "All processes ready";
         }
     );
     
@@ -50,7 +50,7 @@ void registerBasicCommunicationSteps() {
             config.payload_size = payloadSize;
             
             ctx.createReader(process, bufferName, config);
-            ZEROBUFFER_LOG_INFO("Step") << "Buffer '" << bufferName << "' created by " << process 
+            ZEROBUFFER_LOG_DEBUG("Step") << "Buffer '" << bufferName << "' created by " << process 
                                         << " with metadata_size=" << metadataSize 
                                         << ", payload_size=" << payloadSize;
         }
@@ -68,7 +68,7 @@ void registerBasicCommunicationSteps() {
             config.payload_size = 65536;    // Default payload size
             
             ctx.createReader(process, bufferName, config);
-            ZEROBUFFER_LOG_INFO("Step") << "Buffer '" << bufferName << "' created by " << process;
+            ZEROBUFFER_LOG_DEBUG("Step") << "Buffer '" << bufferName << "' created by " << process;
         }
     );
     
@@ -83,14 +83,14 @@ void registerBasicCommunicationSteps() {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             
             ctx.createWriter(process, bufferName);
-            ZEROBUFFER_LOG_INFO("Step") << process << " connected to buffer '" << bufferName << "'";
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " connected to buffer '" << bufferName << "'";
             
             // Verify connection from reader's perspective
             auto* reader = ctx.getReader("reader");
             if (reader && !reader->is_writer_connected(1000)) {
                 throw std::runtime_error("Reader doesn't see writer as connected");
             }
-            ZEROBUFFER_LOG_INFO("Step") << "Connection verified";
+            ZEROBUFFER_LOG_DEBUG("Step") << "Connection verified";
         }
     );
     
@@ -113,7 +113,7 @@ void registerBasicCommunicationSteps() {
             }
             
             writer->set_metadata(metadata.data(), metadataSize);
-            ZEROBUFFER_LOG_INFO("Step") << process << " wrote metadata with size " << metadataSize;
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote metadata with size " << metadataSize;
         }
     );
     
@@ -137,7 +137,7 @@ void registerBasicCommunicationSteps() {
             }
             
             writer->write_frame(frameData.data(), frameSize);
-            ZEROBUFFER_LOG_INFO("Step") << process << " wrote frame with size " << frameSize 
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote frame with size " << frameSize 
                                         << " and sequence " << sequence;
             
             // Store frame info for verification
@@ -179,7 +179,7 @@ void registerBasicCommunicationSteps() {
                                        std::to_string(expectedSequence) + " but got different data");
             }
             
-            ZEROBUFFER_LOG_INFO("Step") << "Frame read by " << process << " with sequence " 
+            ZEROBUFFER_LOG_DEBUG("Step") << "Frame read by " << process << " with sequence " 
                                         << expectedSequence << " and size " << expectedSize;
             
             // Store frame for validation step
@@ -201,7 +201,7 @@ void registerBasicCommunicationSteps() {
                 throw std::runtime_error("No valid frame to validate");
             }
             
-            ZEROBUFFER_LOG_INFO("Step") << process << " validated frame data";
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " validated frame data";
         }
     );
     
@@ -221,9 +221,9 @@ void registerBasicCommunicationSteps() {
                 // In real implementation, we'd release the last frame here
                 // For now, just clear the flag
                 ctx.setProperty("pending_frame_release", "false");
-                ZEROBUFFER_LOG_INFO("Step") << process << " signaled space available (frame released)";
+                ZEROBUFFER_LOG_DEBUG("Step") << process << " signaled space available (frame released)";
             } else {
-                ZEROBUFFER_LOG_INFO("Step") << process << " signaled space available";
+                ZEROBUFFER_LOG_DEBUG("Step") << process << " signaled space available";
             }
         }
     );
@@ -241,7 +241,7 @@ void registerBasicCommunicationSteps() {
             }
             
             writer->write_frame(message.data(), message.size());
-            ZEROBUFFER_LOG_INFO("Step") << process << " wrote '" << message << "'";
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote '" << message << "'";
             
             // Store the message for verification
             ctx.setProperty("expected_message", message);
@@ -265,7 +265,7 @@ void registerBasicCommunicationSteps() {
             if (!frame.valid()) {
                 throw std::runtime_error("Failed to read frame - timeout or invalid frame");
             }
-            ZEROBUFFER_LOG_INFO("Step") << "Frame read by " << process;
+            ZEROBUFFER_LOG_DEBUG("Step") << "Frame read by " << process;
             
             // Verify frame content
             std::string receivedMessage(static_cast<const char*>(frame.data()), frame.size());
@@ -275,15 +275,15 @@ void registerBasicCommunicationSteps() {
                     "' but got '" + receivedMessage + "'"
                 );
             }
-            ZEROBUFFER_LOG_INFO("Step") << "Content verified: '" << receivedMessage << "'";
+            ZEROBUFFER_LOG_DEBUG("Step") << "Content verified: '" << receivedMessage << "'";
             
             // Release the frame
             reader->release_frame(frame);
-            ZEROBUFFER_LOG_INFO("Step") << "Frame released";
+            ZEROBUFFER_LOG_DEBUG("Step") << "Frame released";
         }
     );
     
-    ZEROBUFFER_LOG_INFO("BasicCommunication") << "Registered " << registry.getAllSteps().size() << " step definitions";
+    ZEROBUFFER_LOG_DEBUG("BasicCommunication") << "Registered " << registry.getAllSteps().size() << " step definitions";
 }
 
 } // namespace steps

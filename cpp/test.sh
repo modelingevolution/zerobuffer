@@ -10,14 +10,13 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Check if user is trying to run Harmony tests
+# Check if user is trying to run Harmony tests (but allow test numbers for local tests)
 for arg in "$@"; do
-    if [[ "$arg" == "cpp" ]] || [[ "$arg" == "csharp" ]] || [[ "$arg" == "python" ]] || [[ "$arg" =~ ^[0-9]+\.[0-9]+$ ]]; then
+    if [[ "$arg" == "cpp" ]] || [[ "$arg" == "csharp" ]] || [[ "$arg" == "python" ]]; then
         echo -e "${RED}=========================================${NC}"
         echo -e "${RED}ERROR: Wrong test script!${NC}"
         echo -e "${RED}=========================================${NC}"
         echo -e "${YELLOW}It looks like you're trying to run Harmony integration tests.${NC}"
-        echo -e "${YELLOW}This script (cpp/test.sh) is for C++ unit tests only.${NC}"
         echo ""
         echo -e "${GREEN}To run Harmony tests, use:${NC}"
         echo -e "${GREEN}  cd ../  # Go to zerobuffer root directory${NC}"
@@ -32,8 +31,38 @@ for arg in "$@"; do
     fi
 done
 
-# Test type
-TEST_TYPE=${1:-all}
+# Test type - default to unit tests if no argument provided
+TEST_TYPE=${1:-unit}
+
+# Check for test number format (e.g., 1.1, 1.2)
+if [[ "$TEST_TYPE" =~ ^[0-9]+\.[0-9]+$ ]]; then
+    # Running a specific test by number
+    echo -e "${GREEN}=========================================${NC}"
+    echo -e "${GREEN}Running Test $TEST_TYPE${NC}"
+    echo -e "${GREEN}=========================================${NC}"
+    
+    # Convert test number to Google Test filter
+    # 1.1 -> Test_1_1_*
+    TEST_FILTER="*Test_${TEST_TYPE//./_}_*"
+    
+    # Check if generated tests exist
+    if [ ! -f "build/tests/generated/zerobuffer_generated_tests" ]; then
+        echo -e "${YELLOW}Generated tests not built. Building now...${NC}"
+        cd build && make zerobuffer_generated_tests && cd ..
+    fi
+    
+    if [ -f "build/tests/generated/zerobuffer_generated_tests" ]; then
+        echo -e "${YELLOW}Running test with filter: $TEST_FILTER${NC}"
+        ./build/tests/generated/zerobuffer_generated_tests --gtest_filter="$TEST_FILTER"
+        exit $?
+    else
+        echo -e "${RED}Error: Generated tests not found!${NC}"
+        echo -e "${YELLOW}Run the generator first:${NC}"
+        echo -e "${YELLOW}  harmony-cpp-gen --input ../ZeroBuffer.Harmony.Tests/Features --output tests/generated${NC}"
+        echo -e "${YELLOW}  Or run: ./generate_tests.sh${NC}"
+        exit 1
+    fi
+fi
 
 echo -e "${GREEN}=========================================${NC}"
 echo -e "${GREEN}ZeroBuffer Test Suite${NC}"
@@ -57,23 +86,22 @@ cd build
 if [ "$TEST_TYPE" == "unit" ] || [ "$TEST_TYPE" == "all" ]; then
     echo -e "${YELLOW}Running unit tests...${NC}"
     
-    # First ensure test_duplex_channel is built
-    if [ ! -f "tests/test_duplex_channel" ]; then
-        echo -e "${YELLOW}Building test_duplex_channel...${NC}"
-        make test_duplex_channel
+    # Check if generated tests exist
+    if [ ! -f "tests/generated/zerobuffer_generated_tests" ]; then
+        echo -e "${YELLOW}Building generated tests...${NC}"
+        make zerobuffer_generated_tests
     fi
     
-    # Run tests directly since ctest might not find them
-    if [ -f "tests/test_duplex_channel" ]; then
-        echo -e "${YELLOW}Running duplex channel tests...${NC}"
-        ./tests/test_duplex_channel
-        echo -e "${GREEN}✓ Duplex channel tests passed${NC}"
-    fi
-    
-    if [ -f "tests/test_duplex_simple" ]; then
-        echo -e "${YELLOW}Running simple duplex test...${NC}"
-        ./tests/test_duplex_simple
-        echo -e "${GREEN}✓ Simple duplex test passed${NC}"
+    # Run generated tests
+    if [ -f "tests/generated/zerobuffer_generated_tests" ]; then
+        echo -e "${YELLOW}Running generated tests...${NC}"
+        ./tests/generated/zerobuffer_generated_tests --gtest_color=yes
+        echo -e "${GREEN}✓ Generated tests completed${NC}"
+    else
+        echo -e "${RED}Error: Generated tests not found!${NC}"
+        echo -e "${YELLOW}Run the generator first:${NC}"
+        echo -e "${YELLOW}  cd .. && ./generate_tests.sh${NC}"
+        exit 1
     fi
     
     echo -e "${GREEN}✓ All unit tests passed${NC}"

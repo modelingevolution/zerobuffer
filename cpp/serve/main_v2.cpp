@@ -9,7 +9,6 @@
 
 #include "step_definitions/step_registry.h"
 #include "step_definitions/test_context.h"
-#include "step_definitions/basic_communication_steps.h"
 
 #include <zerobuffer/logger.h>
 #include <nlohmann/json.hpp>
@@ -293,8 +292,8 @@ int main() {
     ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Starting JSON-RPC server (Iteration 4 - Harmony Compliant)";
     ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Protocol: Content-Length headers, 30-second timeout";
     
-    // Register step definitions
-    registerBasicCommunicationSteps();
+    // Register all available step definitions
+    StepRegistry::getInstance().registerAllSteps();
     
     // Log all registered steps for debugging
     auto allSteps = StepRegistry::getInstance().getAllSteps();
