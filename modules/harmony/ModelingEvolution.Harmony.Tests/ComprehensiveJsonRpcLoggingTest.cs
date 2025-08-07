@@ -70,7 +70,7 @@ public class ComprehensiveJsonRpcLoggingTest : TestBase, IDisposable
             
             try
             {
-                var result = await scenario.RunAsync(_stepExecutor, _mockProcessManager);
+                var result = await scenario.RunAsync(_stepExecutor, _mockProcessManager, _output.WriteLine);
                 
                 if (!result.Success)
                 {

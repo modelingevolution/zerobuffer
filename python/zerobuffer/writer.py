@@ -20,6 +20,7 @@ from .exceptions import (
     MetadataAlreadyWrittenException
 )
 from .logging_config import LoggerMixin
+from .shared_memory import SharedMemory, SharedMemoryFactory
 
 
 class Writer(LoggerMixin):
@@ -58,12 +59,12 @@ class Writer(LoggerMixin):
         
         
         try:
-            # Open existing shared memory
-            self._shm = platform.open_shared_memory(name)
-            self._buffer = self._shm.get_buffer()
+            # Open existing shared memory using the new abstraction
+            self._shm = SharedMemoryFactory.open(name)
             
-            # Read OIEB to get layout
-            oieb = OIEB.unpack(self._buffer[:OIEB.SIZE])
+            # Read OIEB to get layout using the clean API
+            oieb_data = self._shm.read_bytes(0, OIEB.SIZE)
+            oieb = OIEB.unpack(oieb_data)
             
             # Verify OIEB
             if oieb.operation_size != OIEB.SIZE:
@@ -79,16 +80,25 @@ class Writer(LoggerMixin):
             
             # Set writer PID
             oieb.writer_pid = os.getpid()
-            self._buffer[:OIEB.SIZE] = oieb.pack()
+            self._logger.debug("Setting writer PID=%d in OIEB", oieb.writer_pid)
+            self._logger.debug("OIEB before pack: writer_pid=%d, reader_pid=%d", oieb.writer_pid, oieb.reader_pid)
             
-            # Create memory views
+            # Write OIEB back using the clean API
+            packed_data = oieb.pack()
+            self._logger.debug("Writing OIEB with writer_pid=%d", oieb.writer_pid)
+            self._shm.write_bytes(0, packed_data)
+            
+            # Verify it was written using the clean API
+            verify_data = self._shm.read_bytes(0, OIEB.SIZE)
+            verify_oieb = OIEB.unpack(verify_data)
+            self._logger.debug("Verified writer PID after write: %d", verify_oieb.writer_pid)
+            
+            self._logger.debug("Writer PID set successfully")
+            
+            # Store layout info
             self._oieb_size = oieb.operation_size
             self._metadata_size = oieb.metadata_size
             self._payload_size = oieb.payload_size
-            
-            self._oieb_view = self._buffer[:self._oieb_size]
-            self._metadata_view = self._buffer[self._oieb_size:self._oieb_size + self._metadata_size]
-            self._payload_view = self._buffer[self._oieb_size + self._metadata_size:]
             
             # Open semaphores
             self._sem_write = platform.open_semaphore(f"sem-w-{name}")
@@ -112,11 +122,14 @@ class Writer(LoggerMixin):
     
     def _read_oieb(self) -> OIEB:
         """Read current OIEB from shared memory"""
-        return OIEB.unpack(self._oieb_view)
+        # Read OIEB using the clean API
+        oieb_data = self._shm.read_bytes(0, OIEB.SIZE)
+        return OIEB.unpack(oieb_data)
     
     def _write_oieb(self, oieb: OIEB) -> None:
         """Write OIEB to shared memory"""
-        self._oieb_view[:] = oieb.pack()
+        # Write OIEB using the clean API
+        self._shm.write_bytes(0, oieb.pack())
     
     def set_metadata(self, data: Union[bytes, bytearray, memoryview]) -> None:
         """
@@ -144,16 +157,29 @@ class Writer(LoggerMixin):
                 raise ZeroBufferException("Metadata too large for buffer")
             
             # Write size prefix
-            self._metadata_view[:8] = len(data).to_bytes(8, byteorder='little')
+            metadata_offset = self._oieb_size
+            self._shm.write_uint64(metadata_offset, len(data))
             
             # Write metadata
             if len(data) > 0:
-                self._metadata_view[8:8 + len(data)] = data
+                self._shm.write_bytes(metadata_offset + 8, data)
             
             # Update OIEB
             oieb.metadata_written_bytes = total_size
             oieb.metadata_free_bytes = oieb.metadata_size - total_size
+            
+            self._logger.info("Updating OIEB after metadata write:")
+            self._logger.info("  metadata_written_bytes: %d", oieb.metadata_written_bytes)
+            self._logger.info("  metadata_free_bytes: %d", oieb.metadata_free_bytes)
+            self._logger.info("  payload_free_bytes (unchanged): %d", oieb.payload_free_bytes)
+            
             self._write_oieb(oieb)
+            
+            # Verify the write
+            oieb_verify = self._read_oieb()
+            self._logger.info("Verified OIEB after metadata write:")
+            self._logger.info("  metadata_written_bytes: %d", oieb_verify.metadata_written_bytes)
+            self._logger.info("  payload_free_bytes: %d", oieb_verify.payload_free_bytes)
             
             self._metadata_written = True
     
@@ -209,6 +235,9 @@ class Writer(LoggerMixin):
             while True:
                 oieb = self._read_oieb()
                 
+                self._logger.debug("Write frame check: total_size=%d, payload_free_bytes=%d, payload_size=%d", 
+                                 total_size, oieb.payload_free_bytes, oieb.payload_size)
+                
                 # Check if frame is too large
                 if total_size > oieb.payload_size:
                     raise FrameTooLargeException()
@@ -220,9 +249,28 @@ class Writer(LoggerMixin):
                 # Check for available space
                 if oieb.payload_free_bytes >= total_size:
                     # We have enough space
+                    self._logger.debug("Have enough space, breaking from wait loop")
                     break
                 
+                # Log detailed state before waiting
+                self._logger.info("About to wait on semaphore - not enough space")
+                self._logger.info("  total_size needed: %d", total_size)
+                self._logger.info("  payload_free_bytes: %d", oieb.payload_free_bytes)
+                self._logger.info("  payload_size: %d", oieb.payload_size)
+                self._logger.info("  payload_write_pos: %d", oieb.payload_write_pos)
+                self._logger.info("  payload_read_pos: %d", oieb.payload_read_pos)
+                self._logger.info("  metadata_written_bytes: %d", oieb.metadata_written_bytes)
+                self._logger.info("  reader_pid: %d", oieb.reader_pid)
+                self._logger.info("  writer_pid: %d", oieb.writer_pid)
+                
+                # Re-read OIEB just to check if it changed
+                oieb_recheck = self._read_oieb()
+                if oieb_recheck.payload_free_bytes != oieb.payload_free_bytes:
+                    self._logger.warning("OIEB changed during check! free_bytes was %d, now %d", 
+                                       oieb.payload_free_bytes, oieb_recheck.payload_free_bytes)
+                
                 # Wait for reader to free space (blocking)
+                self._logger.info("Waiting on sem_read semaphore...")
                 if not self._sem_read.acquire(timeout=5.0):
                     # Timeout - check if reader is alive
                     if not self._is_reader_connected(oieb):
@@ -240,8 +288,9 @@ class Writer(LoggerMixin):
                 if space_to_end >= FrameHeader.SIZE:
                     # Write wrap marker header
                     wrap_header = FrameHeader(payload_size=0, sequence_number=0)
-                    wrap_offset = oieb.payload_write_pos
-                    self._payload_view[wrap_offset:wrap_offset + FrameHeader.SIZE] = wrap_header.pack()
+                    payload_base = self._oieb_size + self._metadata_size
+                    wrap_offset = payload_base + oieb.payload_write_pos
+                    self._shm.write_bytes(wrap_offset, wrap_header.pack())
                 
                 # Account for the wasted space at the end
                 oieb.payload_free_bytes -= space_to_end
@@ -255,12 +304,13 @@ class Writer(LoggerMixin):
                 payload_size=frame_size,
                 sequence_number=self._sequence_number
             )
-            header_offset = oieb.payload_write_pos
-            self._payload_view[header_offset:header_offset + FrameHeader.SIZE] = header.pack()
+            payload_base = self._oieb_size + self._metadata_size
+            header_offset = payload_base + oieb.payload_write_pos
+            self._shm.write_bytes(header_offset, header.pack())
             
             # Write frame data
             data_offset = header_offset + FrameHeader.SIZE
-            self._payload_view[data_offset:data_offset + frame_size] = data
+            self._shm.write_bytes(data_offset, data)
             
             # Update tracking
             oieb.payload_write_pos += total_size
@@ -360,8 +410,9 @@ class Writer(LoggerMixin):
                 if space_to_end >= FrameHeader.SIZE:
                     # Write wrap marker header
                     wrap_header = FrameHeader(payload_size=0, sequence_number=0)
-                    wrap_offset = oieb.payload_write_pos
-                    self._payload_view[wrap_offset:wrap_offset + FrameHeader.SIZE] = wrap_header.pack()
+                    payload_base = self._oieb_size + self._metadata_size
+                    wrap_offset = payload_base + oieb.payload_write_pos
+                    self._shm.write_bytes(wrap_offset, wrap_header.pack())
                 
                 # Account for the wasted space at the end
                 oieb.payload_free_bytes -= space_to_end
@@ -375,17 +426,19 @@ class Writer(LoggerMixin):
                 payload_size=size,
                 sequence_number=self._sequence_number
             )
-            header_offset = oieb.payload_write_pos
-            self._payload_view[header_offset:header_offset + FrameHeader.SIZE] = header.pack()
+            payload_base = self._oieb_size + self._metadata_size
+            header_offset = payload_base + oieb.payload_write_pos
+            self._shm.write_bytes(header_offset, header.pack())
             
             # Store state for commit
-            self._pending_write_pos = header_offset + FrameHeader.SIZE
+            self._pending_write_pos = oieb.payload_write_pos + FrameHeader.SIZE
             self._pending_frame_size = size
             self._pending_total_size = total_size
             
             # Return memoryview for data area
             # Note: Lock is held until commit_frame() is called
-            return self._payload_view[self._pending_write_pos:self._pending_write_pos + size]
+            data_offset = payload_base + self._pending_write_pos
+            return self._shm.get_memoryview(data_offset, size)
         except:
             # Release lock on error
             self._lock.release()
@@ -466,20 +519,7 @@ class Writer(LoggerMixin):
             except:
                 pass
             
-            # Release memoryviews first
-            if hasattr(self, '_oieb_view') and self._oieb_view is not None:
-                self._oieb_view.release()
-                self._oieb_view = None
-            if hasattr(self, '_metadata_view') and self._metadata_view is not None:
-                self._metadata_view.release()
-                self._metadata_view = None
-            if hasattr(self, '_payload_view') and self._payload_view is not None:
-                self._payload_view.release()
-                self._payload_view = None
-            
-            # Clear buffer reference
-            if hasattr(self, '_buffer') and self._buffer is not None:
-                self._buffer = None
+            # No persistent memoryviews to release anymore
             
             # Close resources (writer doesn't own them)
             if hasattr(self, '_sem_read'):

@@ -29,7 +29,8 @@ public class ScenarioExecution
     /// <summary>
     /// Executes the scenario with the configured platform combination
     /// </summary>
-    public async Task<ExecutionResult> RunAsync(IStepExecutor stepExecutor, IProcessManager processManager, CancellationToken cancellationToken = default)
+    public async Task<ExecutionResult> RunAsync(IStepExecutor stepExecutor, IProcessManager processManager,
+        Action<string> Log, CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         var logs = new List<LogEntry>();
@@ -65,7 +66,10 @@ public class ScenarioExecution
                     
                     var result = await stepExecutor.ExecuteStepAsync(step, Platforms, cancellationToken);
                     logs.AddRange(result.Logs);
-                    
+
+                    foreach(var log in result.Logs)
+                        Log($"[{log.Timestamp:HH:mm:ss.fff}] [{log.Platform}:{log.Process}] [{log.Level}] {log.Message}");
+
                     if (!result.Success)
                     {
                         return new ExecutionResult
@@ -100,10 +104,17 @@ public class ScenarioExecution
                     }
                     continue;
                 }
-                
+                Debug.WriteLine($"==> {step}");
                 var result = await stepExecutor.ExecuteStepAsync(step, Platforms, cancellationToken);
                 logs.AddRange(result.Logs);
-                
+
+                foreach (var log in result.Logs)
+                {
+                    var m = $"[{log.Timestamp:HH:mm:ss.fff}] [{log.Platform}:{log.Process}] [{log.Level}] {log.Message}";
+                    Log(m);
+                    Debug.WriteLine(m);
+                }
+
                 if (!result.Success)
                 {
                     return new ExecutionResult
@@ -374,6 +385,7 @@ public class ExecutionResult
     public List<LogEntry> Logs { get; init; } = new();
 }
 
+[DebuggerDisplay("{Process} {Level} {Message}")]
 public class LogEntry
 {
     public DateTime Timestamp { get; init; }

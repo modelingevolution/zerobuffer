@@ -124,10 +124,10 @@ namespace ZeroBuffer.Tests.Features
         testRunner.And("the \'writer\' process attempts to write large frame again", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 14
-        testRunner.Then("proper wrap-around handling should occur", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'writer\' process proper wrap-around handling should occur", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 15
-        testRunner.And("no deadlocks should happen", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process no deadlocks should happen", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -164,16 +164,16 @@ namespace ZeroBuffer.Tests.Features
         testRunner.And("the \'writer\' process writes \'10\' frames rapidly without reader consuming", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 23
-        testRunner.Then("the semaphore count should represent pending frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'writer\' process the semaphore count should represent pending frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 25
         testRunner.When("the \'reader\' process wakes and processes all frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 27
-        testRunner.Then("all frames should be read correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'reader\' process all frames should be read correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 28
-        testRunner.And("the coalesced signals should be handled properly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process the coalesced signals should be handled properly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -208,7 +208,7 @@ namespace ZeroBuffer.Tests.Features
         testRunner.When("the \'writer\' process connects to buffer \'test-zero-metadata\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 34
-        testRunner.And("attempts to write metadata", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process attempts to write metadata", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 36
         testRunner.Then("the \'writer\' process metadata write should fail appropriately", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
@@ -248,22 +248,22 @@ namespace ZeroBuffer.Tests.Features
     this.FeatureBackground();
 #line hidden
 #line 44
-        testRunner.Given("the \'reader\' process creates buffer \'test-minimum\' with minimum viable size \'17\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+        testRunner.Given("the \'reader\' process creates buffer \'test-minimum\' with minimum viable size \'64\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 46
         testRunner.When("the \'writer\' process connects to buffer \'test-minimum\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 47
-        testRunner.And("writes single byte frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process writes single byte frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 49
         testRunner.Then("the \'writer\' process should verify write succeeded", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 51
-        testRunner.When("the \'writer\' process attempts to write \'2\' byte frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.When("the \'writer\' process attempts to write \'49\' byte frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 53
-        testRunner.Then("the \'writer\' process should block waiting for space", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'writer\' process should receive FrameTooLargeException", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -551,10 +551,11 @@ namespace ZeroBuffer.Tests.Features
         testRunner.And("the \'writer\' process fills buffer to \'80%\' capacity", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 130
-        testRunner.And("a second writer process attempts to connect to buffer \'test-multi-writer-full\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process a second writer process attempts to connect to buffer \'test-" +
+                        "multi-writer-full\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 132
-        testRunner.Then("the second writer should fail with writer exists error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.Then("the \'writer\' process the second writer should fail with writer exists error", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 134
         testRunner.When("the \'writer\' process continues filling buffer to \'100%\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");

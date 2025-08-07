@@ -222,7 +222,18 @@
       "Bash(./venv/bin/pytest tests/test_all_features.py --collect-only)",
       "Bash(./venv/bin/pytest tests/test_all_features.py --collect-only --tb=short)",
       "Bash(./venv/bin/pytest tests/test_scenario_1_1.py -v)",
-      "Bash(./venv/bin/pytest tests/test_features_bdd.py --collect-only -q)"
+      "Bash(./venv/bin/pytest tests/test_features_bdd.py --collect-only -q)",
+      "Bash(./test_shm_name.py)",
+      "Bash(./run_debug_test.sh:*)",
+      "Bash(venv/bin/python test_cross_process_debug.py:*)",
+      "Bash(venv/bin/python:*)",
+      "Bash(./test_write_issue.py)",
+      "Bash(./test_shared_memory.py)",
+      "Bash(./run-single-test.sh:*)",
+      "Bash(dotnet new:*)",
+      "Bash(./venv/bin/pytest tests/test_basic_communication.py::TestBasicCommunication::test_1_2_multiple_frames_sequential -v)",
+      "Bash(./zerobuffer-serve:*)",
+      "Bash(../test.sh python 1.1)"
     ],
     "deny": []
   }

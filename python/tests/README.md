@@ -55,7 +55,9 @@ class BasicCommunicationSteps:
 ```
 
 ### Process Parameters
-- Steps mentioning `'([^']+)' process` should accept the process parameter
+- Steps with `the '([^']+)' process` MUST accept but ignore the process parameter
+- **'And' steps MUST NOT have process parameters** (inherit context from previous step)
+- Exception: 'And' steps with explicit process switch
 - **DO NOT filter by process** - Harmony routes steps to the correct process
 - Process parameter is for context only, not for conditional logic
 
@@ -157,20 +159,22 @@ cd ..
 ## Development Process - YOUR TODO LIST
 
 0. **READ THE PREREQUISITES** if you haven't!
-1. Read scenario in feature file and understand the intent
-2. Check if step definitions exist for all steps
-3. Implement missing step definitions with pytest-bdd decorators
-4. Run locally with pytest-bdd: `./venv/bin/pytest tests/test_features_bdd.py -k [scenario_name]`
-5. Fix any issues with step matching or implementation
-6. Test with Harmony if cross-platform validation needed
+1. Read scenario in feature file; Try to understand it and assess if it makes sense. If it doesn't make sense, ask for clarification.
+2. Identify required step definitions
+3. Analyze if we need to exchange data between the processes, or we can simply rely on patterns. If we need to exchange data - stop working and tell me that.
+4. Implement each step with actual ZeroBuffer operations (no empty logging steps!)
+5. Run single test: `./test.sh [test-number]` (e.g., `./test.sh 1.2`); **DO NOT RUN ALL TESTS AT ONCE!**
+6. Fix issues; If the test fails, it can mean that the implementation is incorrect. Investigate the failure, read the protocol documentation and try to fix the implementation.
+7. Only if GREEN, run again with Harmony: `../test.sh python [test-number]` (from parent directory); Fix any issues
 
 ## Implementation Rules
 
-1. **Use pytest-bdd decorators** - `@given`, `@when`, `@then` from pytest-bdd
-2. **Match feature file exactly** - Step patterns must match Gherkin text
-3. **No process filtering** - Accept process parameter but don't filter by it
-4. **Real implementation** - No empty logging steps, implement actual logic
-5. **Single source of truth** - Feature files drive all behavior
+1. **Every step must have real implementation** - no empty logging steps
+2. **Match feature file exactly** - regex must match feature file text
+3. **No unused steps** - delete if not in feature file
+4. **No process-specific logic** - treat all processes the same, the process might only refer to specific zero-buffer client (reader/writer)
+5. **Use pytest-bdd decorators** - `@given`, `@when`, `@then` from pytest-bdd
+6. **Single source of truth** - Feature files drive all behavior
 
 ## Common Patterns
 
@@ -209,24 +213,41 @@ def run_async(coro):
     return loop.run_until_complete(coro)
 ```
 
-### Test Data Patterns
-
+### Buffer Naming Service
+Use `BufferNamingService` to ensure unique buffer names across processes:
 ```python
-class TestDataPatterns:
-    @staticmethod
-    def generate_frame_data(size: int, sequence: int) -> bytes:
-        """Generate consistent test data"""
-        pattern = f"Frame_{sequence:04d}_"
-        return (pattern * (size // len(pattern) + 1))[:size].encode()
-    
-    @staticmethod
-    def verify_frame_data(data: bytes, expected_sequence: int) -> bool:
-        """Verify frame data matches expected pattern"""
-        expected = TestDataPatterns.generate_frame_data(len(data), expected_sequence)
-        return data == expected
+from zerobuffer_serve.services import BufferNamingService
+
+# Creates unique buffer names for test isolation
+naming_service = BufferNamingService(logger)
+actual_name = naming_service.get_buffer_name("test-buffer")
+reader = Reader(actual_name, config)
+```
+
+### Test Data Patterns
+Use `TestDataPatterns` for consistent data generation and assertions across processes:
+```python
+from zerobuffer_serve.test_data_patterns import TestDataPatterns
+
+# Writer process: Generate frame data
+data = TestDataPatterns.generate_frame_data(size=1024, sequence=1)
+writer.write_frame(data)
+
+# Reader process: Generate expected data for assertion
+expected_data = TestDataPatterns.generate_frame_data(len(frame_data), frame_sequence)
+assert frame_data == expected_data
 ```
 
 ## Troubleshooting
+
+### IMPORTANT RULES:
+1. **test.sh scripts may fail due to wrong implementation of those scripts**. If they do not work, fix them. With them you should be able to run single tests easily. If this is not possible do not look for workaround! Fix the script or ask for help.
+   - Local tests: `python/test.sh`
+   - Harmony cross-process tests: `../test.sh` (from parent directory)
+2. **Some scenarios might be too advanced for harmony**. This is very important discovery. We need to know why. Ask immediately for help if you think the step isn't feasible to implement.
+3. **Do not work on workarounds the Development Process**. If you cannot proceed with next points from the Development Process, ask for help and stop working.
+
+## Common Troubleshooting
 
 ### Step Not Found
 ```

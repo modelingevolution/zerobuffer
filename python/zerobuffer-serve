@@ -7,16 +7,16 @@ set -euo pipefail
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Change to the script directory to ensure relative imports work
-cd "$SCRIPT_DIR"
+# DO NOT change directory - Harmony sets the working directory
+# and expects it to remain unchanged
 
 # Activate virtual environment if it exists
 if [[ -d "$SCRIPT_DIR/venv" ]]; then
     source "$SCRIPT_DIR/venv/bin/activate"
 fi
 
-# Export Python path to include the current directory
+# Export Python path to include the script directory
 export PYTHONPATH="$SCRIPT_DIR:${PYTHONPATH:-}"
 
-# Run the Python serve application, passing all arguments through
-exec python zerobuffer_serve.py "$@"
+# Run the Python serve module, passing all arguments through
+exec python -m zerobuffer_serve "$@"

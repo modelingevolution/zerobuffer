@@ -67,13 +67,12 @@ check_venv() {
             "$VENV_DIR/bin/pip" install -q pytest-bdd
         fi
         
-        # Copy and fix feature files
-        echo -e "${BLUE}Updating feature files...${NC}"
-        "$VENV_DIR/bin/python" copy_and_fix_features.py > /dev/null 2>&1
-        if [ $? -eq 0 ]; then
-            echo -e "${GREEN}✓ Feature files updated${NC}"
+        # Feature files are already present in features/ directory
+        if [ -d "features" ] && [ "$(ls -A features/*.feature 2>/dev/null)" ]; then
+            echo -e "${GREEN}✓ Feature files found${NC}"
         else
-            echo -e "${YELLOW}Warning: Could not update feature files${NC}"
+            echo -e "${RED}Error: Feature files not found in features/ directory${NC}"
+            exit 1
         fi
     fi
 }
@@ -226,14 +225,35 @@ if [ -n "$SPECIFIC_TEST" ]; then
     if [[ "$SPECIFIC_TEST" =~ ^[0-9]+[._][0-9]+$ ]]; then
         scenario=$(get_scenario_name "$SPECIFIC_TEST")
         echo -e "${YELLOW}Running: $scenario${NC}"
-        # Use the test file directly if it exists
-        test_file="tests/test_scenario_${SPECIFIC_TEST//./_}.py"
-        if [ -f "$test_file" ]; then
-            CMD="$VENV_DIR/bin/pytest $test_file $VERBOSITY"
+        # Convert test number to method name format (1.2 -> test_1_2)
+        test_method_prefix="test_${SPECIFIC_TEST//./_}"
+        
+        # Search for test in all test files
+        found_test=""
+        for test_file in tests/test_*.py; do
+            if [ -f "$test_file" ] && grep -q "def ${test_method_prefix}_" "$test_file" 2>/dev/null; then
+                found_test="$test_file"
+                # Get the full test method name
+                test_method=$(grep -o "def ${test_method_prefix}_[a-z_]*" "$test_file" | head -1 | sed 's/def //')
+                break
+            fi
+        done
+        
+        if [ -n "$found_test" ]; then
+            # Found the test in a specific file
+            # Check if it's in a test class (look for class definition anywhere in file)
+            if grep -q "^class " "$found_test"; then
+                # Get the class name (assumes tests are in the first class found)
+                class_name=$(grep "^class " "$found_test" | head -1 | sed 's/class \([^(:]*\).*/\1/')
+                CMD="$VENV_DIR/bin/pytest ${found_test}::${class_name}::${test_method} $VERBOSITY"
+            else
+                # Standalone test function
+                CMD="$VENV_DIR/bin/pytest ${found_test}::${test_method} $VERBOSITY"
+            fi
         else
-            # Fall back to searching by scenario name (escape spaces for pytest -k)
-            scenario_escaped=$(echo "$scenario" | sed 's/ /_/g')
-            CMD="$VENV_DIR/bin/pytest tests/test_features_bdd.py -k \"$scenario_escaped\" $VERBOSITY"
+            # Fall back to searching by scenario name
+            scenario_escaped=$(echo "$scenario" | sed 's/ /_/g' | sed 's/-/_/g')
+            CMD="$VENV_DIR/bin/pytest tests/ -k \"${scenario_escaped}\" $VERBOSITY"
         fi
     else
         # Treat as a filter pattern

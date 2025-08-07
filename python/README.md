@@ -203,3 +203,42 @@ However, only one Reader and one Writer can connect to a buffer at a time.
 ### macOS
 - Similar to Linux with BSD-specific handling
 - Requires `posix-ipc` package
+
+## Testing Utilities
+
+The Python implementation includes testing utilities for cross-platform compatibility with C# and C++ implementations:
+
+### BufferNamingService
+
+Ensures unique buffer names across test runs to prevent conflicts:
+
+```python
+from zerobuffer_serve.services import BufferNamingService
+
+# Creates unique buffer names for test isolation
+naming_service = BufferNamingService(logger)
+actual_name = naming_service.get_buffer_name("test-buffer")
+# Returns: "test-buffer_<pid>_<timestamp>" or uses Harmony environment variables
+```
+
+### TestDataPatterns
+
+Provides consistent test data generation across all language implementations:
+
+```python
+from zerobuffer_serve.test_data_patterns import TestDataPatterns
+
+# Generate deterministic frame data
+data = TestDataPatterns.generate_frame_data(size=1024, sequence=1)
+
+# Generate simple pattern data
+simple_data = TestDataPatterns.generate_simple_frame_data(size=1024)
+
+# Verify data matches pattern
+is_valid = TestDataPatterns.verify_simple_frame_data(data)
+
+# Generate test metadata
+metadata = TestDataPatterns.generate_metadata(size=256)
+```
+
+These utilities ensure that Python, C#, and C++ implementations can exchange data correctly in cross-platform tests.

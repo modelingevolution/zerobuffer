@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36109.1 d17.14
+VisualStudioVersion = 17.14.36109.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Harmony.Tests", "ZeroBuffer.Harmony.Tests.csproj", "{18B790B0-F985-D2D2-3278-3F9605E5A4C3}"
 EndProject
@@ -14,6 +14,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Serve", "..\csharp\ZeroBuffer.Serve\ZeroBuffer.Serve.csproj", "{CF0EF038-08E0-078A-291C-88038EE4CBF0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Tests", "..\csharp\ZeroBuffer.Tests\ZeroBuffer.Tests.csproj", "{4B3A1B94-5D94-116D-4B6A-E7894043766D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python", "Python", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Python.Integration.Tests", "..\python\ZeroBuffer.Python.Integration.Tests\ZeroBuffer.Python.Integration.Tests.csproj", "{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,9 +49,16 @@ Global
 		{4B3A1B94-5D94-116D-4B6A-E7894043766D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4B3A1B94-5D94-116D-4B6A-E7894043766D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4B3A1B94-5D94-116D-4B6A-E7894043766D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {3AA60C14-7711-48C2-A8D5-1469A1BA4C25}

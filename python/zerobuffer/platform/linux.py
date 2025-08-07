@@ -3,6 +3,7 @@ Linux-specific implementations for shared memory and semaphores
 """
 
 import os
+import sys
 import fcntl
 import mmap
 import struct
@@ -36,10 +37,30 @@ class LinuxSharedMemory(SharedMemory):
                 self._shm = shared_memory.SharedMemory(name=name, create=True, size=size)
                 # Zero the memory
                 self._shm.buf[:] = b'\x00' * size
+                print(f"DEBUG: Created shared memory '{name}' with size {size}, actual name: {self._shm.name}", file=sys.stderr)
+                # Check if it actually exists in /dev/shm
+                import subprocess
+                result = subprocess.run(f"ls -la /dev/shm/ | grep {self._shm.name}", shell=True, capture_output=True, text=True)
+                print(f"DEBUG: /dev/shm check: {result.stdout.strip() if result.stdout else 'NOT FOUND'}", file=sys.stderr)
             else:
                 # Open existing shared memory
                 self._shm = shared_memory.SharedMemory(name=name, create=False)
                 self._size = self._shm.size
+                print(f"DEBUG: Opened shared memory '{name}', actual name: {self._shm.name}, size: {self._size}, shm object id: {id(self._shm)}", file=sys.stderr)
+                # Print first 16 bytes to verify we're looking at same memory
+                first_bytes = bytes(self._shm.buf[:16])
+                print(f"DEBUG: First 16 bytes: {first_bytes.hex()}", file=sys.stderr)
+                # Test if we can write
+                print(f"DEBUG: Testing write capability...", file=sys.stderr)
+                try:
+                    # Try to write a test byte
+                    old_val = self._shm.buf[0]
+                    self._shm.buf[0] = (old_val + 1) % 256
+                    new_val = self._shm.buf[0]
+                    self._shm.buf[0] = old_val  # Restore
+                    print(f"DEBUG: Write test: old={old_val}, new={new_val}, restored={self._shm.buf[0]}", file=sys.stderr)
+                except Exception as e:
+                    print(f"DEBUG: Write test failed: {e}", file=sys.stderr)
         except FileExistsError:
             raise ZeroBufferException(f"Shared memory '{name}' already exists")
         except FileNotFoundError:
@@ -49,9 +70,8 @@ class LinuxSharedMemory(SharedMemory):
     
     def get_buffer(self) -> memoryview:
         """Get memoryview of entire shared memory buffer"""
-        if self._buffer is None:
-            self._buffer = memoryview(self._shm.buf)
-        return self._buffer
+        # Don't cache - return fresh memoryview each time to avoid sync issues
+        return memoryview(self._shm.buf)
     
     def close(self) -> None:
         """Close the shared memory handle"""

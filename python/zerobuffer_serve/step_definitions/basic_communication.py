@@ -14,6 +14,8 @@ from zerobuffer.exceptions import ZeroBufferException
 
 from .base import BaseSteps
 from ..step_registry import given, when, then, parsers
+from ..services import BufferNamingService
+from ..test_data_patterns import TestDataPatterns
 
 
 class BasicCommunicationSteps(BaseSteps):
@@ -27,10 +29,21 @@ class BasicCommunicationSteps(BaseSteps):
         self._frames_written: List[Frame] = []
         self._frames_read: List[Frame] = []
         self._write_error: Optional[Exception] = None
+        self._buffer_naming = BufferNamingService(self.logger)
+        self._current_buffer = ""
         
     @given(r"the test environment is initialized")
     def test_environment_initialized(self):
         """Initialize test environment"""
+        # Clean up any previous test resources
+        self._readers.clear()
+        self._writers.clear()
+        self._frames_written.clear()
+        self._frames_read.clear()
+        self._current_buffer = ""
+        self._last_frame = None
+        self._write_error = None
+        self._buffer_naming.clear_cache()
         self.logger.info("Test environment initialized")
         
     @given(r"all processes are ready")
@@ -41,56 +54,80 @@ class BasicCommunicationSteps(BaseSteps):
     @given(parsers.re(r"(?:the '(?P<process>[^']+)' process )?creates buffer '(?P<buffer_name>[^']+)' with metadata size '(?P<metadata_size>\d+)' and payload size '(?P<payload_size>\d+)'"))
     async def create_buffer(self, process: Optional[str], buffer_name: str, metadata_size: str, payload_size: str):
         """Create a new ZeroBuffer with specified configuration"""
-            
+        # Accept process parameter but ignore it (as per C# implementation)
+        actual_buffer_name = self._buffer_naming.get_buffer_name(buffer_name)
+        
         config = BufferConfig(
             metadata_size=int(metadata_size),
             payload_size=int(payload_size)
         )
         
-        reader = Reader(buffer_name, config)
-        self._readers[buffer_name] = reader
+        reader = Reader(actual_buffer_name, config)
+        self._readers[buffer_name] = reader  # Store with original name as key
+        self._current_buffer = buffer_name
         self.store_resource(f"reader_{buffer_name}", reader)
         
         self.logger.info(
-            f"Created buffer '{buffer_name}' with metadata_size={metadata_size}, "
+            f"Created buffer '{buffer_name}' (actual: '{actual_buffer_name}') with metadata_size={metadata_size}, "
             f"payload_size={payload_size}"
         )
+        
+        # Small delay to ensure shared memory is fully initialized
+        await asyncio.sleep(0.1)
         
     @when(r"(?:the '([^']+)' process )?connects to buffer '([^']+)'")
     async def connect_to_buffer(self, process: Optional[str], buffer_name: str):
         """Connect a writer to an existing buffer"""
-            
-        writer = Writer(buffer_name)
-        self._writers[buffer_name] = writer
+        # Accept process parameter but ignore it (as per C# implementation)
+        actual_buffer_name = self._buffer_naming.get_buffer_name(buffer_name)
+        
+        writer = Writer(actual_buffer_name)
+        self._writers[buffer_name] = writer  # Store with original name as key
+        self._current_buffer = buffer_name
         self.store_resource(f"writer_{buffer_name}", writer)
         
-        self.logger.info(f"Connected to buffer '{buffer_name}'")
+        self.logger.info(f"Connected to buffer '{buffer_name}' (actual: '{actual_buffer_name}'")
+        
+        # Small delay to ensure shared memory updates are visible
+        await asyncio.sleep(0.1)
         
     @when(r"(?:the '([^']+)' process )?writes metadata with size '(\d+)'")
     async def write_metadata(self, process: Optional[str], size: str):
         """Write metadata to the buffer"""
-        # Find the first writer
-        writer = next(iter(self._writers.values()))
+        # Accept process parameter but ignore it (as per C# implementation)
+        # Get the writer - if only one exists, use it; otherwise use current buffer
+        if not self._writers:
+            raise Exception("No writer connected to any buffer")
+        elif len(self._writers) == 1:
+            writer = next(iter(self._writers.values()))
+        elif self._current_buffer and self._current_buffer in self._writers:
+            writer = self._writers[self._current_buffer]
+        else:
+            raise Exception(f"Multiple writers exist but current buffer '{self._current_buffer}' is not set or not found")
         
-        # Create metadata of specified size
-        metadata = b'M' * int(size)
+        # Generate metadata using TestDataPatterns
+        metadata = TestDataPatterns.generate_metadata(int(size))
         writer.set_metadata(metadata)
         
         self.logger.info(f"Wrote metadata with size {size}")
         
+        # Small delay to ensure OIEB updates are visible
+        await asyncio.sleep(0.1)
+        
     @when(r"(?:the '([^']+)' process )?writes frame with size '(\d+)' and sequence '(\d+)'")
     async def write_frame_with_sequence(self, process: Optional[str], size: str, sequence: str):
         """Write a frame with specific size and sequence"""
-        writer = next(iter(self._writers.values()))
+        # Accept process parameter but ignore it
+        writer = self._writers[self._current_buffer]
+        sequence_num = int(sequence)
         
-        # Create frame data
-        frame_size = int(size)
-        frame_data = b'F' * frame_size
+        # Generate frame data using TestDataPatterns
+        frame_data = TestDataPatterns.generate_frame_data(int(size), sequence_num)
         
         # Write frame
         writer.write_frame(frame_data)
         # Note: Frame is just a tracking object here, actual frame is in shared memory
-        frame = {'data': frame_data, 'sequence_number': int(sequence), 'size': len(frame_data)}
+        frame = {'data': frame_data, 'sequence_number': sequence_num, 'size': len(frame_data)}
         self._frames_written.append(frame)
         self._last_frame = frame
         
@@ -99,7 +136,14 @@ class BasicCommunicationSteps(BaseSteps):
     @when(r"(?:the '([^']+)' process )?writes frame with sequence '(\d+)'")
     async def write_frame_sequence_only(self, process: Optional[str], sequence: str):
         """Write a frame with default size"""
-        await self.write_frame_with_sequence(process, "1024", sequence)
+        # Accept process parameter but ignore it
+        writer = self._writers[self._current_buffer]
+        sequence_num = int(sequence)
+        # Use default size of 1024 when not specified
+        data = TestDataPatterns.generate_frame_data(1024, sequence_num)
+        
+        writer.write_frame(data)
+        self.logger.info(f"Wrote frame with sequence {sequence}")
         
     @when(r"(?:the '([^']+)' process )?writes frames until buffer is full")
     async def write_until_full(self, process: Optional[str]):
@@ -112,7 +156,7 @@ class BasicCommunicationSteps(BaseSteps):
             # Use large frames to fill buffer faster (1KB per frame)
             frame_size = 1024
             while True:
-                data = b'X' * frame_size
+                data = TestDataPatterns.generate_frame_data(frame_size, frame_count)
                 writer.write_frame(data)
                 # Track frame info
                 frame = {'data': data, 'sequence_number': frame_count, 'size': len(data)}
@@ -143,50 +187,86 @@ class BasicCommunicationSteps(BaseSteps):
     @when(r"(?:the '([^']+)' process )?fills zero-copy buffer with test pattern")
     async def fill_zero_copy_buffer(self, process: Optional[str]):
         """Fill zero-copy buffer with test pattern"""
-        buffer = self.get_data("zero_copy_buffer")
+        # Accept process parameter but ignore it
+        writer = self._writers[self._current_buffer]
         size = self.get_data("zero_copy_size")
         
-        # Fill with test pattern
-        pattern = b'ABCD' * (size // 4 + 1)
-        buffer[:size] = pattern[:size]
+        # Request a zero-copy buffer and fill it immediately
+        # This is the correct way to use zero-copy: get buffer, fill, commit
+        span = writer.get_frame_buffer(size)
+        
+        # Generate test pattern using TestDataPatterns with the writer's current sequence
+        test_pattern = TestDataPatterns.generate_frame_data(size, writer.frames_written)
+        
+        # Fill the zero-copy buffer directly (this is the actual zero-copy operation)
+        span[:size] = test_pattern
+        
+        # Store the pattern for verification
+        self.set_data("zero_copy_buffer", test_pattern)
+        self.set_data("zero_copy_ready", True)
         
         self.logger.info("Filled zero-copy buffer with test pattern")
         
     @when(r"(?:the '([^']+)' process )?commits zero-copy frame")
     async def commit_zero_copy_frame(self, process: Optional[str]):
         """Commit the zero-copy frame"""
-        writer = next(iter(self._writers.values()))
-        size = self.get_data("zero_copy_size")
+        # Accept process parameter but ignore it
+        writer = self._writers[self._current_buffer]
         
         # Commit the frame
         writer.commit_frame()
-        # Track frame info
-        frame = {'data': self.get_data("zero_copy_buffer")[:size], 'sequence_number': writer.frames_written, 'size': size}
-        self._frames_written.append(frame)
-        self._last_frame = frame
+        
+        # Clear the ready flag
+        self.remove_data("zero_copy_ready")
         
         self.logger.info("Committed zero-copy frame")
         
     @when(r"(?:the '([^']+)' process )?writes frame with size '(\d+)'")
     async def write_frame_with_size(self, process: Optional[str], size: str):
         """Write a frame with specific size"""
-        writer = next(iter(self._writers.values()))
-        frame_data = b'X' * int(size)
+        # Accept process parameter but ignore it
+        writer = self._writers[self._current_buffer]
+        frame_size = int(size)
         
+        # Use simple test data pattern
+        frame_data = TestDataPatterns.generate_simple_frame_data(frame_size)
         writer.write_frame(frame_data)
-        # Track frame info
-        frame = {'data': frame_data, 'sequence_number': writer.frames_written, 'size': len(frame_data)}
-        self._frames_written.append(frame)
         
         self.logger.info(f"Wrote frame with size {size}")
         
     @when(r"(?:the '([^']+)' process )?writes metadata '([^']+)'")
     async def write_metadata_string(self, process: Optional[str], metadata: str):
         """Write metadata as string"""
-        writer = next(iter(self._writers.values()))
-        writer.set_metadata(metadata.encode())
+        # Accept process parameter but ignore it (as per C# implementation)
         
-        self.logger.info(f"Wrote metadata: {metadata}")
+        # Check if we need to reconnect (for metadata updates)
+        if self._current_buffer in self._writers:
+            existing_writer = self._writers[self._current_buffer]
+            try:
+                # Try to write metadata - if it fails, we need to reconnect
+                metadata_bytes = metadata.encode()
+                existing_writer.set_metadata(metadata_bytes)
+                self.logger.info(f"Wrote metadata: {metadata}")
+                return  # Success - metadata written
+            except Exception as e:
+                if "already written" in str(e).lower() or "already set" in str(e).lower():
+                    # Need to disconnect and reconnect
+                    del self._writers[self._current_buffer]
+                    self.remove_resource(f"writer_{self._current_buffer}")
+                    
+                    # Reconnect
+                    actual_buffer_name = self._buffer_naming.get_buffer_name(self._current_buffer)
+                    new_writer = Writer(actual_buffer_name)
+                    self._writers[self._current_buffer] = new_writer
+                    self.store_resource(f"writer_{self._current_buffer}", new_writer)
+                    
+                    # Now write the new metadata
+                    new_writer.set_metadata(metadata.encode())
+                    self.logger.info(f"Wrote metadata: {metadata} (after reconnect)")
+                else:
+                    raise
+        else:
+            raise Exception(f"No writer connected to buffer '{self._current_buffer}'")
         
     @when(r"(?:the '([^']+)' process )?writes frame with data '([^']+)'")
     async def write_frame_with_data(self, process: Optional[str], data: str):
@@ -226,10 +306,17 @@ class BasicCommunicationSteps(BaseSteps):
     @then(r"(?:the '([^']+)' process )?should validate frame data")
     async def validate_frame_data(self, process: Optional[str]):
         """Validate the last read frame data"""
+        # Accept process parameter but ignore it
         assert self._last_frame is not None, "No frame to validate"
         
-        # Basic validation - check data is not empty
-        assert len(self._last_frame.data) > 0, "Frame data is empty"
+        frame_data = self._last_frame.data if hasattr(self._last_frame, 'data') else self._last_frame['data']
+        frame_sequence = self._last_frame.sequence if hasattr(self._last_frame, 'sequence') else self._last_frame['sequence_number']
+        
+        # Generate expected data using the shared pattern
+        expected_data = TestDataPatterns.generate_frame_data(len(frame_data), frame_sequence)
+        
+        # Compare frame data with expected data
+        assert frame_data == expected_data, "Frame data does not match expected pattern"
         
         self.logger.info("Frame data validated")
         
@@ -287,7 +374,7 @@ class BasicCommunicationSteps(BaseSteps):
         
         def write_thread():
             try:
-                data = b"This should block because buffer is full"
+                data = TestDataPatterns.generate_frame_data(1024, 999)
                 writer.write_frame(data)
                 write_completed.set()
             except Exception as e:
@@ -333,9 +420,10 @@ class BasicCommunicationSteps(BaseSteps):
         
         # Write should succeed quickly
         start_time = time.time()
-        writer.write_frame(b"Success")
+        data = TestDataPatterns.generate_frame_data(1024, 1000)
+        writer.write_frame(data)
         # Track frame info
-        frame = {'data': b"Success", 'sequence_number': writer.frames_written, 'size': len(b"Success")}
+        frame = {'data': data, 'sequence_number': writer.frames_written, 'size': len(data)}
         write_time = time.time() - start_time
         
         assert frame is not None, "Write failed"
@@ -360,43 +448,49 @@ class BasicCommunicationSteps(BaseSteps):
     @then(r"(?:the '([^']+)' process )?should verify frame data matches test pattern")
     async def verify_test_pattern(self, process: Optional[str]):
         """Verify frame data matches the test pattern"""
+        # Accept process parameter but ignore it
         assert self._last_frame is not None, "No frame to verify"
         
-        # Check for ABCD pattern
         if hasattr(self._last_frame, 'data'):
             # Real Frame object
-            data = bytes(self._last_frame.data)
+            frame_data = bytes(self._last_frame.data)
+            sequence = self._last_frame.sequence
         else:
             # Dict object from writer
-            data = self._last_frame['data']
-            
-        pattern = b'ABCD' * (len(data) // 4 + 1)
-        expected = pattern[:len(data)]
+            frame_data = self._last_frame['data']
+            sequence = self._last_frame['sequence_number']
         
-        assert data == expected, "Frame data does not match test pattern"
+        # Generate the expected test pattern based on the frame's sequence number
+        expected_pattern = TestDataPatterns.generate_frame_data(len(frame_data), sequence)
+        
+        assert frame_data == expected_pattern, "Frame data does not match test pattern"
         
         self.logger.info("Frame data matches test pattern")
         
-    @then(r"(?:the '([^']+)' process )?should read (\d+) frames with correct sizes in order")
-    async def read_frames_verify_count(self, process: Optional[str], count: str):
-        """Read specified number of frames"""
-        reader = next(iter(self._readers.values()))
-        expected_count = int(count)
+    @then(r"(?:the '([^']+)' process )?should read (\d+) frames with sizes '([^']+)' in order")
+    async def read_frames_verify_sizes(self, process: Optional[str], count: str, sizes: str):
+        """Read specified number of frames with specific sizes"""
+        # Accept process parameter but ignore it
+        reader = self._readers[self._current_buffer]
+        expected_sizes = [int(s) for s in sizes.split(',')]
         
-        # Expected sizes from test scenario
-        expected_sizes = [100, 1024, 10240, 1]
+        assert int(count) == len(expected_sizes), f"Count {count} doesn't match sizes list length {len(expected_sizes)}"
         
-        for i in range(expected_count):
+        for i in range(int(count)):
             frame = reader.read_frame(timeout=5.0)
             assert frame is not None, f"Failed to read frame {i+1}"
             
-            if i < len(expected_sizes):
-                assert len(frame.data) == expected_sizes[i], \
-                    f"Frame {i+1} size mismatch: expected {expected_sizes[i]}, got {len(frame.data)}"
+            assert len(frame.data) == expected_sizes[i], \
+                f"Frame {i+1} size mismatch: expected {expected_sizes[i]}, got {len(frame.data)}"
+            
+            # Verify frame data integrity using TestDataPatterns
+            frame_data = bytes(frame.data)
+            assert TestDataPatterns.verify_simple_frame_data(frame_data), \
+                f"Frame {i+1} data does not match expected pattern"
                     
             self._frames_read.append(frame)
             
-        self.logger.info(f"Read {expected_count} frames with correct sizes")
+        self.logger.info(f"Read {count} frames with correct sizes")
         
     @then(r"(?:the '([^']+)' process )?should have metadata '([^']+)'")
     async def verify_metadata(self, process: Optional[str], expected_metadata: str):

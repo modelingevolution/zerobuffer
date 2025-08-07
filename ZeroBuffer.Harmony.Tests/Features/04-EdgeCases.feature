@@ -11,8 +11,8 @@ Feature: Edge Cases and Boundary Conditions
         And the 'writer' process writes small frame of '1' byte
         And the 'writer' process attempts to write large frame again
 
-        Then proper wrap-around handling should occur
-        And no deadlocks should happen
+        Then the 'writer' process proper wrap-around handling should occur
+        And the 'writer' process no deadlocks should happen
 
     Scenario: Test 4.2 - Semaphore Signal Coalescing
         Given the 'reader' process creates buffer 'test-coalesce' with default config
@@ -20,18 +20,18 @@ Feature: Edge Cases and Boundary Conditions
         When the 'writer' process connects to buffer 'test-coalesce'
         And the 'writer' process writes '10' frames rapidly without reader consuming
 
-        Then the semaphore count should represent pending frames
+        Then the 'writer' process the semaphore count should represent pending frames
 
         When the 'reader' process wakes and processes all frames
 
-        Then all frames should be read correctly
-        And the coalesced signals should be handled properly
+        Then the 'reader' process all frames should be read correctly
+        And the 'reader' process the coalesced signals should be handled properly
 
     Scenario: Test 4.3 - Zero-Sized Metadata Block
         Given the 'reader' process creates buffer 'test-zero-metadata' with metadata size '0' and payload size '10240'
 
         When the 'writer' process connects to buffer 'test-zero-metadata'
-        And attempts to write metadata
+        And the 'writer' process attempts to write metadata
 
         Then the 'writer' process metadata write should fail appropriately
 
@@ -41,16 +41,16 @@ Feature: Edge Cases and Boundary Conditions
         And the 'reader' process should verify system works correctly without metadata
         
     Scenario: Test 4.4 - Minimum Buffer Sizes
-        Given the 'reader' process creates buffer 'test-minimum' with minimum viable size '17'
+        Given the 'reader' process creates buffer 'test-minimum' with minimum viable size '64'
 
         When the 'writer' process connects to buffer 'test-minimum'
-        And writes single byte frame
+        And the 'writer' process writes single byte frame
 
         Then the 'writer' process should verify write succeeded
 
-        When the 'writer' process attempts to write '2' byte frame
+        When the 'writer' process attempts to write '49' byte frame
 
-        Then the 'writer' process should block waiting for space
+        Then the 'writer' process should receive FrameTooLargeException
         
         
     Scenario: Test 4.5 - Reader Slower Than Writer
@@ -127,9 +127,9 @@ Feature: Edge Cases and Boundary Conditions
 
         When the 'writer' process connects to buffer 'test-multi-writer-full'
         And the 'writer' process fills buffer to '80%' capacity
-        And a second writer process attempts to connect to buffer 'test-multi-writer-full'
+        And the 'writer' process a second writer process attempts to connect to buffer 'test-multi-writer-full'
         
-        Then the second writer should fail with writer exists error
+        Then the 'writer' process the second writer should fail with writer exists error
 
         When the 'writer' process continues filling buffer to '100%'
 

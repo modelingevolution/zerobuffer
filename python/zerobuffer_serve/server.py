@@ -66,18 +66,40 @@ class ZeroBufferServe:
         
         while self._running:
             try:
-                # Read a line of JSON
-                line = await loop.run_in_executor(None, stdin.readline)
-                if not line:
-                    break
+                # Read headers first (LSP-style protocol)
+                headers = {}
+                while True:
+                    header_line = await loop.run_in_executor(None, stdin.readline)
+                    if not header_line:
+                        # End of stream
+                        return
                     
-                # Decode and strip whitespace
-                request_text = line.decode('utf-8').strip()
-                if not request_text:
+                    header_str = header_line.decode('utf-8').strip()
+                    if not header_str:
+                        # Empty line marks end of headers
+                        break
+                        
+                    # Parse header (e.g., "Content-Length: 123")
+                    if ':' in header_str:
+                        key, value = header_str.split(':', 1)
+                        headers[key.strip()] = value.strip()
+                
+                # Get content length from headers
+                if 'Content-Length' not in headers:
+                    self._logger.error("Missing Content-Length header")
                     continue
                     
+                content_length = int(headers['Content-Length'])
+                
+                # Read the JSON content
+                content_bytes = await loop.run_in_executor(None, stdin.read, content_length)
+                if not content_bytes:
+                    break
+                    
+                request_text = content_bytes.decode('utf-8')
+                
                 # Parse and handle request
-                self._logger.debug(f"Received request: {request_text}")
+                # self._logger.debug(f"Received request: {request_text}")  # Too verbose
                 
                 response = await self._handle_request(request_text)
                 
@@ -151,12 +173,20 @@ class ZeroBufferServe:
         return await handler(params)
     
     async def _send_response(self, response: str):
-        """Send JSON-RPC response to stdout"""
-        # Write JSON response as a single line to stdout
-        sys.stdout.write(response + '\n')
-        sys.stdout.flush()
+        """Send JSON-RPC response to stdout with LSP-style headers"""
+        # Encode response to bytes to get accurate length
+        response_bytes = response.encode('utf-8')
+        content_length = len(response_bytes)
         
-        self._logger.debug(f"Sent response: {response}")
+        # Send headers (Content-Length is required)
+        sys.stdout.buffer.write(f"Content-Length: {content_length}\r\n".encode('utf-8'))
+        sys.stdout.buffer.write(b"\r\n")  # Empty line to end headers
+        
+        # Send the JSON content
+        sys.stdout.buffer.write(response_bytes)
+        sys.stdout.buffer.flush()
+        
+        # self._logger.debug(f"Sent response with Content-Length: {content_length}: {response}")  # Too verbose
     
     async def _handle_health(self, params: Dict[str, Any]) -> bool:
         """Handle health check request"""

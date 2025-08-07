@@ -44,13 +44,8 @@ public class MultiprocessTests : TestBase, IDisposable
         _output.WriteLine($"Test ID: {scenario.TestId}");
         _output.WriteLine("");
         
-        var result = await scenario.RunAsync(_stepExecutor, _processManager);
+        var result = await scenario.RunAsync(_stepExecutor, _processManager, _output.WriteLine);
         
-        // Output logs
-        foreach (var log in result.Logs)
-        {
-            _output.WriteLine($"[{log.Timestamp:HH:mm:ss.fff}] [{log.Platform}:{log.Process}] [{log.Level}] {log.Message}");
-        }
         
         if (!result.Success)
         {

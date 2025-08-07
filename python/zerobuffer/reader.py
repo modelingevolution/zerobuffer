@@ -19,6 +19,7 @@ from .exceptions import (
     SequenceError
 )
 from .logging_config import LoggerMixin
+from .shared_memory import SharedMemory, SharedMemoryFactory
 
 
 class Reader(LoggerMixin):
@@ -70,15 +71,12 @@ class Reader(LoggerMixin):
         self._lock_file = platform.create_file_lock(str(lock_path))
         
         try:
-            # Create shared memory
+            # Create shared memory using the new abstraction
             self._logger.info("Creating shared memory: name=%s, size=%d bytes", name, total_size)
-            self._shm = platform.create_shared_memory(name, total_size)
-            self._buffer = self._shm.get_buffer()
+            self._shm = SharedMemoryFactory.create(name, total_size)
             
-            # Create memory views for each section
-            self._oieb_view = self._buffer[:self._oieb_size]
-            self._metadata_view = self._buffer[self._oieb_size:self._oieb_size + self._metadata_size]
-            self._payload_view = self._buffer[self._oieb_size + self._metadata_size:]
+            # Don't create persistent memoryviews - use the API directly
+            # This avoids the "cannot close exported pointers" error
             
             # Initialize OIEB
             oieb = OIEB(
@@ -95,7 +93,11 @@ class Reader(LoggerMixin):
                 writer_pid=0,
                 reader_pid=os.getpid()
             )
-            self._oieb_view[:] = oieb.pack()
+            # Write OIEB using the clean API
+            self._shm.write_bytes(0, oieb.pack())
+            
+            self._logger.debug("Initialized OIEB: payload_free_bytes=%d, payload_size=%d", 
+                             oieb.payload_free_bytes, oieb.payload_size)
             
             # Create semaphores
             self._logger.debug("Creating semaphores: write=%s, read=%s", f"sem-w-{name}", f"sem-r-{name}")
@@ -131,9 +133,9 @@ class Reader(LoggerMixin):
                     
                     try:
                         # Check if shared memory exists and is orphaned
-                        shm = platform.open_shared_memory(buffer_name)
-                        buffer = shm.get_buffer()
-                        oieb = OIEB.unpack(buffer[:OIEB.SIZE])
+                        shm = SharedMemoryFactory.open(buffer_name)
+                        oieb_data = shm.read_bytes(0, OIEB.SIZE)
+                        oieb = OIEB.unpack(oieb_data)
                         
                         # Check if both reader and writer are dead
                         reader_dead = (oieb.reader_pid == 0 or 
@@ -185,11 +187,14 @@ class Reader(LoggerMixin):
     
     def _read_oieb(self) -> OIEB:
         """Read current OIEB from shared memory"""
-        return OIEB.unpack(self._oieb_view)
+        # Read OIEB using the clean API
+        oieb_data = self._shm.read_bytes(0, OIEB.SIZE)
+        return OIEB.unpack(oieb_data)
     
     def _write_oieb(self, oieb: OIEB) -> None:
         """Write OIEB to shared memory"""
-        self._oieb_view[:] = oieb.pack()
+        # Write OIEB using the clean API
+        self._shm.write_bytes(0, oieb.pack())
     
     
     def _calculate_used_bytes(self, write_pos: int, read_pos: int, buffer_size: int) -> int:
@@ -215,14 +220,16 @@ class Reader(LoggerMixin):
                 return None
             
             # Read metadata size prefix
-            size_bytes = self._metadata_view[:8]
+            metadata_offset = self._oieb_size
+            size_bytes = self._shm.read_bytes(metadata_offset, 8)
             size = int.from_bytes(size_bytes, byteorder='little')
             
             if size == 0 or size > oieb.metadata_written_bytes - 8:
                 raise ZeroBufferException("Invalid metadata size")
             
             # Return view of actual metadata (skip size prefix)
-            return self._metadata_view[8:8 + size]
+            buffer = self._shm.get_memoryview()
+            return buffer[metadata_offset + 8:metadata_offset + 8 + size]
     
     def read_frame(self, timeout: Optional[float] = 5.0) -> Optional[Frame]:
         """
@@ -281,9 +288,10 @@ class Reader(LoggerMixin):
                         self._write_oieb(oieb)  # Update OIEB in shared memory
                 
                 # Read frame header
-                header_offset = oieb.payload_read_pos
-                header_data = self._payload_view[header_offset:header_offset + FrameHeader.SIZE]
-                header = FrameHeader.unpack(bytes(header_data))
+                payload_base = self._oieb_size + self._metadata_size
+                header_offset = payload_base + oieb.payload_read_pos
+                header_data = self._shm.read_bytes(header_offset, FrameHeader.SIZE)
+                header = FrameHeader.unpack(header_data)
                 
                 # Check for wrap-around marker
                 if header.payload_size == 0:
@@ -337,9 +345,9 @@ class Reader(LoggerMixin):
                         oieb.payload_read_pos = 0
                         self._write_oieb(oieb)  # Update OIEB in shared memory
                         # Re-read header at new position
-                        header_offset = 0
-                        header_data = self._payload_view[header_offset:header_offset + FrameHeader.SIZE]
-                        header = FrameHeader.unpack(bytes(header_data))
+                        header_offset = payload_base  # Start of payload buffer
+                        header_data = self._shm.read_bytes(header_offset, FrameHeader.SIZE)
+                        header = FrameHeader.unpack(header_data)
                         
                         # Re-validate sequence number after wrap
                         if header.sequence_number != self._expected_sequence:
@@ -350,9 +358,11 @@ class Reader(LoggerMixin):
                 
                 # Create frame reference (zero-copy)
                 data_offset = header_offset + FrameHeader.SIZE
+                # Get a fresh memoryview for the payload area
+                payload_view = self._shm.get_memoryview(payload_base, self._payload_size)
                 frame = Frame(
-                    memory_view=self._payload_view,
-                    offset=data_offset,
+                    memory_view=payload_view,
+                    offset=oieb.payload_read_pos + FrameHeader.SIZE,
                     size=header.payload_size,
                     sequence=header.sequence_number
                 )
@@ -424,12 +434,22 @@ class Reader(LoggerMixin):
             end_time = start_time + timeout_ms
             
             while True:
+                # Debug: Check raw bytes using the clean API
+                raw_bytes = self._shm.read_bytes(0, 16)
+                self._logger.debug("Raw first 16 bytes: %s", raw_bytes.hex())
+                # Check writer_pid bytes at offset 80
+                writer_pid_bytes = self._shm.read_bytes(80, 8)
+                self._logger.debug("Raw bytes 80-88 (writer_pid): %s", writer_pid_bytes.hex())
+                
                 oieb = self._read_oieb()
+                self._logger.debug("Checking writer connection: writer_pid=%d", oieb.writer_pid)
                 if oieb.writer_pid != 0 and platform.process_exists(oieb.writer_pid):
+                    self._logger.debug("Writer connected! PID=%d", oieb.writer_pid)
                     return True
                 
                 current_time = time.time() * 1000
                 if current_time >= end_time:
+                    self._logger.debug("Timeout waiting for writer")
                     return False
                 
                 # Sleep for a short time before checking again
@@ -467,20 +487,7 @@ class Reader(LoggerMixin):
             except:
                 pass
             
-            # Release memoryviews first
-            if hasattr(self, '_oieb_view') and self._oieb_view is not None:
-                self._oieb_view.release()
-                self._oieb_view = None
-            if hasattr(self, '_metadata_view') and self._metadata_view is not None:
-                self._metadata_view.release()
-                self._metadata_view = None
-            if hasattr(self, '_payload_view') and self._payload_view is not None:
-                self._payload_view.release()
-                self._payload_view = None
-            
-            # Clear buffer reference
-            if hasattr(self, '_buffer') and self._buffer is not None:
-                self._buffer = None
+            # No persistent memoryviews to release anymore
             
             # Close and unlink resources (reader owns them)
             if hasattr(self, '_sem_read'):

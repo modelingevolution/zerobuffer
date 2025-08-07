@@ -153,6 +153,9 @@ writer.write_frame(data)
 - **ReaderDeadException**: Thrown when the writer detects the reader process has died
 - **WriterDeadException**: Thrown when the reader detects the writer process has died
 - **FrameTooLargeException**: Thrown when attempting to write a frame larger than the buffer's payload size
+  - Frame size calculation: Total size = 16 bytes (header) + data payload size
+  - Example: A 100-byte data payload requires 116 bytes of buffer space
+  - If (16 + data_size) > buffer.PayloadSize, FrameTooLargeException is thrown
 
 ### C++ Exceptions
 
@@ -166,6 +169,7 @@ writer.write_frame(data)
 - **reader_dead_exception**: Reader process died
 - **writer_dead_exception**: Writer process died
 - **frame_too_large_exception**: Frame exceeds buffer size
+  - Same calculation as C#: Total size = 16 bytes (header) + data payload size
 - Some operations also return invalid values (e.g., `Frame::invalid()`) for non-critical errors
 
 ### Python Exceptions
@@ -177,6 +181,7 @@ writer.write_frame(data)
 - **ReaderDeadError**: Reader process died
 - **WriterDeadError**: Writer process died
 - **FrameTooLargeError**: Frame exceeds buffer size
+  - Same calculation: Total size = 16 bytes (header) + data payload size
 
 ## CLI Commands
 

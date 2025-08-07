@@ -42,13 +42,9 @@ public abstract class HarmonyTestBase
     {
         Output.WriteLine($"Executing: {scenario}");
         
-        var result = await scenario.RunAsync(StepExecutor, ProcessManager);
+        var result = await scenario.RunAsync(StepExecutor, ProcessManager, Output.WriteLine);
         
-        // Output logs
-        foreach (var log in result.Logs)
-        {
-            Output.WriteLine($"[{log.Timestamp:HH:mm:ss.fff}] [{log.Platform}:{log.Process}] [{log.Level}] {log.Message}");
-        }
+       
         
         if (!result.Success)
         {
