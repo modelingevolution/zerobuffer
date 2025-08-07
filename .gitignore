@@ -106,3 +106,7 @@ vcpkg_installed/
 /ZeroBuffer.Harmony.Tests/CodeGeneration/bin/
 /python/test_venv2/bin
 /python/test_venv2
+/python/obj
+/python/ZeroBuffer.Python.Integration.Tests/obj
+/python/ZeroBuffer.Python.Integration.Tests/bin/Debug/net9.0
+/test-jsonrpc/obj
