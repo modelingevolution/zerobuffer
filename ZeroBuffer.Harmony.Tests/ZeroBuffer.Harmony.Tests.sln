@@ -19,6 +19,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python", "Python", "{02EA68
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Python.Integration.Tests", "..\python\ZeroBuffer.Python.Integration.Tests\ZeroBuffer.Python.Integration.Tests.csproj", "{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cpp", "Cpp", "{1B1E498C-7059-49D5-88AC-2852DFAFBA6B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Cpp.Integration.Tests", "..\cpp\ZeroBuffer.Cpp.Integration.Tests\ZeroBuffer.Cpp.Integration.Tests.csproj", "{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,12 +57,17 @@ Global
 		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE} = {1B1E498C-7059-49D5-88AC-2852DFAFBA6B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {3AA60C14-7711-48C2-A8D5-1469A1BA4C25}

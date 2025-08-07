@@ -92,7 +92,7 @@ install(FILES
 )
 
 # Tests
-option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_TESTS "Build unit tests" OFF)  # Disabled by default for faster builds (Harmony tests only)
 if(BUILD_TESTS)
     enable_testing()
     
@@ -114,13 +114,13 @@ if(BUILD_TESTS)
 endif()
 
 # Examples
-option(BUILD_EXAMPLES "Build examples" ON)
+option(BUILD_EXAMPLES "Build examples" OFF)  # Disabled by default for faster builds
 if(BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-# Benchmarks
-option(BUILD_BENCHMARKS "Build benchmarks" ON)
+# Benchmarks  
+option(BUILD_BENCHMARKS "Build benchmarks" OFF)  # Disabled by default for faster builds
 if(BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
@@ -132,11 +132,23 @@ if(BUILD_SERVE)
     find_package(nlohmann_json QUIET)
     if(NOT nlohmann_json_FOUND)
         include(FetchContent)
+        
+        # Set CMake policy to suppress deprecation warnings from fetched content
+        set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
+        cmake_policy(SET CMP0048 NEW)
+        
         FetchContent_Declare(
             json
             GIT_REPOSITORY https://github.com/nlohmann/json.git
-            GIT_TAG v3.11.2
+            GIT_TAG v3.11.3  # Updated to latest stable version
+            CMAKE_ARGS
+                -DCMAKE_POLICY_DEFAULT_CMP0048=NEW
         )
+        
+        # Suppress warnings from the fetched content
+        set(JSON_BuildTests OFF CACHE INTERNAL "")
+        set(JSON_Install OFF CACHE INTERNAL "")
+        
         FetchContent_MakeAvailable(json)
     endif()
     

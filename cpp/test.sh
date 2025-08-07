@@ -1,5 +1,5 @@
 #!/bin/bash
-# Standard test script for zerobuffer
+# Standard test script for zerobuffer C++ unit tests
 # Usage: ./test.sh [unit|benchmark|all]
 
 set -e
@@ -9,6 +9,28 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+
+# Check if user is trying to run Harmony tests
+for arg in "$@"; do
+    if [[ "$arg" == "cpp" ]] || [[ "$arg" == "csharp" ]] || [[ "$arg" == "python" ]] || [[ "$arg" =~ ^[0-9]+\.[0-9]+$ ]]; then
+        echo -e "${RED}=========================================${NC}"
+        echo -e "${RED}ERROR: Wrong test script!${NC}"
+        echo -e "${RED}=========================================${NC}"
+        echo -e "${YELLOW}It looks like you're trying to run Harmony integration tests.${NC}"
+        echo -e "${YELLOW}This script (cpp/test.sh) is for C++ unit tests only.${NC}"
+        echo ""
+        echo -e "${GREEN}To run Harmony tests, use:${NC}"
+        echo -e "${GREEN}  cd ../  # Go to zerobuffer root directory${NC}"
+        echo -e "${GREEN}  ./test.sh cpp         # Run all C++ Harmony tests${NC}"
+        echo -e "${GREEN}  ./test.sh cpp 1.1     # Run specific test 1.1${NC}"
+        echo -e "${GREEN}  ./test.sh csharp      # Run C# tests${NC}"
+        echo -e "${GREEN}  ./test.sh python      # Run Python tests${NC}"
+        echo ""
+        echo -e "${YELLOW}Current directory: $(pwd)${NC}"
+        echo -e "${YELLOW}You need to be in: $(dirname $(pwd))${NC}"
+        exit 1
+    fi
+done
 
 # Test type
 TEST_TYPE=${1:-all}

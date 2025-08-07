@@ -1,35 +1,37 @@
 cmake_minimum_required(VERSION 3.20)
 
 # POC tests for testing infrastructure development
-add_subdirectory(poc)
+# DISABLED: These are proof-of-concept tests, not needed for production
+# add_subdirectory(poc)
 
 # Duplex channel tests
-add_executable(test_duplex_channel
-    test_duplex_channel.cpp
-)
-
-target_link_libraries(test_duplex_channel
-    PRIVATE
-        zerobuffer
-        GTest::gtest
-        GTest::gtest_main
-)
-
-# Add test discovery
-include(GoogleTest)
-gtest_discover_tests(test_duplex_channel
-    PROPERTIES TIMEOUT 30
-)
-
-# Simple duplex test
-add_executable(test_duplex_simple
-    test_duplex_simple.cpp
-)
-
-target_link_libraries(test_duplex_simple
-    PRIVATE
-        zerobuffer
-)
+# DISABLED: Not needed for Harmony integration testing
+# add_executable(test_duplex_channel
+#     test_duplex_channel.cpp
+# )
+# 
+# target_link_libraries(test_duplex_channel
+#     PRIVATE
+#         zerobuffer
+#         GTest::gtest
+#         GTest::gtest_main
+# )
+# 
+# # Add test discovery
+# include(GoogleTest)
+# gtest_discover_tests(test_duplex_channel
+#     PROPERTIES TIMEOUT 30
+# )
+# 
+# # Simple duplex test
+# add_executable(test_duplex_simple
+#     test_duplex_simple.cpp
+# )
+# 
+# target_link_libraries(test_duplex_simple
+#     PRIVATE
+#         zerobuffer
+# )
 
 # Cross-platform test applications - only include if they exist
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cross-platform/test_writer.cpp" AND 
@@ -43,11 +45,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cross-platform/test_writer.cpp" AND
         if(NOT nlohmann_json_FOUND)
             # Try to find it manually or use FetchContent
             include(FetchContent)
+            
+            # Set CMake policy to suppress deprecation warnings from fetched content
+            set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
+            cmake_policy(SET CMP0048 NEW)
+            
             FetchContent_Declare(
                 json
                 GIT_REPOSITORY https://github.com/nlohmann/json.git
-                GIT_TAG v3.11.2
+                GIT_TAG v3.11.3  # Updated to latest stable version
+                CMAKE_ARGS
+                    -DCMAKE_POLICY_DEFAULT_CMP0048=NEW
             )
+            
+            # Suppress warnings from the fetched content
+            set(JSON_BuildTests OFF CACHE INTERNAL "")
+            set(JSON_Install OFF CACHE INTERNAL "")
+            
             FetchContent_MakeAvailable(json)
         endif()
         

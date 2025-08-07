@@ -118,28 +118,28 @@ namespace ZeroBuffer.Tests.Features
 #line 11
         testRunner.When("the \'writer\' process connects to buffer \'bench-latency\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-                TechTalk.SpecFlow.Table table6 = new TechTalk.SpecFlow.Table(new string[] {
+                TechTalk.SpecFlow.Table table14 = new TechTalk.SpecFlow.Table(new string[] {
                             "size",
                             "iterations",
                             "expected"});
-                table6.AddRow(new string[] {
+                table14.AddRow(new string[] {
                             "1KB",
                             "10000",
                             "sub-millisecond"});
-                table6.AddRow(new string[] {
+                table14.AddRow(new string[] {
                             "64KB",
                             "10000",
                             "sub-millisecond"});
-                table6.AddRow(new string[] {
+                table14.AddRow(new string[] {
                             "1MB",
                             "10000",
                             "low milliseconds"});
-                table6.AddRow(new string[] {
+                table14.AddRow(new string[] {
                             "10MB",
                             "10000",
                             "low milliseconds"});
 #line 13
-        testRunner.Then("measure latency for frame sizes:", ((string)(null)), table6, "Then ");
+        testRunner.Then("measure latency for frame sizes:", ((string)(null)), table14, "Then ");
 #line hidden
 #line 20
         testRunner.And("report Min, Max, Mean, P50, P90, P99, P99.9", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
@@ -175,23 +175,23 @@ namespace ZeroBuffer.Tests.Features
 #line 25
         testRunner.When("the \'writer\' process connects to buffer \'bench-throughput\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-                TechTalk.SpecFlow.Table table7 = new TechTalk.SpecFlow.Table(new string[] {
+                TechTalk.SpecFlow.Table table15 = new TechTalk.SpecFlow.Table(new string[] {
                             "size",
                             "metric"});
-                table7.AddRow(new string[] {
+                table15.AddRow(new string[] {
                             "1KB",
                             "frames/sec, MB/sec"});
-                table7.AddRow(new string[] {
+                table15.AddRow(new string[] {
                             "64KB",
                             "frames/sec, MB/sec"});
-                table7.AddRow(new string[] {
+                table15.AddRow(new string[] {
                             "1MB",
                             "frames/sec, MB/sec"});
-                table7.AddRow(new string[] {
+                table15.AddRow(new string[] {
                             "10MB",
                             "frames/sec, MB/sec"});
 #line 27
-        testRunner.Then("measure throughput for \'60\' seconds with frame sizes:", ((string)(null)), table7, "Then ");
+        testRunner.Then("measure throughput for \'60\' seconds with frame sizes:", ((string)(null)), table15, "Then ");
 #line hidden
 #line 34
         testRunner.And("report CPU usage percentage", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
@@ -304,26 +304,26 @@ namespace ZeroBuffer.Tests.Features
 #line 55
         testRunner.Given("measure sem_post/sem_wait operation cost", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-                TechTalk.SpecFlow.Table table8 = new TechTalk.SpecFlow.Table(new string[] {
+                TechTalk.SpecFlow.Table table16 = new TechTalk.SpecFlow.Table(new string[] {
                             "rate",
                             "expected_impact"});
-                table8.AddRow(new string[] {
+                table16.AddRow(new string[] {
                             "1Hz",
                             "negligible"});
-                table8.AddRow(new string[] {
+                table16.AddRow(new string[] {
                             "100Hz",
                             "negligible"});
-                table8.AddRow(new string[] {
+                table16.AddRow(new string[] {
                             "1kHz",
                             "negligible"});
-                table8.AddRow(new string[] {
+                table16.AddRow(new string[] {
                             "10kHz",
                             "negligible"});
-                table8.AddRow(new string[] {
+                table16.AddRow(new string[] {
                             "100kHz",
                             "measurable"});
 #line 57
-        testRunner.When("test at rates:", ((string)(null)), table8, "When ");
+        testRunner.When("test at rates:", ((string)(null)), table16, "When ");
 #line hidden
 #line 65
         testRunner.Then("report CPU usage and latency impact", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");

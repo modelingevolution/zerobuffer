@@ -11,7 +11,7 @@
       "workingDirectory": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer"
     },
     "cpp": {
-      "executable": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/cpp/build/serve/zerobuffer-serve-debug",
+      "executable": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/cpp/build/serve/zerobuffer-serve",
       "arguments": "",
       "workingDirectory": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer"
     }

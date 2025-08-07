@@ -162,20 +162,20 @@ namespace ZeroBuffer.Tests.Features
 #line 21
         testRunner.And("the \'writer\' process writes valid frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-                TechTalk.SpecFlow.Table table2 = new TechTalk.SpecFlow.Table(new string[] {
+                TechTalk.SpecFlow.Table table10 = new TechTalk.SpecFlow.Table(new string[] {
                             "corruption_type",
                             "expected_result"});
-                table2.AddRow(new string[] {
+                table10.AddRow(new string[] {
                             "payload_size > remaining",
                             "reader handles gracefully"});
-                table2.AddRow(new string[] {
+                table10.AddRow(new string[] {
                             "sequence_number invalid",
                             "reader detects error"});
-                table2.AddRow(new string[] {
+                table10.AddRow(new string[] {
                             "header magic corrupted",
                             "reader rejects frame"});
 #line 23
-        testRunner.Then("test multiple corruption scenarios:", ((string)(null)), table2, "Then ");
+        testRunner.Then("test multiple corruption scenarios:", ((string)(null)), table10, "Then ");
 #line hidden
             }
             this.ScenarioCleanup();
