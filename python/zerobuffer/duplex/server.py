@@ -6,6 +6,7 @@ import threading
 import time
 from typing import Callable, Optional, Awaitable
 import asyncio
+import logging
 from ..reader import Reader
 from ..writer import Writer
 from ..types import BufferConfig, Frame
@@ -18,7 +19,7 @@ from ..logging_config import get_logger
 class ImmutableDuplexServer(IImmutableDuplexServer):
     """Server that processes immutable requests and returns new response data"""
     
-    def __init__(self, channel_name: str, config: BufferConfig, logger=None):
+    def __init__(self, channel_name: str, config: BufferConfig, logger: Optional[logging.Logger] = None) -> None:
         """
         Create an immutable duplex server
         
@@ -33,12 +34,16 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
         self._config = config
         self._logger = logger
         
-        self._request_reader = None
-        self._response_writer = None
+        self._request_reader: Optional[Reader] = None
+        self._response_writer: Optional[Writer] = None
         self._running = False
-        self._thread = None
-        self._handler = None
+        self._thread: Optional[threading.Thread] = None
+        self._handler: Optional[Callable[[Frame], bytes]] = None
         self._lock = threading.Lock()
+    
+    def _is_running(self) -> bool:
+        """Check if server should keep running (thread-safe check)"""
+        return bool(self._running)
     
     def start(self, handler: Callable[[Frame], bytes], mode: ProcessingMode = ProcessingMode.SINGLE_THREAD) -> None:
         """Start processing requests"""
@@ -121,20 +126,16 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                     return
                 time.sleep(0.1)
             
-            if not self._running:
-                return
-            
             # Connect to response buffer as writer
             retry_count = 0
-            while self._running and retry_count < 50:  # 5 seconds
+            while retry_count < 50:  # 5 seconds
+                if not self._is_running():
+                    return
                 try:
                     self._response_writer = Writer(self._response_buffer_name)
                     break
                 except:
                     retry_count += 1
-                    # Check if we should stop
-                    if not self._running:
-                        return
                     time.sleep(0.1)
             
             if self._response_writer is None:
@@ -143,17 +144,18 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                 return
             
             # Process requests
-            while self._running:
+            while True:
+                if not self._is_running():
+                    break
                 try:
                     # Read request with short timeout to allow checking _running flag
                     frame = self._request_reader.read_frame(timeout=0.1)
                     if frame is None:
-                        # Check if we should stop
-                        if not self._running:
-                            break
                         continue
                     
                     # Process request
+                    if self._handler is None:
+                        raise RuntimeError("Handler not set")
                     response_data = self._handler(frame)
                     
                     # Write response with same sequence number
@@ -175,7 +177,7 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
         finally:
             self._cleanup()
     
-    def _cleanup(self):
+    def _cleanup(self) -> None:
         """Clean up resources"""
         if self._response_writer:
             self._response_writer.close()
@@ -204,7 +206,7 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
 class MutableDuplexServer(IMutableDuplexServer):
     """Server that mutates request data in-place (zero-copy)"""
     
-    def __init__(self, channel_name: str, config: BufferConfig, logger=None):
+    def __init__(self, channel_name: str, config: BufferConfig, logger: Optional[logging.Logger] = None) -> None:
         """
         Create a mutable duplex server
         
@@ -219,12 +221,16 @@ class MutableDuplexServer(IMutableDuplexServer):
         self._config = config
         self._logger = logger
         
-        self._request_reader = None
-        self._response_writer = None
+        self._request_reader: Optional[Reader] = None
+        self._response_writer: Optional[Writer] = None
         self._running = False
-        self._thread = None
-        self._handler = None
+        self._thread: Optional[threading.Thread] = None
+        self._handler: Optional[Callable[[Frame], None]] = None
         self._lock = threading.Lock()
+    
+    def _is_running(self) -> bool:
+        """Check if server should keep running (thread-safe check)"""
+        return bool(self._running)
     
     def start(self, handler: Callable[[Frame], None], mode: ProcessingMode = ProcessingMode.SINGLE_THREAD) -> None:
         """Start processing with mutable handler"""
@@ -266,15 +272,14 @@ class MutableDuplexServer(IMutableDuplexServer):
             
             # Connect to response buffer
             retry_count = 0
-            while self._running and retry_count < 50:
+            while retry_count < 50:
+                if not self._is_running():
+                    return
                 try:
                     self._response_writer = Writer(self._response_buffer_name)
                     break
                 except:
                     retry_count += 1
-                    # Check if we should stop
-                    if not self._running:
-                        return
                     time.sleep(0.1)
             
             if self._response_writer is None:
@@ -283,14 +288,13 @@ class MutableDuplexServer(IMutableDuplexServer):
                 return
             
             # Process requests
-            while self._running:
+            while True:
+                if not self._is_running():
+                    break
                 try:
                     # Read request with short timeout to allow checking _running flag
                     frame = self._request_reader.read_frame(timeout=0.1)
                     if frame is None:
-                        # Check if we should stop
-                        if not self._running:
-                            break
                         continue
                     
                     # Process request in-place
@@ -299,6 +303,8 @@ class MutableDuplexServer(IMutableDuplexServer):
                     # True zero-copy would require memory-mapped access
                     
                     # Call handler to process frame
+                    if self._handler is None:
+                        raise RuntimeError("Handler not set")
                     self._handler(frame)
                     
                     # Write the modified data as response
@@ -319,7 +325,7 @@ class MutableDuplexServer(IMutableDuplexServer):
         finally:
             self._cleanup()
     
-    def _cleanup(self):
+    def _cleanup(self) -> None:
         """Clean up resources"""
         if self._response_writer:
             self._response_writer.close()

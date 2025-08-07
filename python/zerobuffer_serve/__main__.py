@@ -13,7 +13,7 @@ from .test_context import TestContext
 from .logging.dual_logger import DualLoggerProvider
 
 
-async def main():
+async def main() -> None:
     """Main entry point for the serve application"""
     # Set up logging to stderr so it doesn't interfere with JSON-RPC on stdout
     logging.basicConfig(

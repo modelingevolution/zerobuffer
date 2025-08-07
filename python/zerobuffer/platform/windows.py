@@ -8,21 +8,34 @@ import time
 import struct
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 from multiprocessing import shared_memory
 
 from .base import SharedMemory, Semaphore, FileLock
 from ..exceptions import ZeroBufferException
 
 # Import Windows-specific modules
-try:
-    import win32api
-    import win32con
-    import win32event
-    import win32file
-    import pywintypes
-except ImportError:
-    raise ImportError("pywin32 is required on Windows. Install with: pip install pywin32")
+import sys
+if sys.platform == 'win32':
+    try:
+        import win32api
+        import win32con
+        import win32event
+        import win32file
+        import pywintypes
+    except ImportError:
+        raise ImportError("pywin32 is required on Windows. Install with: pip install pywin32")
+else:
+    # Dummy implementations for type checking on non-Windows platforms
+    class DummyModule:
+        def __getattr__(self, name: str) -> Any:
+            return 0
+    
+    win32api = DummyModule()
+    win32con = DummyModule()
+    win32event = DummyModule()
+    win32file = DummyModule()
+    pywintypes = DummyModule()
 
 
 class WindowsSharedMemory(SharedMemory):
@@ -31,8 +44,8 @@ class WindowsSharedMemory(SharedMemory):
     def __init__(self, name: str, size: int, create: bool = False):
         self._name = name
         self._size = size
-        self._shm = None
-        self._buffer = None
+        self._shm: Optional[shared_memory.SharedMemory] = None
+        self._buffer: Optional[memoryview] = None
         
         try:
             if create:

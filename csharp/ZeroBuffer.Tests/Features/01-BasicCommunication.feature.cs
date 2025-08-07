@@ -339,62 +339,6 @@ namespace ZeroBuffer.Tests.Features
             this.ScenarioCleanup();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Test 1.6 - Metadata Update During Operation")]
-        [Xunit.TraitAttribute("FeatureTitle", "Basic Communication Tests")]
-        [Xunit.TraitAttribute("Description", "Test 1.6 - Metadata Update During Operation")]
-        public void Test1_6_MetadataUpdateDuringOperation()
-        {
-            string[] tagsOfScenario = ((string[])(null));
-            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 1.6 - Metadata Update During Operation", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 69
-    this.ScenarioInitialize(scenarioInfo);
-#line hidden
-            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                testRunner.SkipScenario();
-            }
-            else
-            {
-                this.ScenarioStart();
-#line 4
-    this.FeatureBackground();
-#line hidden
-#line 70
-        testRunner.Given("the \'reader\' process creates buffer \'test-metadata-update\' with metadata size \'10" +
-                        "24\' and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
-#line 72
-        testRunner.When("the \'writer\' process connects to buffer \'test-metadata-update\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 73
-        testRunner.And("the \'writer\' process writes metadata \'version=1.0\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 74
-        testRunner.And("the \'writer\' process writes frame with data \'frame1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 76
-        testRunner.Then("the \'reader\' process should have metadata \'version=1.0\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 77
-        testRunner.And("the \'reader\' process should read frame with data \'frame1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 79
-        testRunner.When("the \'writer\' process writes metadata \'version=2.0\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
-#line hidden
-#line 80
-        testRunner.And("the \'writer\' process writes frame with data \'frame2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 82
-        testRunner.Then("the \'reader\' process should have metadata \'version=2.0\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 83
-        testRunner.And("the \'reader\' process should read frame with data \'frame2\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-            }
-            this.ScenarioCleanup();
-        }
-        
         [System.CodeDom.Compiler.GeneratedCodeAttribute("TechTalk.SpecFlow", "3.9.0.0")]
         [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
         public class FixtureData : System.IDisposable

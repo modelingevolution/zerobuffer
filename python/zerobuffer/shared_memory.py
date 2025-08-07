@@ -87,7 +87,7 @@ class SharedMemory:
         # Direct slice assignment to the buffer
         self._shm.buf[offset:offset + len(data)] = data
     
-    def read_struct(self, offset: int, format_string: str) -> tuple:
+    def read_struct(self, offset: int, format_string: str) -> tuple[object, ...]:
         """
         Read a struct from shared memory.
         
@@ -102,7 +102,7 @@ class SharedMemory:
         data = self.read_bytes(offset, size)
         return struct.unpack(format_string, data)
     
-    def write_struct(self, offset: int, format_string: str, *values) -> None:
+    def write_struct(self, offset: int, format_string: str, *values: object) -> None:
         """
         Write a struct to shared memory.
         
@@ -116,7 +116,10 @@ class SharedMemory:
     
     def read_uint64(self, offset: int) -> int:
         """Read a little-endian uint64 at the given offset."""
-        return self.read_struct(offset, '<Q')[0]
+        result = self.read_struct(offset, '<Q')[0]
+        # Cast is safe since we know '<Q' format returns an int
+        assert isinstance(result, int)
+        return result
     
     def write_uint64(self, offset: int, value: int) -> None:
         """Write a little-endian uint64 at the given offset."""

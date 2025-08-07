@@ -292,19 +292,19 @@ namespace ZeroBuffer.Tests.Features
 #line hidden
 #line 57
         testRunner.Given("the \'reader\' process creates buffer \'test-reader-slower\' with metadata size \'0\' a" +
-                        "nd payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+                        "nd payload size \'1024\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 59
         testRunner.When("the \'writer\' process connects to buffer \'test-reader-slower\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 60
-        testRunner.And("writes continuously at high speed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process writes continuously at high speed", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 62
-        testRunner.When("the \'reader\' process reads with \'10\' ms delay per frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.When("the \'reader\' process reads with \'50\' ms delay per frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 63
-        testRunner.And("the test runs for \'1000\' frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'reader\' process the test runs for \'100\' frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 65
         testRunner.Then("the \'reader\' process should receive all frames without loss", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
@@ -313,7 +313,7 @@ namespace ZeroBuffer.Tests.Features
         testRunner.Then("the \'writer\' process should block appropriately", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 68
-        testRunner.And("flow control should work correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'writer\' process flow control should work correctly", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();

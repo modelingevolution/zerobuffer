@@ -8,16 +8,24 @@ import asyncio
 import inspect
 import re
 from enum import Enum
-from typing import Dict, List, Callable, Any, Optional, Tuple, Match
+from typing import Dict, List, Callable, Any, Optional, Tuple, Match, TYPE_CHECKING
 import logging
 
-try:
-    from pytest_bdd import given, when, then, parsers
+if TYPE_CHECKING:
+    from pytest_bdd import given as pytest_given, when as pytest_when, then as pytest_then, parsers as pytest_parsers
     PYTEST_BDD_AVAILABLE = True
-except ImportError:
-    # Fallback for when pytest-bdd is not installed (e.g., in production Harmony mode)
-    PYTEST_BDD_AVAILABLE = False
-    # We'll discover steps differently in this case
+else:
+    try:
+        from pytest_bdd import given as pytest_given, when as pytest_when, then as pytest_then, parsers as pytest_parsers
+        PYTEST_BDD_AVAILABLE = True
+    except ImportError:
+        # Fallback for when pytest-bdd is not installed (e.g., in production Harmony mode)
+        PYTEST_BDD_AVAILABLE = False
+        # We'll discover steps differently in this case
+        pytest_given = None
+        pytest_when = None
+        pytest_then = None
+        pytest_parsers = None
 
 from .models import StepInfo, StepResponse, TableData, LogEntry
 
@@ -50,7 +58,7 @@ class StepDefinitionInfo:
 class StepRegistry:
     """Registry for step definitions with discovery and execution"""
     
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger) -> None:
         self._logger = logger
         self._steps: Dict[StepType, List[StepDefinitionInfo]] = {
             StepType.GIVEN: [],
@@ -59,12 +67,12 @@ class StepRegistry:
         }
         self._instances: List[Any] = []
         
-    def register_instance(self, instance: Any):
+    def register_instance(self, instance: Any) -> None:
         """Register an instance containing step definitions"""
         self._instances.append(instance)
         self._logger.debug(f"Registered instance: {instance.__class__.__name__}")
         
-    def discover_steps(self):
+    def discover_steps(self) -> None:
         """Discover all step definitions from registered instances"""
         for instance in self._instances:
             self._discover_steps_from_instance(instance)
@@ -76,7 +84,7 @@ class StepRegistry:
             f"Then={len(self._steps[StepType.THEN])}"
         )
         
-    def _discover_steps_from_instance(self, instance: Any):
+    def _discover_steps_from_instance(self, instance: Any) -> None:
         """Discover steps from a single instance"""
         class_name = instance.__class__.__name__
         self._logger.debug(f"Discovering steps from: {class_name}")

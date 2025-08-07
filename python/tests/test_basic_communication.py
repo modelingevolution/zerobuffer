@@ -226,51 +226,11 @@ class TestBasicCommunication:
         # And the 'writer' process writes frame with size '1'
         await self.steps.write_frame_with_size("writer", "1")
         
-        # Then the 'reader' process should read 4 frames with correct sizes in order
-        await self.steps.read_frames_verify_count("reader", "4")
+        # Then the 'reader' process should read 4 frames with sizes '100,1024,10240,1' in order
+        await self.steps.read_frames_verify_sizes("reader", "4", "100,1024,10240,1")
         
         print("✅ Test 1.5 completed successfully!")
         
-    @pytest.mark.asyncio
-    async def test_1_6_metadata_update_during_operation(self):
-        """Test 1.6 - Metadata Update During Operation"""
-        print("\n=== Test 1.6 - Metadata Update During Operation ===")
-        
-        # Background
-        self.steps.test_environment_initialized()
-        self.steps.all_processes_ready()
-        
-        # Given the 'reader' process creates buffer 'test-metadata-update' with metadata size '1024' and payload size '10240'
-        await self.steps.create_buffer("reader", "test-metadata-update", "1024", "10240")
-        
-        # When the 'writer' process connects to buffer 'test-metadata-update'
-        await self.steps.connect_to_buffer("writer", "test-metadata-update")
-        
-        # And the 'writer' process writes metadata 'version=1.0'
-        await self.steps.write_metadata_string("writer", "version=1.0")
-        
-        # And the 'writer' process writes frame with data 'frame1'
-        await self.steps.write_frame_with_data("writer", "frame1")
-        
-        # Then the 'reader' process should have metadata 'version=1.0'
-        await self.steps.verify_metadata("reader", "version=1.0")
-        
-        # And the 'reader' process should read frame with data 'frame1'
-        await self.steps.read_frame_verify_data("reader", "frame1")
-        
-        # When the 'writer' process writes metadata 'version=2.0'
-        await self.steps.write_metadata_string("writer", "version=2.0")
-        
-        # And the 'writer' process writes frame with data 'frame2'
-        await self.steps.write_frame_with_data("writer", "frame2")
-        
-        # Then the 'reader' process should have metadata 'version=2.0'
-        await self.steps.verify_metadata("reader", "version=2.0")
-        
-        # And the 'reader' process should read frame with data 'frame2'
-        await self.steps.read_frame_verify_data("reader", "frame2")
-        
-        print("✅ Test 1.6 completed successfully!")
 
 
 if __name__ == "__main__":

@@ -54,18 +54,18 @@ Feature: Edge Cases and Boundary Conditions
         
         
     Scenario: Test 4.5 - Reader Slower Than Writer
-        Given the 'reader' process creates buffer 'test-reader-slower' with metadata size '0' and payload size '10240'
+        Given the 'reader' process creates buffer 'test-reader-slower' with metadata size '0' and payload size '1024'
 
         When the 'writer' process connects to buffer 'test-reader-slower'
-        And writes continuously at high speed
+        And the 'writer' process writes continuously at high speed
 
-        When the 'reader' process reads with '10' ms delay per frame
-        And the test runs for '1000' frames
+        When the 'reader' process reads with '50' ms delay per frame
+        And the 'reader' process the test runs for '100' frames
 
         Then the 'reader' process should receive all frames without loss
         
         Then the 'writer' process should block appropriately
-        And flow control should work correctly
+        And the 'writer' process flow control should work correctly
 
     Scenario: Test 4.6 - Exact Buffer Fit
         Given the 'reader' process creates buffer 'test-exact-fit' with metadata size '0' and payload size '10240'

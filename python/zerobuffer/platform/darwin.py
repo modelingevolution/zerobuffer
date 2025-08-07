@@ -26,8 +26,8 @@ class DarwinSharedMemory(SharedMemory):
     def __init__(self, name: str, size: int, create: bool = False):
         self._name = name
         self._size = size
-        self._shm = None
-        self._buffer = None
+        self._shm: Optional[shared_memory.SharedMemory] = None
+        self._buffer: Optional[memoryview] = None
         
         try:
             if create:

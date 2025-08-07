@@ -233,7 +233,19 @@
       "Bash(dotnet new:*)",
       "Bash(./venv/bin/pytest tests/test_basic_communication.py::TestBasicCommunication::test_1_2_multiple_frames_sequential -v)",
       "Bash(./zerobuffer-serve:*)",
-      "Bash(../test.sh python 1.1)"
+      "Bash(../test.sh python 1.1)",
+      "Bash(./copy_features.sh:*)",
+      "Bash(./test_1_1_hardcoded)",
+      "Bash(./test_1_1_with_infra)",
+      "Bash(./venv/bin/pip install pydantic --quiet)",
+      "Bash(./venv/bin/pip install psutil --quiet)",
+      "Bash(./check_logging.sh:*)",
+      "Bash(./venv/bin/pip install pydantic-settings --quiet)",
+      "Bash(kill:*)",
+      "Bash(/mnt/d/source/modelingevolution/streamer/src/zerobuffer/cpp/build/serve/zerobuffer-serve --version)",
+      "Bash(./test_regex)",
+      "Bash(ZEROBUFFER_LOG_LEVEL=DEBUG ./test.sh cpp 1.1)",
+      "Bash(export ZEROBUFFER_LOG_LEVEL=DEBUG)"
     ],
     "deny": []
   }

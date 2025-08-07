@@ -124,3 +124,21 @@ option(BUILD_BENCHMARKS "Build benchmarks" ON)
 if(BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
+
+# Serve (JSON-RPC server for Harmony)
+option(BUILD_SERVE "Build zerobuffer-serve for Harmony integration" ON)
+if(BUILD_SERVE)
+    # Ensure nlohmann_json is available
+    find_package(nlohmann_json QUIET)
+    if(NOT nlohmann_json_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+            json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.11.2
+        )
+        FetchContent_MakeAvailable(json)
+    endif()
+    
+    add_subdirectory(serve)
+endif()

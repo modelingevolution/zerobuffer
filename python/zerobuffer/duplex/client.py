@@ -3,7 +3,7 @@ Duplex Channel Client implementation
 """
 
 import threading
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Any
 from ..reader import Reader
 from ..writer import Writer
 from ..types import BufferConfig
@@ -27,12 +27,12 @@ class DuplexClient(IDuplexClient):
         
         # Create response reader first (we own the response buffer)
         # Use default config - server should have created with same config
-        self._response_reader = None
-        self._request_writer = None
+        self._response_reader: Optional[Reader] = None
+        self._request_writer: Optional[Writer] = None
         self._lock = threading.Lock()
         self._closed = False
-        self._pending_sequence = None
-        self._pending_buffer = None
+        self._pending_sequence: Optional[int] = None
+        self._pending_buffer: Optional[memoryview] = None
         
         # Initialize connections
         self._connect()
@@ -59,7 +59,9 @@ class DuplexClient(IDuplexClient):
             
             # Get current sequence before writing
             # Since Writer increments after writing, we predict the sequence
-            current_sequence = self._request_writer._sequence_number
+            if self._request_writer is None:
+                raise RuntimeError("Request writer not connected")
+            current_sequence = getattr(self._request_writer, '_sequence_number', 0)
             
             # Write frame
             self._request_writer.write_frame(data)
@@ -77,6 +79,8 @@ class DuplexClient(IDuplexClient):
                 raise ZeroBufferException("Previous request not committed")
             
             # Get current sequence before acquiring buffer
+            if self._request_writer is None:
+                raise RuntimeError("Request writer not connected")
             self._pending_sequence = self._request_writer._sequence_number
             
             # Get buffer from writer
@@ -95,6 +99,8 @@ class DuplexClient(IDuplexClient):
                 raise ZeroBufferException("No pending request to commit")
             
             # Commit the frame
+            if self._request_writer is None:
+                raise RuntimeError("Request writer not connected")
             self._request_writer.commit_frame()
             self._pending_buffer = None
             self._pending_sequence = None
@@ -105,6 +111,8 @@ class DuplexClient(IDuplexClient):
             raise ZeroBufferException("Client is closed")
         
         # Read frame from response buffer
+        if self._response_reader is None:
+            raise RuntimeError("Response reader not connected")
         frame = self._response_reader.read_frame(timeout=timeout_ms / 1000.0)
         
         if frame is None:
@@ -124,7 +132,7 @@ class DuplexClient(IDuplexClient):
     
     def release_response(self, response: DuplexResponse) -> None:
         """Release a response frame"""
-        if response._frame:
+        if response._frame and self._response_reader is not None:
             self._response_reader.release_frame(response._frame)
     
     @property
@@ -135,6 +143,8 @@ class DuplexClient(IDuplexClient):
         
         # Server is connected if it's reading from request buffer
         # and writing to response buffer
+        if self._request_writer is None or self._response_reader is None:
+            return False
         return (self._request_writer.is_reader_connected() and 
                 self._response_reader.is_writer_connected())
     

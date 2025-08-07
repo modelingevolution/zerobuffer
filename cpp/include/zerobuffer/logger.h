@@ -52,9 +52,9 @@ inline void init_logging(severity_level min_level = info) {
     // Add common attributes
     logging::add_common_attributes();
     
-    // Setup console sink with formatting
+    // Setup console sink with formatting (write to stderr)
     auto console = logging::add_console_log(
-        std::clog,
+        std::cerr,
         keywords::format = expr::stream
             << "[" << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
             << "] [" << expr::attr<severity_level>("Severity")

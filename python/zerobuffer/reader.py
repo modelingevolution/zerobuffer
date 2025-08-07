@@ -124,7 +124,7 @@ class Reader(LoggerMixin):
                     try_remove = platform.PlatformFileLock.try_remove_stale
                 else:
                     # Fallback to Linux implementation if available
-                    try_remove = getattr(platform.LinuxFileLock, 'try_remove_stale', lambda x: False)
+                    try_remove = getattr(platform.LinuxFileLock, 'try_remove_stale', lambda path: False)
                 
                 if try_remove(str(lock_file)):
                     # We removed a stale lock, clean up associated resources

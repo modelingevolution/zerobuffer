@@ -190,46 +190,45 @@ namespace ZeroBuffer
                 foreach (var lockFile in Directory.GetFiles(lockDir, "*.lock"))
                 {
                     // Try to remove stale lock
-                    if (FileLockFactory.TryRemoveStale(lockFile))
-                    {
-                        // We successfully removed a stale lock, clean up associated resources
-                        string bufferName = Path.GetFileNameWithoutExtension(lockFile);
+                    if (!FileLockFactory.TryRemoveStale(lockFile)) continue;
+
+                    // We successfully removed a stale lock, clean up associated resources
+                    string bufferName = Path.GetFileNameWithoutExtension(lockFile);
                         
+                    try
+                    {
+                        // Try to open the shared memory to check if it's orphaned
+                        using var shm = SharedMemoryFactory.Open(bufferName);
+                        var oieb = shm.Read<OIEB>(0);
+                            
+                        // Check if both reader and writer are dead
+                        bool readerDead = (oieb.ReaderPid == 0) || !ProcessExists(oieb.ReaderPid);
+                        bool writerDead = (oieb.WriterPid == 0) || !ProcessExists(oieb.WriterPid);
+                            
+                        if (readerDead && writerDead)
+                        {
+                            // Both processes are dead, safe to clean up
+                            // First dispose our handle to the shared memory
+                            shm.Dispose();
+                                
+                            // Now remove all resources
+                            SharedMemoryFactory.Remove(bufferName);
+                            SemaphoreFactory.Remove($"sem-w-{bufferName}");
+                            SemaphoreFactory.Remove($"sem-r-{bufferName}");
+                        }
+                    }
+                    catch
+                    {
+                        // If we can't open shared memory, clean up anyway since lock was stale
                         try
                         {
-                            // Try to open the shared memory to check if it's orphaned
-                            using var shm = SharedMemoryFactory.Open(bufferName);
-                            var oieb = shm.Read<OIEB>(0);
-                            
-                            // Check if both reader and writer are dead
-                            bool readerDead = (oieb.ReaderPid == 0) || !ProcessExists(oieb.ReaderPid);
-                            bool writerDead = (oieb.WriterPid == 0) || !ProcessExists(oieb.WriterPid);
-                            
-                            if (readerDead && writerDead)
-                            {
-                                // Both processes are dead, safe to clean up
-                                // First dispose our handle to the shared memory
-                                shm.Dispose();
-                                
-                                // Now remove all resources
-                                SharedMemoryFactory.Remove(bufferName);
-                                SemaphoreFactory.Remove($"sem-w-{bufferName}");
-                                SemaphoreFactory.Remove($"sem-r-{bufferName}");
-                            }
+                            SharedMemoryFactory.Remove(bufferName);
+                            SemaphoreFactory.Remove($"sem-w-{bufferName}");
+                            SemaphoreFactory.Remove($"sem-r-{bufferName}");
                         }
                         catch
                         {
-                            // If we can't open shared memory, clean up anyway since lock was stale
-                            try
-                            {
-                                SharedMemoryFactory.Remove(bufferName);
-                                SemaphoreFactory.Remove($"sem-w-{bufferName}");
-                                SemaphoreFactory.Remove($"sem-r-{bufferName}");
-                            }
-                            catch
-                            {
-                                // Ignore cleanup errors
-                            }
+                            // Ignore cleanup errors
                         }
                     }
                 }
@@ -358,16 +357,14 @@ namespace ZeroBuffer
                 }
 
                 // Wait for data
-                if (!_writeSemaphore.Wait(waitTime))
-                {
-                    // Timeout - check if writer died
-                    if (oieb.WriterPid != 0 && !ProcessExists(oieb.WriterPid))
-                    {
-                        throw new WriterDeadException();
-                    }
+                if (_writeSemaphore.Wait(waitTime)) continue;
+
+                // Timeout - check if writer died
+                if (oieb.WriterPid != 0 && !ProcessExists(oieb.WriterPid))
+                    throw new WriterDeadException();
+                
                     
-                    return Frame.Invalid;
-                }
+                return Frame.Invalid;
             }
         }
 

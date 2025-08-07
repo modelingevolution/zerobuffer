@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 
+# POC tests for testing infrastructure development
+add_subdirectory(poc)
+
 # Duplex channel tests
 add_executable(test_duplex_channel
     test_duplex_channel.cpp

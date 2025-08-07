@@ -583,7 +583,8 @@ namespace ZeroBuffer.Tests.StepDefinitions
         private Task? _writerTask;
         private int _framesWritten = 0;
         private int _framesRead = 0;
-        private bool _writerBlocked = false;
+        private int _blockedWrites = 0;
+        private List<double> _writeTimings = new List<double>();
 
         [When(@"writes continuously at high speed")]
         [When(@"the '(.*)' process writes continuously at high speed")]
@@ -595,34 +596,97 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 throw new InvalidOperationException("No writer found");
             }
 
+            _framesWritten = 0;
+            _blockedWrites = 0;
+            _writeTimings.Clear();
             _writerCts = new CancellationTokenSource();
+            
             _writerTask = Task.Run(() =>
             {
-                var data = new byte[100];
+                // Create frame with sequence number
+                var frameData = new byte[100];
                 var random = new Random();
-                random.NextBytes(data);
-
-                while (!_writerCts.Token.IsCancellationRequested)
+                
+                // Write continuously until cancelled
+                while (!_writerCts.Token.IsCancellationRequested && _framesWritten < 200) // Safety limit
                 {
                     try
                     {
-                        var writeTask = Task.Run(() => writer.WriteFrame(data));
-                        if (!writeTask.Wait(TimeSpan.FromMilliseconds(50)))
+                        // Embed sequence number in frame
+                        BitConverter.GetBytes(_framesWritten).CopyTo(frameData, 0);
+                        
+                        // Measure write time
+                        var sw = System.Diagnostics.Stopwatch.StartNew();
+                        writer.WriteFrame(frameData);
+                        sw.Stop();
+                        
+                        var writeMs = sw.Elapsed.TotalMilliseconds;
+                        _writeTimings.Add(writeMs);
+                        
+                        // Detect blocking (20ms threshold for 50ms reader delay)
+                        if (writeMs > 20)
                         {
-                            _writerBlocked = true;
-                            writeTask.Wait();
+                            _blockedWrites++;
                         }
+                        
                         _framesWritten++;
                     }
                     catch (OperationCanceledException)
                     {
                         break;
                     }
+                    catch (Exception)
+                    {
+                        // Buffer might be closed, exit gracefully
+                        break;
+                    }
                 }
             });
         }
 
-        
+        [When(@"the '(.*)' process reads with '(.*)' ms delay per frame")]
+        public void WhenProcessReadsWithDelayPerFrame(string process, string delayMs)
+        {
+            var reader = _basicSteps._readers.Values.LastOrDefault();
+            if (reader == null)
+            {
+                throw new InvalidOperationException("No reader found");
+            }
+
+            var delay = int.Parse(delayMs);
+            _framesRead = 0;
+            var expectedSeq = 0;
+            
+            Task.Run(async () =>
+            {
+                while (_framesRead < 100 && !_writerCts?.Token.IsCancellationRequested != false)
+                {
+                    var frame = reader.ReadFrame();
+                    if (frame.IsValid)
+                    {
+                        // Verify sequence number (first 4 bytes of payload)
+                        var span = frame.Span;
+                        if (span.Length >= 4)
+                        {
+                            var receivedSeq = BitConverter.ToInt32(span.Slice(0, 4));
+                            if (receivedSeq != expectedSeq)
+                            {
+                                throw new InvalidOperationException($"Frame loss detected! Expected seq {expectedSeq}, got {receivedSeq}");
+                            }
+                        }
+                        expectedSeq++;
+                        _framesRead++;
+                        
+                        // Reader automatically signals space when reading next frame
+                        await Task.Delay(delay); // Slow reader
+                    }
+                    else
+                    {
+                        await Task.Delay(1);
+                    }
+                }
+            });
+        }
 
         [When(@"the test runs for '(.*)' frames")]
         [When(@"the '(.*)' process the test runs for '(.*)' frames")]
@@ -631,35 +695,58 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Handle both parameter patterns
             var targetFramesStr = frameCount ?? processOrFrameCount;
             var targetFrames = int.Parse(targetFramesStr);
-            var timeout = DateTime.UtcNow.AddSeconds(30);
+            var timeout = DateTime.UtcNow.AddSeconds(10); // 100 frames * 50ms = 5s, so 10s is safe
 
+            // Wait for reader to process target frames
             while (_framesRead < targetFrames && DateTime.UtcNow < timeout)
             {
-                Thread.Sleep(10);
+                Thread.Sleep(50);
             }
 
+            // Stop writer
             _writerCts?.Cancel();
-            _writerTask?.Wait(TimeSpan.FromSeconds(1));
+            try
+            {
+                _writerTask?.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch { }
         }
 
         [Then(@"the '(.*)' process should receive all frames without loss")]
         public void ThenProcessShouldReceiveAllFramesWithoutLoss(string process)
         {
-            Assert.Equal(1000, _framesRead);
+            Assert.Equal(100, _framesRead);
         }
 
         [Then(@"the '(.*)' process should block appropriately")]
         public void ThenProcessShouldBlockAppropriately(string process)
         {
-            Assert.True(_writerBlocked, "Writer should have blocked at least once when buffer was full");
+            // With 1KB buffer (8 frames) and 100 frames total, expect ~92 blocks
+            Assert.True(_blockedWrites > 80, $"Writer should have blocked many times, but only blocked {_blockedWrites} times");
+            
+            // Verify blocking duration
+            if (_writeTimings.Count > 10)
+            {
+                var avgBlockedTime = _writeTimings.Skip(8).Average(); // Skip initial burst
+                Assert.True(avgBlockedTime > 20, $"Blocked writes should take >20ms, avg was {avgBlockedTime:F1}ms");
+            }
         }
 
         [Then(@"flow control should work correctly")]
         [Then(@"the '(.*)' process flow control should work correctly")]
         public void ThenFlowControlShouldWorkCorrectly(string process = null)
         {
-            Assert.True(_framesWritten >= 1000, "Writer should have written at least as many frames as reader read");
-            Assert.True(_writerBlocked, "Flow control should have caused writer to block");
+            Assert.True(_framesWritten >= 100, $"Writer should have written at least 100 frames, wrote {_framesWritten}");
+            Assert.True(_blockedWrites > 80, $"Flow control should have caused many blocks, had {_blockedWrites}");
+            
+            // Verify timing pattern
+            if (_writeTimings.Count > 10)
+            {
+                var firstBurst = _writeTimings.Take(8).Average();
+                var blockedWrites = _writeTimings.Skip(8).Average();
+                Assert.True(firstBurst < 5, $"Initial burst should be fast (<5ms), was {firstBurst:F1}ms");
+                Assert.True(blockedWrites > 20, $"Blocked writes should be slow (>20ms), was {blockedWrites:F1}ms");
+            }
         }
     }
 }

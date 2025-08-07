@@ -14,7 +14,7 @@ from typing import Dict, Optional
 class BufferNamingService:
     """Service for generating unique buffer names for test isolation"""
     
-    def __init__(self, logger: Optional[logging.Logger] = None):
+    def __init__(self, logger: Optional[logging.Logger] = None) -> None:
         """
         Initialize the buffer naming service
         
@@ -63,7 +63,7 @@ class BufferNamingService:
         # self._logger.debug(f"Created and cached buffer name: {unique_name} for base name: {base_name}")
         return unique_name
     
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the name cache (useful for test cleanup)"""
         self._name_cache.clear()
         self._logger.debug("Cleared buffer name cache")

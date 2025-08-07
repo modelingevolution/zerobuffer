@@ -22,6 +22,7 @@ VERBOSITY=""
 NO_BUILD=""
 SPECIFIC_TEST=""
 VENV_DIR="${VENV_DIR:-venv}"
+NO_TYPE_CHECK=""
 
 # Function to display usage
 usage() {
@@ -67,13 +68,88 @@ check_venv() {
             "$VENV_DIR/bin/pip" install -q pytest-bdd
         fi
         
-        # Feature files are already present in features/ directory
+        # Check if mypy is installed for type checking
+        if ! "$VENV_DIR/bin/python" -c "import mypy" 2>/dev/null; then
+            echo -e "${YELLOW}Installing mypy for type checking...${NC}"
+            "$VENV_DIR/bin/pip" install -q mypy
+        fi
+        
+        # CRITICAL: ALWAYS copy and fix feature files from source of truth
+        # This MUST be done EVERY time because:
+        # 1. Feature files in ZeroBuffer.Harmony.Tests are the source of truth
+        # 2. Python's pytest-bdd doesn't support "And" steps like C#'s SpecFlow
+        # 3. We need to convert "And" to proper Given/When/Then based on context
+        # DO NOT REMOVE THIS! Tests will fail without proper feature file conversion!
+        if [ -x "./copy_features.sh" ]; then
+            echo -e "${YELLOW}Copying and fixing feature files from source of truth...${NC}"
+            ./copy_features.sh > /dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Failed to copy and fix feature files!${NC}"
+                echo -e "${RED}Running copy_features.sh with output to debug:${NC}"
+                ./copy_features.sh
+                exit 1
+            fi
+        else
+            echo -e "${RED}ERROR: copy_features.sh not found or not executable!${NC}"
+            echo -e "${RED}This script is REQUIRED to convert 'And' steps for pytest-bdd${NC}"
+            exit 1
+        fi
+        
+        # Verify feature files are present after copying
         if [ -d "features" ] && [ "$(ls -A features/*.feature 2>/dev/null)" ]; then
             echo -e "${GREEN}✓ Feature files found${NC}"
         else
             echo -e "${RED}Error: Feature files not found in features/ directory${NC}"
             exit 1
         fi
+    fi
+}
+
+# Run type checking with mypy
+run_type_check() {
+    echo -e "${YELLOW}Running type checking with mypy...${NC}"
+    
+    # Create mypy configuration if it doesn't exist
+    if [ ! -f "mypy.ini" ]; then
+        cat > mypy.ini << 'EOF'
+[mypy]
+python_version = 3.8
+warn_return_any = True
+warn_unused_configs = True
+disallow_untyped_defs = True
+disallow_any_unimported = False
+no_implicit_optional = True
+check_untyped_defs = True
+warn_redundant_casts = True
+warn_unused_ignores = True
+warn_no_return = True
+warn_unreachable = True
+strict_equality = True
+
+# Ignore missing imports for third-party libraries
+[mypy-pytest.*]
+ignore_missing_imports = True
+
+[mypy-pytest_bdd.*]
+ignore_missing_imports = True
+
+[mypy-psutil.*]
+ignore_missing_imports = True
+
+[mypy-posix_ipc.*]
+ignore_missing_imports = True
+EOF
+        echo -e "${GREEN}Created mypy.ini configuration${NC}"
+    fi
+    
+    # Run mypy on the zerobuffer_serve directory
+    if "$VENV_DIR/bin/mypy" zerobuffer_serve/ --config-file mypy.ini; then
+        echo -e "${GREEN}✓ Type checking passed${NC}"
+        return 0
+    else
+        echo -e "${RED}✗ Type checking failed${NC}"
+        echo -e "${YELLOW}Fix type errors or use --no-type-check to skip${NC}"
+        return 1
     fi
 }
 
@@ -155,6 +231,23 @@ get_scenario_name() {
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        python|python_*|*_python)
+            # Check if user is trying to run Harmony tests with local script
+            echo -e "${RED}ERROR: You're trying to run Harmony cross-platform tests with the local test script!${NC}"
+            echo -e "${RED}This script is for LOCAL Python tests only.${NC}"
+            echo ""
+            echo -e "${YELLOW}To run Harmony cross-platform tests, use:${NC}"
+            echo -e "${GREEN}  ../test.sh $1 [test-number]${NC}"
+            echo ""
+            echo -e "${YELLOW}Examples:${NC}"
+            echo -e "${GREEN}  ../test.sh python 1.1        # Run Python-Python test 1.1${NC}"
+            echo -e "${GREEN}  ../test.sh python_csharp 1.2 # Run Python-C# test 1.2${NC}"
+            echo -e "${GREEN}  ../test.sh csharp_python 1.3 # Run C#-Python test 1.3${NC}"
+            echo ""
+            echo -e "${YELLOW}For local Python tests, use:${NC}"
+            echo -e "${GREEN}  ./test.sh 1.1                # Run test 1.1 locally${NC}"
+            exit 1
+            ;;
         -f|--filter)
             FILTER="$2"
             shift 2
@@ -218,6 +311,15 @@ done
 
 # Check virtual environment
 check_venv
+
+# Run type checking unless disabled
+if [ -z "$NO_TYPE_CHECK" ]; then
+    if ! run_type_check; then
+        echo -e "${RED}Type checking failed. Fix errors or use --no-type-check to skip.${NC}"
+        exit 1
+    fi
+    echo ""
+fi
 
 # Build test command
 if [ -n "$SPECIFIC_TEST" ]; then

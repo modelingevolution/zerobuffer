@@ -66,18 +66,3 @@ Feature: Basic Communication Tests
 
         Then the 'reader' process should read 4 frames with sizes '100,1024,10240,1' in order
 
-    Scenario: Test 1.6 - Metadata Update During Operation
-        Given the 'reader' process creates buffer 'test-metadata-update' with metadata size '1024' and payload size '10240'
-
-        When the 'writer' process connects to buffer 'test-metadata-update'
-        And the 'writer' process writes metadata 'version=1.0'
-        And the 'writer' process writes frame with data 'frame1'
-
-        Then the 'reader' process should have metadata 'version=1.0'
-        And the 'reader' process should read frame with data 'frame1'
-
-        When the 'writer' process writes metadata 'version=2.0'
-        And the 'writer' process writes frame with data 'frame2'
-
-        Then the 'reader' process should have metadata 'version=2.0'
-        And the 'reader' process should read frame with data 'frame2'

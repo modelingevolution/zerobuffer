@@ -8,7 +8,8 @@ import asyncio
 import json
 import logging
 import sys
-from typing import Dict, Any, Callable, Optional
+from typing import Dict, Any, Callable, Optional, BinaryIO, Union, List
+from io import BufferedReader, BufferedWriter
 
 from .models import (
     HealthRequest,
@@ -38,7 +39,7 @@ class ZeroBufferServe:
         self._logger = logger_provider.get_logger(self.__class__.__name__)
         self._running = False
         
-    async def run(self):
+    async def run(self) -> None:
         """Run the JSON-RPC server on stdin/stdout"""
         self._logger.info("Starting JSON-RPC server on stdin/stdout")
         self._running = True
@@ -60,7 +61,7 @@ class ZeroBufferServe:
             self._running = False
             self._logger.info("JSON-RPC server stopped")
     
-    async def _read_loop(self, stdin):
+    async def _read_loop(self, stdin: BinaryIO) -> None:
         """Read and process JSON-RPC requests from stdin"""
         loop = asyncio.get_event_loop()
         
@@ -155,7 +156,7 @@ class ZeroBufferServe:
                 
             return None
     
-    async def _route_method(self, method: str, params: Dict[str, Any]) -> Any:
+    async def _route_method(self, method: str, params: Union[Dict[str, Any], List[Any], None]) -> Any:
         """Route method to appropriate handler"""
         handlers = {
             'health': self._handle_health,
@@ -170,9 +171,13 @@ class ZeroBufferServe:
         if not handler:
             raise ValueError(f"Unknown method: {method}")
             
+        # Ensure params is not None for handlers
+        if params is None:
+            params = {}
+            
         return await handler(params)
     
-    async def _send_response(self, response: str):
+    async def _send_response(self, response: str) -> None:
         """Send JSON-RPC response to stdout with LSP-style headers"""
         # Encode response to bytes to get accurate length
         response_bytes = response.encode('utf-8')
@@ -188,7 +193,7 @@ class ZeroBufferServe:
         
         # self._logger.debug(f"Sent response with Content-Length: {content_length}: {response}")  # Too verbose
     
-    async def _handle_health(self, params: Dict[str, Any]) -> bool:
+    async def _handle_health(self, params: Union[Dict[str, Any], List[Any]]) -> bool:
         """Handle health check request"""
         # Handle various parameter formats from different clients
         if isinstance(params, list):
@@ -201,17 +206,14 @@ class ZeroBufferServe:
             else:
                 # Default values for minimal health check
                 request = HealthRequest(hostPid=0, featureId=0)
-        elif isinstance(params, dict):
-            # Direct named parameters
-            request = HealthRequest(**params)
         else:
-            # Default values for minimal health check
-            request = HealthRequest(hostPid=0, featureId=0)
+            # Direct named parameters (must be dict if not list)
+            request = HealthRequest(**params)
             
         self._logger.info(f"Health check requested with hostPid: {request.hostPid}, featureId: {request.featureId}")
         return True
     
-    async def _handle_initialize(self, params: Dict[str, Any]) -> bool:
+    async def _handle_initialize(self, params: Union[Dict[str, Any], List[Any]]) -> bool:
         """Handle initialization request"""
         # Handle various parameter formats from different clients
         if isinstance(params, list):
@@ -262,7 +264,7 @@ class ZeroBufferServe:
             self._logger.error(f"Failed to initialize: {e}", exc_info=True)
             return False
     
-    async def _handle_discover(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_discover(self, params: Union[Dict[str, Any], List[Any], None]) -> Dict[str, Any]:
         """Handle step discovery request"""
         self._logger.info("Discovering available step definitions")
         
@@ -279,7 +281,7 @@ class ZeroBufferServe:
             ]
         }
     
-    async def _handle_execute_step(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_execute_step(self, params: Union[Dict[str, Any], List[Any]]) -> Dict[str, Any]:
         """Handle step execution request"""
         # Handle various parameter formats from different clients
         if isinstance(params, list):
@@ -351,7 +353,7 @@ class ZeroBufferServe:
                 ]
             }
     
-    async def _handle_cleanup(self, params: Dict[str, Any]) -> None:
+    async def _handle_cleanup(self, params: Union[Dict[str, Any], List[Any], None]) -> None:
         """Handle cleanup request"""
         self._logger.info("Cleaning up resources")
         
@@ -361,7 +363,7 @@ class ZeroBufferServe:
             self._logger.error(f"Cleanup failed: {e}", exc_info=True)
             raise
     
-    async def _handle_shutdown(self, params: Dict[str, Any]) -> None:
+    async def _handle_shutdown(self, params: Union[Dict[str, Any], List[Any], None]) -> None:
         """Handle shutdown request"""
         self._logger.info("Shutdown requested")
         self._running = False

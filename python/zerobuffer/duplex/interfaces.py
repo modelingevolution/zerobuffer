@@ -13,7 +13,7 @@ from .processing_mode import ProcessingMode
 class DuplexResponse:
     """Response from duplex channel with sequence number and data"""
     sequence: int
-    data: memoryview
+    data: Optional[memoryview]
     _frame: Optional[Frame] = None
     
     @property
@@ -23,6 +23,8 @@ class DuplexResponse:
     
     def to_bytes(self) -> bytes:
         """Convert to bytes (creates a copy)"""
+        if self.data is None:
+            return b''
         return bytes(self.data)
     
     def __len__(self) -> int:

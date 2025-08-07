@@ -71,7 +71,10 @@ class LinuxSharedMemory(SharedMemory):
     def get_buffer(self) -> memoryview:
         """Get memoryview of entire shared memory buffer"""
         # Don't cache - return fresh memoryview each time to avoid sync issues
-        return memoryview(self._shm.buf)
+        if self._shm is not None:
+            return memoryview(self._shm.buf)
+        else:
+            raise RuntimeError("Shared memory not initialized")
     
     def close(self) -> None:
         """Close the shared memory handle"""
@@ -205,7 +208,8 @@ class LinuxFileLock(FileLock):
             self._locked = True
         except BlockingIOError:
             # Lock is held by another process
-            os.close(self._fd)
+            if self._fd is not None:
+                os.close(self._fd)
             self._fd = None
             raise ZeroBufferException(f"Failed to acquire lock: {path}")
         except Exception as e:

@@ -6,7 +6,7 @@ Similar to the C# DualLogger implementation.
 
 import logging
 import sys
-from typing import List
+from typing import List, Dict, Any, Optional, Mapping
 from threading import Lock
 
 from ..models import LogEntry
@@ -15,11 +15,11 @@ from ..models import LogEntry
 class LogCollector:
     """Collects log entries in memory for JSON-RPC responses"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self._logs: List[LogEntry] = []
         self._lock = Lock()
         
-    def add(self, level: str, message: str):
+    def add(self, level: str, message: str) -> None:
         """Add a log entry"""
         with self._lock:
             self._logs.append(LogEntry(level=level, message=message))
@@ -35,27 +35,29 @@ class LogCollector:
 class DualLogger(logging.Logger):
     """Logger that writes to stderr and collects in memory"""
     
-    def __init__(self, name: str, collector: LogCollector):
+    def __init__(self, name: str, collector: LogCollector) -> None:
         super().__init__(name)
         self._collector = collector
         
-    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
+    def _log(self, level: int, msg: object, args: Any, 
+             exc_info: Any = None, extra: Optional[Mapping[str, object]] = None, 
+             stack_info: bool = False, stacklevel: int = 1) -> None:
         """Override to capture logs"""
         # Call parent to handle normal logging
         super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel)
         
         # Also collect the log
         level_name = logging.getLevelName(level)
-        formatted_msg = msg % args if args else msg
+        formatted_msg = str(msg) % args if args else str(msg)
         self._collector.add(level_name, formatted_msg)
 
 
 class DualLoggerProvider:
     """Provides dual loggers with shared log collection"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self._collector = LogCollector()
-        self._loggers = {}
+        self._loggers: Dict[str, logging.Logger] = {}
         
         # Configure stderr handler
         handler = logging.StreamHandler(sys.stderr)

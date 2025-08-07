@@ -15,6 +15,7 @@ from .exceptions import (
     ZeroBufferException,
     ReaderDeadException,
     WriterAlreadyConnectedException,
+    BufferFullException,
     FrameTooLargeException,
     InvalidFrameSizeException,
     MetadataAlreadyWrittenException
@@ -111,7 +112,7 @@ class Writer(LoggerMixin):
             self._cleanup_on_error()
             raise
     
-    def _cleanup_on_error(self):
+    def _cleanup_on_error(self) -> None:
         """Clean up resources on initialization error"""
         if hasattr(self, '_sem_read'):
             self._sem_read.close()
@@ -162,7 +163,13 @@ class Writer(LoggerMixin):
             
             # Write metadata
             if len(data) > 0:
-                self._shm.write_bytes(metadata_offset + 8, data)
+                # Convert to bytes if needed
+                if isinstance(data, memoryview):
+                    self._shm.write_bytes(metadata_offset + 8, bytes(data))
+                elif isinstance(data, bytearray):
+                    self._shm.write_bytes(metadata_offset + 8, bytes(data))
+                else:
+                    self._shm.write_bytes(metadata_offset + 8, data)
             
             # Update OIEB
             oieb.metadata_written_bytes = total_size
@@ -275,7 +282,8 @@ class Writer(LoggerMixin):
                     # Timeout - check if reader is alive
                     if not self._is_reader_connected(oieb):
                         raise ReaderDeadException()
-                    # Continue waiting (no exception, just keep blocking)
+                    # Buffer is full - throw exception like C# does
+                    raise BufferFullException()
             
             # Check if we need to wrap
             continuous_free = self._get_continuous_free_space(oieb)
@@ -399,7 +407,8 @@ class Writer(LoggerMixin):
                 if not self._sem_read.acquire(timeout=5.0):
                     if not self._is_reader_connected(oieb):
                         raise ReaderDeadException()
-                    # Continue waiting (no exception, just keep blocking)
+                    # Buffer is full - throw exception like C# does
+                    raise BufferFullException()
             
             # Handle wrap-around if needed
             continuous_free = self._get_continuous_free_space(oieb)

@@ -82,13 +82,124 @@ dotnet test
 5. **Step Routing**: Routes each step to the appropriate process via JSON-RPC
 6. **Result Aggregation**: Collects results and reports test outcomes
 
+## Feature File Management
+
+The source of truth for feature files is located in `ZeroBuffer.Harmony.Tests/Features/`. These files are copied to platform-specific test projects:
+
+| Platform | Location | Copy Method | Framework | Notes |
+|----------|----------|-------------|-----------|-------|
+| **C#** | `csharp/ZeroBuffer.Tests/Features/` | MSBuild target (automatic) | SpecFlow | Copies at build via `CopyFeatureFiles` target in .csproj |
+| **Python** | `python/features/` | `copy_features.sh` script | pytest-bdd | Converts "And" steps to Given/When/Then |
+| **C++** | `cpp/features/` | CMake (planned) | Google Test | Will generate GTest files via C# generator |
+
+### Platform-Specific Adaptations
+
+- **C# (SpecFlow)**: 
+  - MSBuild `CopyFeatureFiles` target copies features before build
+  - SpecFlow automatically generates .cs test files from .feature files
+  - No manual intervention needed
+
+- **Python (pytest-bdd)**: 
+  - Run `./copy_features.sh` to copy and adapt features
+  - Script converts "And" steps since pytest-bdd doesn't support @and decorator
+  - Must be run manually or as part of CI
+
+- **C++ (Google Test)**: 
+  - CMake will copy features during configuration (planned)
+  - C# generator tool will create GTest files for native testing
+  - Enables dual-mode testing (native GTest + Harmony JSON-RPC)
+
+## Serve Implementation Requirements
+
+All platform serve implementations (C#, Python, C++) MUST follow these requirements:
+
+### Timeout Handling (CRITICAL)
+
+**The serve implementation MUST enforce a 30-second default timeout for step execution. Harmony does NOT implement timeouts.**
+
+- Default timeout: 30 seconds (30000ms) per step
+- Harmony currently does NOT send a `timeoutMs` parameter - serves must use the default
+- Timeout responses must be structured (not exceptions):
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": {
+        "success": false,
+        "error": "Step execution timeout: The step execution time limit of 30000ms was reached...",
+        "data": {
+            "timeoutType": "STEP_EXECUTION_TIMEOUT",
+            "timeoutMs": 30000,
+            "elapsedMs": 30005
+        },
+        "logs": [...]
+    },
+    "id": 4
+}
+```
+
+### Exception Handling
+
+**All exceptions MUST be caught and returned as structured responses:**
+
+- Never let exceptions crash the serve process
+- Return `success: false` with exception details
+- Include exception type, message, and optional stack trace:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": {
+        "success": false,
+        "error": "Exception in step execution: BufferFullException...",
+        "data": {
+            "exceptionType": "BufferFullException",
+            "exceptionMessage": "Cannot write frame, buffer is full",
+            "stepText": "the writer process writes data"
+        },
+        "logs": [...]
+    },
+    "id": 5
+}
+```
+
+### JSON-RPC Protocol
+
+Serves must implement these methods with LSP-style Content-Length headers:
+
+1. **health** - Health check
+2. **initialize** - Process initialization
+3. **discover** - Return available step definitions
+4. **executeStep** - Execute a step (with 30s timeout)
+5. **cleanup** - Clean up resources
+6. **shutdown** - Graceful shutdown
+
+Message format:
+```
+Content-Length: 123\r\n
+\r\n
+{"jsonrpc":"2.0","method":"executeStep","params":{...},"id":1}
+```
+
+### Implementation Status
+
+| Platform | Component | Timeout (30s) | Exception Handling | Status |
+|----------|-----------|---------------|-------------------|---------|
+| **C#** | ZeroBuffer.Serve | ❌ TODO | ⚠️ Partial | Needs timeout |
+| **Python** | zerobuffer_serve | ❌ TODO | ⚠️ Partial | Needs timeout |
+| **C++** | zerobuffer-serve | 📝 Design | 📝 Design | In design phase |
+
+### Action Items
+
+1. **C# (ZeroBuffer.Serve)**: Add 30-second timeout in `ExecuteStepAsync` using `CancellationTokenSource`
+2. **Python (zerobuffer_serve)**: Add 30-second timeout in `_handle_execute_step` using `asyncio.wait_for`
+3. **C++**: Implement timeout from the start using `std::async` with `wait_for`
+4. **All platforms**: Ensure exceptions are caught and returned as structured responses
+
 ## Future Enhancements
 
-- Support for more platforms (Rust, Go, etc.)
-- Parallel test execution
-- Performance benchmarking
-- Visual test result reporting
-- Integration with CI/CD pipelines
+- Event-based communication. Invokes sends command, in response we have stream of events.
+- Extracting common servo logic to proper libraries to make it easier to write a servo. 
 
 ## Contributing
 

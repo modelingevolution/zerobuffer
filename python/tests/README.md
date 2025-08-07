@@ -5,21 +5,83 @@
 2. Read harmony documentation (all markdown files)
 3. Install test dependencies: `pip install -r requirements-test.txt`
 
-## Architecture Overview
+## Production Engineering Requirements
 
-Python tests use **pytest-bdd** to execute scenarios directly from feature files, ensuring tests stay synchronized with the source of truth.
+### Code Quality Standards
+- **Type Hints**: All functions MUST have complete type annotations
+- **Docstrings**: All public methods require docstrings (Google/NumPy style)
+- **Error Handling**: Explicit exception types, no bare `except:` clauses
+- **Async/Await**: Proper async context management, no blocking I/O in async functions
+- **Resource Management**: Use context managers for all resources (buffers, semaphores)
+- **Logging**: Structured logging with appropriate levels (no print statements)
+
+### Architecture Principles
+
+#### 1. **Dependency Injection**
+```python
+class BasicCommunicationSteps:
+    def __init__(
+        self, 
+        test_context: TestContext,
+        logger: Logger,
+        buffer_factory: Optional[BufferFactory] = None
+    ):
+        self._test_context = test_context
+        self._logger = logger
+        self._buffer_factory = buffer_factory or BufferFactory()
+```
+
+#### 2. **Interface Segregation**
+```python
+from abc import ABC, abstractmethod
+from typing import Protocol
+
+class BufferReader(Protocol):
+    """Interface for buffer reading operations"""
+    def read_frame(self, timeout_ms: int) -> Frame: ...
+    def get_metadata(self) -> bytes: ...
+
+class BufferWriter(Protocol):
+    """Interface for buffer writing operations"""
+    def write_frame(self, data: bytes) -> None: ...
+    def set_metadata(self, data: bytes) -> None: ...
+```
+
+#### 3. **Domain-Driven Design**
+- Step definitions are **application services**
+- ZeroBuffer Reader/Writer are **domain entities**
+- TestContext is an **aggregate root**
+- BufferConfig is a **value object**
+
+### Testing Infrastructure Architecture
 
 ```
-Feature Files (Source of Truth)
-├── ZeroBuffer.Harmony.Tests/Features/*.feature
-│
-├── Local Testing (pytest-bdd)
-│   └── Reads feature files directly
-│       └── Executes Python step definitions
-│
-└── Harmony Testing (JSON-RPC)
-    └── Receives steps via JSON-RPC
-        └── Executes same Python step definitions
+┌─────────────────────────────────────────────────────────┐
+│                    Test Orchestration Layer              │
+│  ┌──────────────┐                    ┌──────────────┐  │
+│  │ pytest-bdd   │                    │   Harmony    │  │
+│  │   Runner     │                    │  JSON-RPC    │  │
+│  └──────┬───────┘                    └──────┬───────┘  │
+│         │                                    │          │
+│         └──────────────┬─────────────────────┘          │
+│                        ▼                                │
+│              ┌──────────────────┐                       │
+│              │  Step Registry   │                       │
+│              │  (Singleton)     │                       │
+│              └────────┬─────────┘                       │
+│                       ▼                                 │
+│         ┌──────────────────────────┐                   │
+│         │   Step Definitions       │                   │
+│         │  (Service Layer)         │                   │
+│         └──────────┬───────────────┘                   │
+│                    ▼                                    │
+│      ┌─────────────────────────────────┐              │
+│      │     Domain Layer                │              │
+│      │  ┌─────────┐  ┌─────────┐     │              │
+│      │  │ Reader  │  │ Writer  │     │              │
+│      │  └─────────┘  └─────────┘     │              │
+│      └─────────────────────────────────┘              │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## File Locations
@@ -76,31 +138,134 @@ async def create_buffer(self, process: str, buffer: str):
 ```
 
 ### State Management
+
+**Production Requirements:**
+- Use immutable data structures where possible
+- Thread-safe state management for concurrent tests
+- Clear separation between test state and system state
+
 ```python
+from dataclasses import dataclass, field
+from typing import Dict, Optional, Any
+from threading import Lock
+import contextlib
+
+@dataclass
+class TestState:
+    """Immutable test state snapshot"""
+    readers: Dict[str, Reader] = field(default_factory=dict)
+    writers: Dict[str, Writer] = field(default_factory=dict)
+    last_frame: Optional[Frame] = None
+    last_exception: Optional[Exception] = None
+    properties: Dict[str, Any] = field(default_factory=dict)
+
 class BasicCommunicationSteps:
-    def __init__(self, test_context, logger):
-        self._readers: Dict[str, Reader] = {}
-        self._writers: Dict[str, Writer] = {}
-        self._last_frame: Optional[Frame] = None
-        self._last_exception: Optional[Exception] = None
+    def __init__(
+        self, 
+        test_context: TestContext,
+        logger: Logger
+    ) -> None:
+        self._test_context = test_context
+        self._logger = logger
+        self._state = TestState()
+        self._state_lock = Lock()
+        
+    @contextlib.contextmanager
+    def _atomic_state_update(self):
+        """Ensure thread-safe state updates"""
+        with self._state_lock:
+            # Create mutable copy
+            new_state = dataclasses.replace(self._state)
+            yield new_state
+            # Commit changes
+            self._state = new_state
 ```
 
 ### Error Handling
-- Expected failures: capture exception, don't throw
-- Store in `_last_exception` for Then validation
+
+**Production Requirements:**
+- Custom exception hierarchy
+- Proper exception chaining
+- Detailed error context
+- Recovery strategies
 
 ```python
+from typing import Type, Optional, Callable, TypeVar
+from functools import wraps
+import traceback
+
+# Custom exception hierarchy
+class ZeroBufferTestException(Exception):
+    """Base exception for test failures"""
+    pass
+
+class StepExecutionException(ZeroBufferTestException):
+    """Step execution failed"""
+    def __init__(self, step: str, cause: Exception):
+        self.step = step
+        self.cause = cause
+        super().__init__(f"Step '{step}' failed: {cause}")
+
+class AssertionException(ZeroBufferTestException):
+    """Test assertion failed"""
+    pass
+
+# Exception handling decorator
+T = TypeVar('T')
+
+def capture_expected_exception(*exception_types: Type[Exception]):
+    """Decorator to capture expected exceptions for validation"""
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @wraps(func)
+        async def async_wrapper(self, *args, **kwargs) -> Optional[T]:
+            try:
+                return await func(self, *args, **kwargs)
+            except exception_types as e:
+                self._logger.info(f"Expected exception captured: {type(e).__name__}")
+                with self._atomic_state_update() as state:
+                    state.last_exception = e
+                return None
+            except Exception as e:
+                self._logger.error(f"Unexpected exception in {func.__name__}: {e}")
+                raise StepExecutionException(func.__name__, e) from e
+                
+        @wraps(func)
+        def sync_wrapper(self, *args, **kwargs) -> Optional[T]:
+            try:
+                return func(self, *args, **kwargs)
+            except exception_types as e:
+                self._logger.info(f"Expected exception captured: {type(e).__name__}")
+                with self._atomic_state_update() as state:
+                    state.last_exception = e
+                return None
+            except Exception as e:
+                self._logger.error(f"Unexpected exception in {func.__name__}: {e}")
+                raise StepExecutionException(func.__name__, e) from e
+                
+        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+    return decorator
+
+# Usage example
 @when("the writer attempts to write oversized frame")
-async def write_oversized_frame(self):
-    try:
-        oversized_data = b'x' * (self.buffer_size + 1)
-        self._writer.write_frame(oversized_data)
-    except FrameTooLargeException as e:
-        self._last_exception = e
+@capture_expected_exception(FrameTooLargeException, BufferFullException)
+async def write_oversized_frame(self) -> None:
+    """
+    Attempt to write a frame larger than buffer capacity.
+    
+    Raises:
+        FrameTooLargeException: Expected when frame exceeds buffer size
+        BufferFullException: Possible if buffer is already near capacity
+    """
+    oversized_data = b'x' * (self.buffer_size + 1)
+    await self._writer.write_frame_async(oversized_data)
 
 @then("the write should fail with frame too large error")
-def verify_frame_too_large(self):
-    assert isinstance(self._last_exception, FrameTooLargeException)
+def verify_frame_too_large(self) -> None:
+    """Verify that the expected exception was raised"""
+    if not isinstance(self._state.last_exception, FrameTooLargeException):
+        raise AssertionException(
+            f"Expected FrameTooLargeException, got {type(self._state.last_exception).__name__}"
+        )
 ```
 
 ## Running Tests
@@ -149,23 +314,81 @@ cd ..
 ### Traditional Python Tests
 
 ```bash
-# Run existing unit tests
-./venv/bin/pytest tests/test_zerobuffer.py -v
-
-# Run scenario tests
-./venv/bin/pytest tests/test_scenarios.py -v
+# RUN test.sh in python folder
+./test.sh [number]
 ```
 
 ## Development Process - YOUR TODO LIST
 
-0. **READ THE PREREQUISITES** if you haven't!
-1. Read scenario in feature file; Try to understand it and assess if it makes sense. If it doesn't make sense, ask for clarification.
-2. Identify required step definitions
-3. Analyze if we need to exchange data between the processes, or we can simply rely on patterns. If we need to exchange data - stop working and tell me that.
-4. Implement each step with actual ZeroBuffer operations (no empty logging steps!)
-5. Run single test: `./test.sh [test-number]` (e.g., `./test.sh 1.2`); **DO NOT RUN ALL TESTS AT ONCE!**
-6. Fix issues; If the test fails, it can mean that the implementation is incorrect. Investigate the failure, read the protocol documentation and try to fix the implementation.
-7. Only if GREEN, run again with Harmony: `../test.sh python [test-number]` (from parent directory); Fix any issues
+### Pre-Development Checklist
+- [ ] **READ ALL PREREQUISITES** (Protocol docs, Harmony docs)
+- [ ] **Setup environment**: Virtual environment activated, dependencies installed
+- [ ] **Verify test infrastructure**: `./test.sh 1.1` passes (baseline test)
+
+### For Each New Scenario
+
+#### 1. Analysis Phase
+- [ ] **Read scenario** in feature file
+- [ ] **Validate scenario logic** - Does it make sense? Ask if unclear
+- [ ] **Check data exchange requirements** - If processes need shared state, STOP and discuss architecture
+- [ ] **Review reference implementation** - Check C# version in `../../csharp/ZeroBuffer.Tests/StepDefinitions/`
+
+#### 2. Design Phase
+- [ ] **Identify step definitions** needed
+- [ ] **Design state management** - What needs to be tracked?
+- [ ] **Plan error scenarios** - Which exceptions are expected?
+- [ ] **Define performance requirements** - Any steps that are time-critical?
+
+#### 3. Implementation Phase
+- [ ] **Create/update step definition class** with proper structure:
+  ```python
+  class ScenarioNameSteps:
+      def __init__(self, test_context: TestContext, logger: Logger):
+          # Dependency injection
+      
+      @given(parsers.re(r"..."))
+      @performance_critical(threshold_ms=100)
+      async def step_name(self, ...) -> None:
+          """Docstring with Args, Returns, Raises"""
+          # Real implementation - NO empty logging!
+  ```
+- [ ] **Add type hints** to ALL parameters and returns
+- [ ] **Implement error handling** with custom exceptions
+- [ ] **Add performance monitoring** for critical operations
+- [ ] **Write comprehensive docstrings**
+
+#### 4. Testing Phase
+- [ ] **Unit test the step** in isolation (if complex logic)
+- [ ] **Run single test locally**: `./test.sh [test-number]`
+  - [ ] Verify no memory leaks
+  - [ ] Check performance metrics
+  - [ ] Review logs for warnings
+- [ ] **Fix any failures** - Read protocol docs, check implementation
+- [ ] **Run with resource monitoring** enabled
+
+#### 5. Integration Phase
+- [ ] **ONLY if local test GREEN**: Run with Harmony
+  - [ ] `cd ..` (to parent directory)
+  - [ ] `./test.sh python [test-number]`
+- [ ] **Test cross-platform combinations**:
+  - [ ] `./test.sh python_csharp [test-number]`
+  - [ ] `./test.sh csharp_python [test-number]`
+- [ ] **Verify no resource leaks** in cross-platform scenarios
+
+#### 6. Code Review Checklist
+- [ ] **No empty logging steps** - Every step has real implementation
+- [ ] **Pattern matches exactly** - Regex matches feature file text
+- [ ] **No unused steps** - Delete any orphaned definitions
+- [ ] **No process filtering** - Steps work for any process
+- [ ] **Type safety** - Full type annotations
+- [ ] **Error handling** - All exceptions caught and handled
+- [ ] **Performance** - Meets timing requirements
+- [ ] **Documentation** - Docstrings and comments where needed
+
+### Post-Implementation
+- [ ] **Update test metrics** if new patterns discovered
+- [ ] **Document any gotchas** in this README
+- [ ] **Share learnings** with team if complex issue solved
 
 ## Implementation Rules
 
@@ -244,7 +467,7 @@ assert frame_data == expected_data
 1. **test.sh scripts may fail due to wrong implementation of those scripts**. If they do not work, fix them. With them you should be able to run single tests easily. If this is not possible do not look for workaround! Fix the script or ask for help.
    - Local tests: `python/test.sh`
    - Harmony cross-process tests: `../test.sh` (from parent directory)
-2. **Some scenarios might be too advanced for harmony**. This is very important discovery. We need to know why. Ask immediately for help if you think the step isn't feasible to implement.
+2. **If problems occur with test implementation**, you can run the tests in C# to see how they are implemented. The C# test implementations in `../../csharp/ZeroBuffer.Tests/StepDefinitions/` provide a reference for the expected behavior and can help clarify any ambiguities in the feature files.
 3. **Do not work on workarounds the Development Process**. If you cannot proceed with next points from the Development Process, ask for help and stop working.
 
 ## Common Troubleshooting
@@ -300,13 +523,269 @@ bdd_features_base_dir = ../../ZeroBuffer.Harmony.Tests/Features
 | **Test Discovery** | Compile-time | Runtime via pytest |
 | **Feature Files** | Auto-copied to project | Read from source location |
 
-## Best Practices
+## Performance and Monitoring
 
-1. **Keep step definitions focused** - One action per step
-2. **Use descriptive names** - Method names should explain the action
-3. **Share state carefully** - Use class attributes for cross-step data
-4. **Test both paths** - Verify both local (pytest-bdd) and Harmony execution
-5. **Document complex patterns** - Add comments for non-obvious regex patterns
+### Performance Requirements
+
+```python
+import time
+import functools
+from contextlib import contextmanager
+from typing import Dict, List
+import statistics
+
+class PerformanceMonitor:
+    """Track performance metrics for test steps"""
+    
+    def __init__(self, logger: Logger):
+        self._logger = logger
+        self._metrics: Dict[str, List[float]] = {}
+        
+    @contextmanager
+    def measure(self, operation: str):
+        """Context manager to measure operation duration"""
+        start = time.perf_counter()
+        try:
+            yield
+        finally:
+            duration = time.perf_counter() - start
+            self._metrics.setdefault(operation, []).append(duration)
+            
+            if duration > 1.0:  # Log slow operations
+                self._logger.warning(
+                    f"Slow operation: {operation} took {duration:.3f}s"
+                )
+    
+    def get_statistics(self, operation: str) -> Dict[str, float]:
+        """Get performance statistics for an operation"""
+        timings = self._metrics.get(operation, [])
+        if not timings:
+            return {}
+            
+        return {
+            "min": min(timings),
+            "max": max(timings),
+            "mean": statistics.mean(timings),
+            "median": statistics.median(timings),
+            "p95": statistics.quantiles(timings, n=20)[18] if len(timings) > 20 else max(timings),
+            "count": len(timings)
+        }
+
+def performance_critical(threshold_ms: float = 100):
+    """Decorator for performance-critical operations"""
+    def decorator(func):
+        @functools.wraps(func)
+        async def async_wrapper(self, *args, **kwargs):
+            start = time.perf_counter()
+            try:
+                result = await func(self, *args, **kwargs)
+                duration_ms = (time.perf_counter() - start) * 1000
+                
+                if duration_ms > threshold_ms:
+                    self._logger.warning(
+                        f"{func.__name__} exceeded threshold: "
+                        f"{duration_ms:.2f}ms > {threshold_ms}ms"
+                    )
+                    
+                return result
+            except Exception as e:
+                duration_ms = (time.perf_counter() - start) * 1000
+                self._logger.error(
+                    f"{func.__name__} failed after {duration_ms:.2f}ms: {e}"
+                )
+                raise
+                
+        @functools.wraps(func)
+        def sync_wrapper(self, *args, **kwargs):
+            start = time.perf_counter()
+            try:
+                result = func(self, *args, **kwargs)
+                duration_ms = (time.perf_counter() - start) * 1000
+                
+                if duration_ms > threshold_ms:
+                    self._logger.warning(
+                        f"{func.__name__} exceeded threshold: "
+                        f"{duration_ms:.2f}ms > {threshold_ms}ms"
+                    )
+                    
+                return result
+            except Exception as e:
+                duration_ms = (time.perf_counter() - start) * 1000
+                self._logger.error(
+                    f"{func.__name__} failed after {duration_ms:.2f}ms: {e}"
+                )
+                raise
+                
+        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+    return decorator
+```
+
+### Resource Monitoring
+
+```python
+import psutil
+import resource
+from dataclasses import dataclass
+
+@dataclass
+class ResourceSnapshot:
+    """System resource snapshot"""
+    memory_mb: float
+    cpu_percent: float
+    open_files: int
+    threads: int
+    
+class ResourceMonitor:
+    """Monitor system resource usage during tests"""
+    
+    def __init__(self, logger: Logger, warn_memory_mb: float = 500):
+        self._logger = logger
+        self._warn_memory_mb = warn_memory_mb
+        self._process = psutil.Process()
+        self._initial_snapshot = self.capture()
+        
+    def capture(self) -> ResourceSnapshot:
+        """Capture current resource usage"""
+        return ResourceSnapshot(
+            memory_mb=self._process.memory_info().rss / 1024 / 1024,
+            cpu_percent=self._process.cpu_percent(),
+            open_files=len(self._process.open_files()),
+            threads=self._process.num_threads()
+        )
+    
+    def check_resources(self) -> None:
+        """Check for resource leaks or excessive usage"""
+        current = self.capture()
+        
+        # Check memory usage
+        if current.memory_mb > self._warn_memory_mb:
+            self._logger.warning(
+                f"High memory usage: {current.memory_mb:.1f}MB"
+            )
+            
+        # Check for file descriptor leaks
+        if current.open_files > self._initial_snapshot.open_files + 10:
+            self._logger.warning(
+                f"Possible file descriptor leak: "
+                f"{current.open_files} open files"
+            )
+```
+
+## Production Best Practices
+
+### 1. **Code Organization**
+- One class per feature file
+- Separate concerns: steps, state, utilities
+- Use composition over inheritance
+- Follow SOLID principles
+
+### 2. **Type Safety**
+```python
+from typing import NewType, Union, Literal
+
+BufferName = NewType('BufferName', str)
+ProcessName = NewType('ProcessName', str)
+FrameData = Union[bytes, bytearray, memoryview]
+StepType = Literal['given', 'when', 'then']
+```
+
+### 3. **Async Best Practices**
+```python
+import asyncio
+from asyncio import Queue, Event, Lock
+
+class AsyncStepManager:
+    """Manage async step execution with proper cleanup"""
+    
+    def __init__(self):
+        self._tasks: List[asyncio.Task] = []
+        self._cleanup_event = Event()
+        
+    async def run_step_with_timeout(
+        self, 
+        coro: Coroutine,
+        timeout: float = 30.0
+    ) -> Any:
+        """Run step with timeout and cleanup"""
+        task = asyncio.create_task(coro)
+        self._tasks.append(task)
+        
+        try:
+            return await asyncio.wait_for(task, timeout)
+        except asyncio.TimeoutError:
+            task.cancel()
+            raise StepTimeoutException(f"Step timed out after {timeout}s")
+        finally:
+            self._tasks.remove(task)
+    
+    async def cleanup(self) -> None:
+        """Cancel all pending tasks"""
+        for task in self._tasks:
+            task.cancel()
+        
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+        self._tasks.clear()
+```
+
+### 4. **Observability**
+```python
+import structlog
+from opentelemetry import trace, metrics
+
+# Structured logging
+logger = structlog.get_logger()
+
+# Distributed tracing
+tracer = trace.get_tracer(__name__)
+
+# Metrics
+meter = metrics.get_meter(__name__)
+step_counter = meter.create_counter(
+    "test_steps_executed",
+    description="Number of test steps executed"
+)
+
+@when("some step")
+def some_step(self):
+    with tracer.start_as_current_span("execute_step") as span:
+        span.set_attribute("step.type", "when")
+        span.set_attribute("step.name", "some step")
+        
+        step_counter.add(1, {"step_type": "when"})
+        
+        logger.info(
+            "Executing step",
+            step_type="when",
+            step_name="some step",
+            trace_id=span.get_span_context().trace_id
+        )
+```
+
+### 5. **Configuration Management**
+```python
+from pydantic import BaseSettings, Field
+from typing import Optional
+
+class TestConfig(BaseSettings):
+    """Test configuration with validation"""
+    
+    buffer_timeout_ms: int = Field(5000, ge=100, le=60000)
+    max_frame_size: int = Field(1048576, ge=1, le=104857600)
+    log_level: str = Field("INFO", regex="^(DEBUG|INFO|WARNING|ERROR)$")
+    performance_tracking: bool = True
+    resource_monitoring: bool = True
+    
+    class Config:
+        env_prefix = "ZEROBUFFER_TEST_"
+        env_file = ".env.test"
+```
+
+### 6. **Testing Patterns**
+- **Arrange-Act-Assert** in every step
+- **Given-When-Then** maps to setup-execute-verify
+- **Test isolation** via TestContext reset
+- **Deterministic tests** with seeded random
+- **Property-based testing** for edge cases
 
 ## Advanced Features
 
@@ -345,17 +824,6 @@ def buffer_factory(test_context):
     return factory
 ```
 
-## Continuous Integration
-
-Add to CI pipeline:
-```yaml
-# .github/workflows/test.yml
-- name: Run Python BDD Tests
-  run: |
-    cd python
-    pip install -r requirements-test.txt
-    pytest tests/test_features_bdd.py --junit-xml=test-results.xml
-```
 
 ## Getting Help
 

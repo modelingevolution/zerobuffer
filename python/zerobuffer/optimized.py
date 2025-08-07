@@ -9,11 +9,15 @@ Key optimizations:
 """
 
 import struct
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, Tuple, TYPE_CHECKING
 import threading
 
 from .types import OIEB, FrameHeader, Frame
 from .exceptions import *
+
+if TYPE_CHECKING:
+    from .reader import Reader
+    from .writer import Writer
 
 
 # Pre-compiled struct formats for better performance
@@ -25,7 +29,7 @@ SIZE_STRUCT = struct.Struct('<Q')        # Single uint64 for metadata size
 class OptimizedWriter:
     """Optimized Writer with reduced memory allocations"""
     
-    def __init__(self, base_writer):
+    def __init__(self, base_writer: 'Writer') -> None:
         self._writer = base_writer
         
         # Pre-allocate buffers for struct operations
@@ -128,7 +132,7 @@ class OptimizedWriter:
 class OptimizedReader:
     """Optimized Reader with reduced memory allocations"""
     
-    def __init__(self, base_reader):
+    def __init__(self, base_reader: 'Reader') -> None:
         self._reader = base_reader
         
         # Pre-allocate buffer for header unpacking
@@ -259,19 +263,19 @@ class OptimizedReader:
                 return frame
 
 
-def optimize_writer(writer) -> OptimizedWriter:
+def optimize_writer(writer: 'Writer') -> OptimizedWriter:
     """Wrap a Writer instance with optimized methods"""
     opt = OptimizedWriter(writer)
     # Monkey-patch the write_frame method
-    writer.write_frame_original = writer.write_frame
-    writer.write_frame = opt.write_frame_optimized
+    setattr(writer, 'write_frame_original', writer.write_frame)
+    setattr(writer, 'write_frame', opt.write_frame_optimized)
     return opt
 
 
-def optimize_reader(reader) -> OptimizedReader:
+def optimize_reader(reader: 'Reader') -> OptimizedReader:
     """Wrap a Reader instance with optimized methods"""
     opt = OptimizedReader(reader)
     # Monkey-patch the read_frame method
-    reader.read_frame_original = reader.read_frame
-    reader.read_frame = opt.read_frame_optimized
+    setattr(reader, 'read_frame_original', reader.read_frame)
+    setattr(reader, 'read_frame', opt.read_frame_optimized)
     return opt

@@ -11,7 +11,7 @@ import logging
 class TestContext:
     """Manages test execution context and shared state"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self._role: Optional[str] = None
         self._platform: Optional[str] = None
         self._scenario: Optional[str] = None
@@ -26,7 +26,7 @@ class TestContext:
         platform: str,
         scenario: str,
         test_run_id: str
-    ):
+    ) -> None:
         """Initialize the test context"""
         self._role = role
         self._platform = platform
@@ -58,7 +58,7 @@ class TestContext:
         """Get the test run ID"""
         return self._test_run_id
         
-    def set_data(self, key: str, value: Any):
+    def set_data(self, key: str, value: Any) -> None:
         """Store arbitrary data in the context"""
         self._data[key] = value
         self._logger.debug(f"Set context data: {key} = {value}")
@@ -67,7 +67,7 @@ class TestContext:
         """Retrieve data from the context"""
         return self._data.get(key, default)
         
-    def add_resource(self, name: str, resource: Any):
+    def add_resource(self, name: str, resource: Any) -> None:
         """Add a resource to be cleaned up later"""
         self._resources[name] = resource
         self._logger.debug(f"Added resource: {name}")
@@ -76,7 +76,7 @@ class TestContext:
         """Get a resource by name"""
         return self._resources.get(name)
         
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up all resources"""
         self._logger.info("Cleaning up test context resources")
         
@@ -98,7 +98,7 @@ class TestContext:
         self._resources.clear()
         self._data.clear()
         
-    def reset(self):
+    def reset(self) -> None:
         """Reset context for a new test"""
         self.cleanup()
         self._role = None
