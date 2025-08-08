@@ -14,41 +14,16 @@ namespace zerobuffer {
 namespace logging = boost::log;
 namespace keywords = boost::log::keywords;
 namespace expr = boost::log::expressions;
+namespace trivial = boost::log::trivial;
 
-// Severity levels
-enum severity_level {
-    trace,
-    debug,
-    info,
-    warning,
-    error,
-    fatal
-};
-
-// Convert severity level to string
-inline std::ostream& operator<<(std::ostream& strm, severity_level level) {
-    static const char* levels[] = {
-        "TRACE",
-        "DEBUG",
-        "INFO",
-        "WARNING",
-        "ERROR",
-        "FATAL"
-    };
-    
-    if (static_cast<std::size_t>(level) < sizeof(levels) / sizeof(*levels))
-        strm << levels[level];
-    else
-        strm << static_cast<int>(level);
-    
-    return strm;
-}
+// Use Boost's built-in severity levels
+using severity_level = boost::log::trivial::severity_level;
 
 // Logger type
 using Logger = logging::sources::severity_logger<severity_level>;
 
 // Initialize logging system
-inline void init_logging(severity_level min_level = info) {
+inline void init_logging(severity_level min_level = trivial::info) {
     // Add common attributes
     logging::add_common_attributes();
     
@@ -57,34 +32,34 @@ inline void init_logging(severity_level min_level = info) {
         std::cerr,
         keywords::format = expr::stream
             << "[" << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
-            << "] [" << expr::attr<severity_level>("Severity")
+            << "] [" << trivial::severity
             << "] " << expr::smessage
     );
     
     // Set minimum severity level
     logging::core::get()->set_filter(
-        expr::attr<severity_level>("Severity") >= min_level
+        trivial::severity >= min_level
     );
 }
 
 // Convenience macros for logging
 #define ZEROBUFFER_LOG_TRACE(channel) \
-    BOOST_LOG_SEV(::zerobuffer::_get_logger(), zerobuffer::trace) << "[" << channel << "] "
+    BOOST_LOG_SEV(::zerobuffer::_get_logger(), boost::log::trivial::trace) << "[" << channel << "] "
 
 #define ZEROBUFFER_LOG_DEBUG(channel) \
-    BOOST_LOG_SEV(::zerobuffer::_get_logger(), zerobuffer::debug) << "[" << channel << "] "
+    BOOST_LOG_SEV(::zerobuffer::_get_logger(), boost::log::trivial::debug) << "[" << channel << "] "
 
 #define ZEROBUFFER_LOG_INFO(channel) \
-    BOOST_LOG_SEV(::zerobuffer::_get_logger(), zerobuffer::info) << "[" << channel << "] "
+    BOOST_LOG_SEV(::zerobuffer::_get_logger(), boost::log::trivial::info) << "[" << channel << "] "
 
 #define ZEROBUFFER_LOG_WARNING(channel) \
-    BOOST_LOG_SEV(::zerobuffer::_get_logger(), zerobuffer::warning) << "[" << channel << "] "
+    BOOST_LOG_SEV(::zerobuffer::_get_logger(), boost::log::trivial::warning) << "[" << channel << "] "
 
 #define ZEROBUFFER_LOG_ERROR(channel) \
-    BOOST_LOG_SEV(::zerobuffer::_get_logger(), zerobuffer::error) << "[" << channel << "] "
+    BOOST_LOG_SEV(::zerobuffer::_get_logger(), boost::log::trivial::error) << "[" << channel << "] "
 
 #define ZEROBUFFER_LOG_FATAL(channel) \
-    BOOST_LOG_SEV(::zerobuffer::_get_logger(), zerobuffer::fatal) << "[" << channel << "] "
+    BOOST_LOG_SEV(::zerobuffer::_get_logger(), boost::log::trivial::fatal) << "[" << channel << "] "
 
 // Global logger instance
 inline Logger& _get_logger() {

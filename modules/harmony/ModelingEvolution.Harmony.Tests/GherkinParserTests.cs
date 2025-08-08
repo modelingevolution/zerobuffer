@@ -31,7 +31,7 @@ Feature: Test Parameters
         try
         {
             // Act
-            var scenarios = parser.ParseFeatureFile(tempFile).ToList();
+            var scenarios = parser.ParseFeatureFile(tempFile, FeatureIdMapper.GetFeatureId).ToList();
             
             // Assert
             Assert.Single(scenarios);
@@ -83,7 +83,7 @@ Feature: Simple Test
         try
         {
             // Act
-            var scenarios = parser.ParseFeatureFile(tempFile).ToList();
+            var scenarios = parser.ParseFeatureFile(tempFile, FeatureIdMapper.GetFeatureId).ToList();
             
             // Assert
             Assert.Single(scenarios);
@@ -140,7 +140,7 @@ Feature: And/But Context Test
         try
         {
             // Act
-            var scenarios = parser.ParseFeatureFile(tempFile).ToList();
+            var scenarios = parser.ParseFeatureFile(tempFile, FeatureIdMapper.GetFeatureId).ToList();
             
             // Assert
             Assert.Single(scenarios);

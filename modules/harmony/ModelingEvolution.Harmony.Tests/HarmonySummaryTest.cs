@@ -52,11 +52,10 @@ public class HarmonySummaryTest
         int totalScenarios = 0;
         int scenariosWithBackground = 0;
         int scenariosWithMultipleProcesses = 0;
-        int stepsWithTables = 0;
         
         foreach (var featurePath in allFeatures)
         {
-            var scenarios = parser.ParseFeatureFile(featurePath).ToList();
+            var scenarios = parser.ParseFeatureFile(featurePath, FeatureIdMapper.GetFeatureId).ToList();
             totalScenarios += scenarios.Count;
             
             foreach (var scenario in scenarios)
@@ -91,7 +90,7 @@ public class HarmonySummaryTest
         var parser = new GherkinParser(processExtractor);
         var generator = new ScenarioGenerator(parser);
         
-        var scenarios = parser.ParseFeatureFile(Path.Combine("Features", "BasicCommunication.feature")).ToList();
+        var scenarios = parser.ParseFeatureFile(Path.Combine("Features", "BasicCommunication.feature"), FeatureIdMapper.GetFeatureId).ToList();
         var firstScenario = scenarios.First();
         
         _output.WriteLine($"Example: {firstScenario.Name}");

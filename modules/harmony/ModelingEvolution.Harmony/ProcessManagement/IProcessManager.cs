@@ -1,3 +1,5 @@
+using ModelingEvolution.Harmony.Shared;
+
 namespace ModelingEvolution.Harmony.ProcessManagement;
 
 /// <summary>
@@ -21,5 +23,5 @@ public interface IProcessConnection
     string ProcessName { get; }
     string Platform { get; }
     bool IsConnected { get; }
-    Task<T> InvokeAsync<T>(string method, object parameters, CancellationToken cancellationToken = default);
+    IServoClient CreateServoClient();
 }

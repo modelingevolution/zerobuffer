@@ -5,6 +5,10 @@
 namespace zerobuffer {
 namespace steps {
 
+TestContext::TestContext() : bufferNaming_() {
+    // Constructor initializes BufferNamingService
+}
+
 void TestContext::createReader(const std::string& processName, 
                                const std::string& bufferName,
                                const BufferConfig& config) {
@@ -14,11 +18,15 @@ void TestContext::createReader(const std::string& processName,
         throw std::runtime_error("Reader already exists for process: " + processName);
     }
     
-    readers_[processName] = std::make_unique<Reader>(bufferName, config);
-    currentBuffer_ = bufferName;
+    // Use BufferNamingService to get unique buffer name
+    std::string actualBufferName = bufferNaming_.getBufferName(bufferName);
+    
+    readers_[processName] = std::make_unique<Reader>(actualBufferName, config);
+    currentBuffer_ = bufferName;  // Store the original name for reference
     
     ZEROBUFFER_LOG_DEBUG("TestContext") << "Created reader for process '" << processName 
-                                         << "' with buffer '" << bufferName << "'";
+                                         << "' with buffer '" << actualBufferName 
+                                         << "' (base name: '" << bufferName << "')";
 }
 
 void TestContext::createWriter(const std::string& processName,
@@ -29,11 +37,15 @@ void TestContext::createWriter(const std::string& processName,
         throw std::runtime_error("Writer already exists for process: " + processName);
     }
     
-    writers_[processName] = std::make_unique<Writer>(bufferName);
-    currentBuffer_ = bufferName;
+    // Use BufferNamingService to get the same unique buffer name
+    std::string actualBufferName = bufferNaming_.getBufferName(bufferName);
+    
+    writers_[processName] = std::make_unique<Writer>(actualBufferName);
+    currentBuffer_ = bufferName;  // Store the original name for reference
     
     ZEROBUFFER_LOG_DEBUG("TestContext") << "Created writer for process '" << processName 
-                                         << "' with buffer '" << bufferName << "'";
+                                         << "' with buffer '" << actualBufferName 
+                                         << "' (base name: '" << bufferName << "')";
 }
 
 Reader* TestContext::getReader(const std::string& processName) {
@@ -157,6 +169,7 @@ void TestContext::reset() {
     currentBuffer_.clear();
     lastException_ = nullptr;
     lastFrame_.reset();
+    bufferNaming_.clearCache();  // Clear buffer name cache for new test
     
     ZEROBUFFER_LOG_DEBUG("TestContext") << "Context reset";
 }

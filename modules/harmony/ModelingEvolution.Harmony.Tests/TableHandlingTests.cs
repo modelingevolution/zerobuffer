@@ -11,7 +11,7 @@ namespace ModelingEvolution.Harmony.Tests;
 public class TableHandlingTests
 {
     private readonly ITestOutputHelper _output;
-    private readonly IGherkinParser _parser;
+    private readonly GherkinParser _parser;
     
     public TableHandlingTests(ITestOutputHelper output)
     {
@@ -121,7 +121,7 @@ Feature: Test Tables
     public void CurrentParser_ShouldHandleTables()
     {
         // Check if our current parser needs to be updated to handle tables
-        var scenarios = _parser.ParseFeatureFile(Path.Combine("Features", "EdgeCases.feature")).ToList();
+        var scenarios = _parser.ParseFeatureFile(Path.Combine("Features", "EdgeCases.feature"), FeatureIdMapper.GetFeatureId).ToList();
         
         // Find a scenario with tables
         var continuousFreeBytes = scenarios.FirstOrDefault(s => s.Name.Contains("Continuous Free Space"));

@@ -8,10 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Gherkin" Version="29.0.0" />
+    <PackageReference Include="Gherkin" Version="33.1.0" />
     <PackageReference Include="StreamJsonRpc" Version="2.22.11" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
   </ItemGroup>
 
 
@@ -22,6 +22,11 @@
     <None Update="harmony-config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModelingEvolution.Harmony.Shared\ModelingEvolution.Harmony.Shared.csproj" />
   </ItemGroup>
 
 </Project>

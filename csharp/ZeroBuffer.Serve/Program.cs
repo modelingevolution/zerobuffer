@@ -23,9 +23,11 @@ services.AddLogging(builder =>
 // Register services
 services.AddSingleton(loggerProvider);
 
-// Register test contexts
-services.AddSingleton<ZeroBuffer.Tests.ITestContext, TestContext>();
-services.AddSingleton<ZeroBuffer.Serve.JsonRpc.ITestContext, SimpleTestContext>();
+// Test context removed - using ScenarioContext for context bridging
+
+// Register ScenarioContext for servo context bridging (not used in normal SpecFlow tests)
+// This allows us to bridge JSON-RPC Context with step execution
+services.AddScoped<ScenarioContext>();
 
 // Register buffer naming service
 services.AddSingleton<ZeroBuffer.Tests.Services.IBufferNamingService, ZeroBuffer.Tests.Services.BufferNamingService>();

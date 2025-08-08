@@ -6,6 +6,7 @@
 #include "zerobuffer/reader.h"  // For ZeroBufferException
 #include <memory>
 #include <vector>
+#include <chrono>
 
 namespace zerobuffer {
 
@@ -36,6 +37,10 @@ public:
     // Write frame
     void write_frame(const void* data, size_t size);
     void write_frame(const std::vector<uint8_t>& data);
+    
+    // Set write timeout (default is 5 seconds)
+    void set_write_timeout(std::chrono::milliseconds timeout);
+    std::chrono::milliseconds get_write_timeout() const;
     
     // Zero-copy frame access
     void* get_frame_buffer(size_t size, uint64_t& sequence_number);

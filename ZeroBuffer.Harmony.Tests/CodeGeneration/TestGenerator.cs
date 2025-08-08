@@ -28,6 +28,10 @@ public class TestGenerator
         // Track all generated test classes for the registry
         var allTestClasses = new List<(string namespaceName, string className)>();
         
+        // Track statistics
+        int totalFiles = 0;
+        int changedFiles = 0;
+        
         // Group scenarios by platform combination and then by feature file
         var scenariosByPlatformAndFeature = scenarioExecutions
             .GroupBy(s => GetPlatformCombination(s))
@@ -72,17 +76,53 @@ public class TestGenerator
                 // Track this test class
                 allTestClasses.Add((namespaceName, featureClassName));
                 
-                // Write to file
-                await File.WriteAllTextAsync(outputFile, testClass);
-                Console.WriteLine($"Generated {outputFile} with {testCount} tests");
+                // Check if file content has changed
+                totalFiles++;
+                bool fileChanged = true;
+                if (File.Exists(outputFile))
+                {
+                    var existingContent = await File.ReadAllTextAsync(outputFile);
+                    fileChanged = existingContent != testClass;
+                }
+                
+                // Write to file only if changed
+                if (fileChanged)
+                {
+                    await File.WriteAllTextAsync(outputFile, testClass);
+                    Console.WriteLine($"Generated {outputFile} with {testCount} tests");
+                    changedFiles++;
+                }
+                // Else: file unchanged, no need to log
             }
         }
         
         // Generate the FeatureRegistry
         var registryPath = Path.Combine(outputPath, "FeatureRegistry.generated.cs");
         var registryClass = GenerateFeatureRegistry(allTestClasses);
-        await File.WriteAllTextAsync(registryPath, registryClass);
-        Console.WriteLine($"Generated {registryPath} with registry for {allTestClasses.Count} test classes");
+        
+        // Check if registry file has changed
+        totalFiles++;
+        bool registryChanged = true;
+        if (File.Exists(registryPath))
+        {
+            var existingContent = await File.ReadAllTextAsync(registryPath);
+            registryChanged = existingContent != registryClass;
+        }
+        
+        // Write registry only if changed
+        if (registryChanged)
+        {
+            await File.WriteAllTextAsync(registryPath, registryClass);
+            Console.WriteLine($"Generated {registryPath} with registry for {allTestClasses.Count} test classes");
+            changedFiles++;
+        }
+        
+        // Print summary only if files changed
+        if (changedFiles > 0)
+        {
+            Console.WriteLine($"Test generation: {changedFiles} of {totalFiles} files updated");
+        }
+        // Silent when nothing changed
     }
     
     private string GetPlatformCombination(ScenarioExecution scenario)

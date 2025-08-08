@@ -32,6 +32,8 @@ cmake ..
 make -j$(nproc)
 ```
 
+**Note:** The first build can take up to 5 minutes as CMake downloads dependencies (Google Test, nlohmann/json, etc.). Subsequent builds are much faster.
+
 ## Running Tests
 
 ```bash

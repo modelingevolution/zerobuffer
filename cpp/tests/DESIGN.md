@@ -45,15 +45,13 @@ Feature Files (.feature)
 - Header-only option available
 - Excellent performance and ease of use
 
-### 2. JSON-RPC Library
-**Choice: jsonrpcpp by badaix**
-- Header-only library (easy integration)
-- Transport agnostic (perfect for stdin/stdout)
-- Built on nlohmann/json
-- Lightweight and modern C++
-- MIT licensed
-
-Repository: https://github.com/badaix/jsonrpcpp
+### 2. JSON-RPC Implementation
+**Choice: Custom implementation using nlohmann/json**
+- Simple direct implementation in zerobuffer-serve
+- No additional dependencies beyond nlohmann/json
+- Full control over Content-Length header handling
+- Supports Harmony protocol requirements
+- Clean integration with step registry
 
 ### 3. Step Pattern Matching Approach
 

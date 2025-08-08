@@ -9,7 +9,7 @@ namespace ModelingEvolution.Harmony.Tests;
 public class BackgroundAndScenarioParsingTests
 {
     private readonly ITestOutputHelper _output;
-    private readonly IGherkinParser _parser;
+    private readonly GherkinParser _parser;
     
     public BackgroundAndScenarioParsingTests(ITestOutputHelper output)
     {
@@ -25,7 +25,7 @@ public class BackgroundAndScenarioParsingTests
         var featurePath = Path.Combine("Features", "BasicCommunication.feature");
         
         // Act
-        var scenarios = _parser.ParseFeatureFile(featurePath).ToList();
+        var scenarios = _parser.ParseFeatureFile(featurePath, FeatureIdMapper.GetFeatureId).ToList();
         
         // Assert
         scenarios.Should().NotBeEmpty();
@@ -67,7 +67,7 @@ public class BackgroundAndScenarioParsingTests
         var featurePath = Path.Combine("Features", "Initialization.feature");
         
         // Act
-        var scenarios = _parser.ParseFeatureFile(featurePath).ToList();
+        var scenarios = _parser.ParseFeatureFile(featurePath, FeatureIdMapper.GetFeatureId).ToList();
         
         // Look for scenarios with inline process specification
         var writerBeforeReader = scenarios.FirstOrDefault(s => s.Name.Contains("Writer Before Reader"));
@@ -140,7 +140,7 @@ public class BackgroundAndScenarioParsingTests
         foreach (var featurePath in allFeatures)
         {
             var featureName = Path.GetFileNameWithoutExtension(featurePath);
-            var scenarios = _parser.ParseFeatureFile(featurePath).ToList();
+            var scenarios = _parser.ParseFeatureFile(featurePath, FeatureIdMapper.GetFeatureId).ToList();
             totalScenarios += scenarios.Count;
             
             _output.WriteLine($"{featureName}: {scenarios.Count} scenarios");
@@ -173,7 +173,7 @@ public class BackgroundAndScenarioParsingTests
     {
         // This is crucial - background steps must be executed before scenario steps
         var featurePath = Path.Combine("Features", "BasicCommunication.feature");
-        var scenarios = _parser.ParseFeatureFile(featurePath).ToList();
+        var scenarios = _parser.ParseFeatureFile(featurePath, FeatureIdMapper.GetFeatureId).ToList();
         
         var firstScenario = scenarios.First();
         firstScenario.Background.Should().NotBeNull("BasicCommunication should have background");

@@ -2,6 +2,7 @@
 #include "zerobuffer/logger.h"
 #include <cstring>
 #include <atomic>
+#include <chrono>
 #include <boost/log/attributes/named_scope.hpp>
 
 namespace zerobuffer {
@@ -11,7 +12,8 @@ public:
     explicit Impl(const std::string& name) 
         : name_(name), sequence_number_(1), frames_written_(0), bytes_written_(0), 
           metadata_written_(false), pending_metadata_size_(0), pending_frame_size_(0),
-          pending_frame_sequence_(0), pending_frame_total_size_(0), pending_write_pos_(0) {
+          pending_frame_sequence_(0), pending_frame_total_size_(0), pending_write_pos_(0),
+          write_timeout_(5000) {  // Default timeout is 5 seconds
         
         ZEROBUFFER_LOG_DEBUG("Writer") << "Connecting to buffer: " << name;
         
@@ -159,6 +161,8 @@ public:
         
         size_t total_size = sizeof(FrameHeader) + size;
         
+        auto start = std::chrono::steady_clock::now();
+        
         while (true) {
             OIEB* oieb = get_oieb();
             
@@ -175,13 +179,20 @@ public:
                 break;
             }
             
-            // Wait for reader to free space
-            if (!sem_read_->wait(std::chrono::milliseconds(5000))) {
-                // Timeout - check if reader is alive
+            // Check if we've exceeded the write timeout
+            auto elapsed = std::chrono::steady_clock::now() - start;
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed) >= write_timeout_) {
+                ZEROBUFFER_LOG_DEBUG("Writer") << "Write timeout after " << write_timeout_.count() << "ms";
+                throw BufferFullException();
+            }
+            
+            // Wait for reader to free space (with shorter wait to check timeout periodically)
+            if (!sem_read_->wait(std::chrono::milliseconds(100))) {
+                // Short timeout - check if reader is alive and overall timeout
                 if (!is_reader_connected()) {
                     throw ReaderDeadException();
                 }
-                // Continue waiting
+                // Continue waiting (will check timeout in next iteration)
             }
         }
         
@@ -370,6 +381,7 @@ private:
     uint64_t frames_written_;
     uint64_t bytes_written_;
     bool metadata_written_;
+    std::chrono::milliseconds write_timeout_;  // Write timeout
     
     // For zero-copy operations
     size_t pending_metadata_size_;
@@ -431,6 +443,14 @@ uint64_t Writer::frames_written() const {
 
 uint64_t Writer::bytes_written() const {
     return impl_->bytes_written_;
+}
+
+void Writer::set_write_timeout(std::chrono::milliseconds timeout) {
+    impl_->write_timeout_ = timeout;
+}
+
+std::chrono::milliseconds Writer::get_write_timeout() const {
+    return impl_->write_timeout_;
 }
 
 } // namespace zerobuffer

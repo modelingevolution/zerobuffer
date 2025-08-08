@@ -73,7 +73,7 @@ void print_usage(const char* program_name) {
 
 int main(int argc, char* argv[]) {
     // Initialize logging with debug level for testing
-    zerobuffer::init_logging(zerobuffer::debug);
+    zerobuffer::init_logging(boost::log::trivial::debug);
     
     // Default values
     int frames = 1000;

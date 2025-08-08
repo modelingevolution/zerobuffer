@@ -24,7 +24,15 @@ if (!File.Exists(configPath))
     return 1;
 }
 
-Console.WriteLine($"Loading configuration from {configPath}");
+// Suppress verbose output unless VERBOSE environment variable is set
+var verbose = Environment.GetEnvironmentVariable("VERBOSE") == "true" || 
+              Environment.GetEnvironmentVariable("VERBOSE") == "1";
+
+if (verbose)
+{
+    Console.WriteLine($"Loading configuration from {configPath}");
+}
+
 var json = await File.ReadAllTextAsync(configPath);
 var config = JsonSerializer.Deserialize<MultiprocessConfiguration>(json, new JsonSerializerOptions 
 { 
@@ -39,8 +47,11 @@ if (config?.Platforms == null || config.Platforms.Count == 0)
 
 var platforms = config.Platforms.Keys.ToArray();
 
-Console.WriteLine($"Generating tests from {featuresPath} to {outputPath}");
-Console.WriteLine($"Platforms: {string.Join(", ", platforms)}");
+if (verbose)
+{
+    Console.WriteLine($"Generating tests from {featuresPath} to {outputPath}");
+    Console.WriteLine($"Platforms: {string.Join(", ", platforms)}");
+}
 
 // Ensure output directory exists
 Directory.CreateDirectory(outputPath);
@@ -54,5 +65,10 @@ var scenarioGenerator = new ScenarioGenerator(parser);
 var generator = new TestGenerator(parser, scenarioGenerator, platforms);
 await generator.GenerateTestsAsync(featuresPath, outputPath);
 
-Console.WriteLine("Test generation completed successfully");
+// Only print completion message if verbose or if anything was actually generated
+// (The generator will print messages for changed files regardless of verbose setting)
+if (verbose)
+{
+    Console.WriteLine("Test generation completed successfully");
+}
 return 0;

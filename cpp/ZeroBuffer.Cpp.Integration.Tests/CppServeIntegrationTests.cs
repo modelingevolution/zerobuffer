@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using StreamJsonRpc;
+using StreamJsonRpc.Protocol;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
@@ -35,7 +36,8 @@ namespace ZeroBuffer.Cpp.Integration.Tests
             // Serve is in: cpp/build/serve/zerobuffer-serve
             var cppRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
             var servePath = Path.Combine(cppRoot, "build", "serve", "zerobuffer-serve");
-            
+            servePath = Path.GetFullPath(servePath);
+
             _output.WriteLine($"C++ root: {cppRoot}");
             _output.WriteLine($"Serve executable: {servePath}");
             
@@ -78,12 +80,14 @@ namespace ZeroBuffer.Cpp.Integration.Tests
                 }
             });
 
-            // Create JSON-RPC client with StreamJsonRpc
-            _jsonRpc = new JsonRpc(_cppProcess.StandardInput.BaseStream, _cppProcess.StandardOutput.BaseStream);
+            // Create JSON-RPC client with StreamJsonRpc using HeaderDelimitedMessageHandler
+            // This is required for compatibility with the C++ server which expects Content-Length headers
+            var formatter = new JsonMessageFormatter();
+            var handler = new HeaderDelimitedMessageHandler(_cppProcess.StandardInput.BaseStream, _cppProcess.StandardOutput.BaseStream, formatter);
+            _jsonRpc = new JsonRpc(handler);
             _jsonRpc.StartListening();
 
-            // Give the process time to initialize
-            await Task.Delay(500);
+            
             _output.WriteLine("C++ process started successfully");
         }
 
@@ -97,7 +101,7 @@ namespace ZeroBuffer.Cpp.Integration.Tests
                     try
                     {
                         await _jsonRpc.InvokeAsync("shutdown");
-                        await Task.Delay(500);
+                        await Task.Delay(100);
                     }
                     catch
                     {
@@ -160,6 +164,7 @@ namespace ZeroBuffer.Cpp.Integration.Tests
         [Fact]
         public async Task HealthCheck_ShouldReturnTrue()
         {
+            
             // Act
             var result = await _jsonRpc!.InvokeAsync<bool>("health");
 
@@ -171,6 +176,7 @@ namespace ZeroBuffer.Cpp.Integration.Tests
         [Fact]
         public async Task Initialize_ShouldAcceptValidParameters_AndReturnTrue()
         {
+            
             // Arrange - C++ expects slightly different format
             var initParams = new
             {
@@ -205,9 +211,6 @@ namespace ZeroBuffer.Cpp.Integration.Tests
         [Fact]
         public async Task Discover_ShouldReturnStepDefinitions()
         {
-            // Wait a bit for the process to fully initialize
-            await Task.Delay(500);
-            
             // Act
             var result = await _jsonRpc!.InvokeAsync<DiscoverResponse>("discover");
 
@@ -312,7 +315,7 @@ namespace ZeroBuffer.Cpp.Integration.Tests
         public async Task ExecuteStep_CompleteTest11Scenario_ShouldSucceed()
         {
             // This tests the complete Test 1.1 scenario that C++ has implemented
-            
+
             // Arrange - Initialize
             await _jsonRpc!.InvokeAsync<bool>("initialize", new
             {
@@ -447,7 +450,7 @@ namespace ZeroBuffer.Cpp.Integration.Tests
         {
             // This test verifies what format Harmony actually sends for steps
             // The hypothesis is that Harmony sends the full text, not ProcessedText
-            
+
             // Arrange - Initialize first
             await _jsonRpc!.InvokeAsync<bool>("initialize", new
             {

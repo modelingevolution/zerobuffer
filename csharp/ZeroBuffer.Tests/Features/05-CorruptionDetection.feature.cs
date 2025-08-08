@@ -312,38 +312,38 @@ namespace ZeroBuffer.Tests.Features
         testRunner.Given("the \'reader\' process creates buffer \'test-free-space\' with specific configuration" +
                         "", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-                TechTalk.SpecFlow.Table table9 = new TechTalk.SpecFlow.Table(new string[] {
+                TechTalk.SpecFlow.Table table1 = new TechTalk.SpecFlow.Table(new string[] {
                             "write_pos",
                             "read_pos",
                             "expected_result",
                             "scenario"});
-                table9.AddRow(new string[] {
+                table1.AddRow(new string[] {
                             "5000",
                             "2000",
                             "calculated",
                             "write_pos > read_pos"});
-                table9.AddRow(new string[] {
+                table1.AddRow(new string[] {
                             "2000",
                             "5000",
                             "calculated",
                             "write_pos < read_pos"});
-                table9.AddRow(new string[] {
+                table1.AddRow(new string[] {
                             "5000",
                             "5000",
                             "calculated",
                             "write_pos == read_pos empty"});
-                table9.AddRow(new string[] {
+                table1.AddRow(new string[] {
                             "0",
                             "0",
                             "calculated",
                             "both at start"});
-                table9.AddRow(new string[] {
+                table1.AddRow(new string[] {
                             "5000",
                             "0",
                             "calculated",
                             "read_pos at start cannot wrap"});
 #line 66
-        testRunner.When("the system tests continuous_free_bytes calculation with:", ((string)(null)), table9, "When ");
+        testRunner.When("the system tests continuous_free_bytes calculation with:", ((string)(null)), table1, "When ");
 #line hidden
 #line 74
         testRunner.Then("the \'reader\' process calculations should match specification", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");

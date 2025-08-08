@@ -42,7 +42,7 @@ Scenario: Process context should be inherited
         
         try
         {
-            var scenarios = parser.ParseFeatureFile(tempFile).ToList();
+            var scenarios = parser.ParseFeatureFile(tempFile, FeatureIdMapper.GetFeatureId).ToList();
             var scenario = scenarios.First();
             
             _output.WriteLine("=== Current Parsing (Incorrect) ===\n");

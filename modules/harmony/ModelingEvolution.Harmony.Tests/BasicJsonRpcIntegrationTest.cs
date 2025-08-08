@@ -10,7 +10,6 @@ namespace ModelingEvolution.Harmony.Tests;
 public class BasicJsonRpcIntegrationTest : IDisposable
 {
     private readonly ITestOutputHelper _output;
-    private Process? _process;
     
     public BasicJsonRpcIntegrationTest(ITestOutputHelper output)
     {
@@ -18,7 +17,7 @@ public class BasicJsonRpcIntegrationTest : IDisposable
     }
     
     [Fact]
-    public async Task TestBasicJsonRpcCommunication()
+    public void TestBasicJsonRpcCommunication()
     {
         // Create a simple echo server for testing
         using var serverPipe = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
@@ -119,12 +118,7 @@ public class BasicJsonRpcIntegrationTest : IDisposable
     
     public void Dispose()
     {
-        if (_process != null && !_process.HasExited)
-        {
-            _process.Kill();
-            _process.WaitForExit(1000);
-            _process.Dispose();
-        }
+        // Nothing to dispose
     }
     
     // Simple duplex stream for testing

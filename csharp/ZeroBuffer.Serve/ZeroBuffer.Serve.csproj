@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroBuffer.Tests\ZeroBuffer.Tests.csproj" />
+    <ProjectReference Include="..\..\modules\harmony\ModelingEvolution.Harmony.Shared\ModelingEvolution.Harmony.Shared.csproj" />
   </ItemGroup>
 
 

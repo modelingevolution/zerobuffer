@@ -25,8 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\modules\harmony\ModelingEvolution.Harmony\ModelingEvolution.Harmony.csproj" />
-    <ProjectReference Include="..\csharp\ZeroBuffer\ZeroBuffer.csproj" />
-    <ProjectReference Include="..\csharp\ZeroBuffer.Serve\ZeroBuffer.Serve.csproj" />
+    
   </ItemGroup>
 
   <ItemGroup>
@@ -56,13 +55,22 @@
     <PropertyGroup>
       <FeaturesPath>$(MSBuildProjectDirectory)/Features</FeaturesPath>
       <GeneratedPath>$(MSBuildProjectDirectory)/Generated</GeneratedPath>
+      <GeneratorProject>$(MSBuildProjectDirectory)/CodeGeneration/TestGeneratorConsole.csproj</GeneratorProject>
+      <GeneratorOutputPath>$(MSBuildProjectDirectory)/CodeGeneration/bin/$(Configuration)/net9.0/TestGeneratorConsole</GeneratorOutputPath>
+      <GeneratorOutputPathExe>$(GeneratorOutputPath).exe</GeneratorOutputPathExe>
+      <GeneratorOutputPathDll>$(GeneratorOutputPath).dll</GeneratorOutputPathDll>
     </PropertyGroup>
     
     <!-- Create Generated directory if it doesn't exist -->
     <MakeDir Directories="$(GeneratedPath)" />
     
-    <!-- Run the test generator (we'll compile and run the generator inline) -->
-    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)/CodeGeneration/TestGeneratorConsole.csproj&quot; -- &quot;$(FeaturesPath)&quot; &quot;$(GeneratedPath)&quot; &quot;$(MSBuildProjectDirectory)/harmony-config.json&quot;" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" />
+    <!-- Build the generator if necessary -->
+    <MSBuild Projects="$(GeneratorProject)" Targets="Build" Properties="Configuration=$(Configuration)" />
+    
+    <!-- Always use dotnet to run the DLL for cross-platform compatibility -->
+    <Exec Command="dotnet &quot;$(GeneratorOutputPathDll)&quot; &quot;$(FeaturesPath)&quot; &quot;$(GeneratedPath)&quot; &quot;$(MSBuildProjectDirectory)/harmony-config.json&quot;" 
+          WorkingDirectory="$(MSBuildProjectDirectory)" 
+          ConsoleToMSBuild="true" />
   </Target>
   
   <!-- Clean generated files -->

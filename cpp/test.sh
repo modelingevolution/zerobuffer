@@ -48,7 +48,7 @@ if [[ "$TEST_TYPE" =~ ^[0-9]+\.[0-9]+$ ]]; then
     # Check if generated tests exist
     if [ ! -f "build/tests/generated/zerobuffer_generated_tests" ]; then
         echo -e "${YELLOW}Generated tests not built. Building now...${NC}"
-        cd build && make zerobuffer_generated_tests && cd ..
+        cd build && make -j8 zerobuffer_generated_tests && cd ..
     fi
     
     if [ -f "build/tests/generated/zerobuffer_generated_tests" ]; then
@@ -89,7 +89,7 @@ if [ "$TEST_TYPE" == "unit" ] || [ "$TEST_TYPE" == "all" ]; then
     # Check if generated tests exist
     if [ ! -f "tests/generated/zerobuffer_generated_tests" ]; then
         echo -e "${YELLOW}Building generated tests...${NC}"
-        make zerobuffer_generated_tests
+        make -j8 zerobuffer_generated_tests
     fi
     
     # Run generated tests

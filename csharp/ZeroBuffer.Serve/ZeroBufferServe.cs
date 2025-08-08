@@ -1,5 +1,9 @@
+using System.Collections.Immutable;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ModelingEvolution.Harmony.Shared;
 using StreamJsonRpc;
+using TechTalk.SpecFlow;
 using ZeroBuffer.Serve.JsonRpc;
 using ZeroBuffer.Serve.Logging;
 
@@ -9,19 +13,19 @@ public class ZeroBufferServe
 {
     private readonly ILogger<ZeroBufferServe> _logger;
     private readonly IStepExecutor _stepExecutor;
-    private readonly ITestContext _testContext;
     private readonly DualLoggerProvider _loggerProvider;
+    private readonly IServiceProvider _serviceProvider;
     
     public ZeroBufferServe(
         ILogger<ZeroBufferServe> logger,
         IStepExecutor stepExecutor,
-        ITestContext testContext,
-        DualLoggerProvider loggerProvider)
+        DualLoggerProvider loggerProvider,
+        IServiceProvider serviceProvider)
     {
         _logger = logger;
         _stepExecutor = stepExecutor;
-        _testContext = testContext;
         _loggerProvider = loggerProvider;
+        _serviceProvider = serviceProvider;
     }
     
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -34,7 +38,7 @@ public class ZeroBufferServe
         using var jsonRpc = new StreamJsonRpc.JsonRpc(stdout, stdin);
         
         // Register JSON-RPC methods
-        jsonRpc.AddLocalRpcMethod("health", new Func<HealthRequest, Task<bool>>(HealthAsync));
+        jsonRpc.AddLocalRpcMethod("health", new Func<Task<bool>>(HealthAsync));
         jsonRpc.AddLocalRpcMethod("initialize", new Func<InitializeRequest, Task<bool>>(InitializeAsync));
         jsonRpc.AddLocalRpcMethod("executeStep", new Func<StepRequest, Task<StepResponse>>(ExecuteStepAsync));
         jsonRpc.AddLocalRpcMethod("discover", new Func<Task<DiscoverResponse>>(DiscoverAsync));
@@ -67,10 +71,9 @@ public class ZeroBufferServe
         _logger.LogInformation("JSON-RPC server stopped");
     }
     
-    private async Task<bool> HealthAsync(HealthRequest request)
+    private async Task<bool> HealthAsync()
     {
-        _logger.LogInformation("Health check requested with hostPid: {HostPid}, featureId: {FeatureId}", 
-            request.HostPid, request.FeatureId);
+        _logger.LogInformation("Health check requested");
         return await Task.FromResult(true);
     }
     
@@ -80,7 +83,7 @@ public class ZeroBufferServe
         
         var steps = _stepExecutor.GetStepRegistry().GetAllSteps();
         
-        var response = new DiscoverResponse { Steps = steps };
+        var response = new DiscoverResponse(steps.ToImmutableList());
         
         _logger.LogInformation("Discovered {Count} step definitions", response.Steps.Count);
         return await Task.FromResult(response);
@@ -93,12 +96,17 @@ public class ZeroBufferServe
         
         try
         {
-            // Initialize test context with all available parameters
-            _testContext.Initialize(request.Role, request.Platform, request.Scenario, request.TestRunId);
-            
-            // Store Harmony process management parameters for resource isolation
-            _testContext.SetData("harmony_host_pid", request.HostPid);
-            _testContext.SetData("harmony_feature_id", request.FeatureId);
+            // Store initialization data in ScenarioContext for step access
+            var scenarioContext = _serviceProvider.GetService<TechTalk.SpecFlow.ScenarioContext>();
+            if (scenarioContext != null)
+            {
+                scenarioContext["role"] = request.Role;
+                scenarioContext["platform"] = request.Platform;
+                scenarioContext["scenario"] = request.Scenario;
+                scenarioContext["testRunId"] = request.TestRunId;
+                scenarioContext["harmony_host_pid"] = request.HostPid.ToString();
+                scenarioContext["harmony_feature_id"] = request.FeatureId.ToString();
+            }
             
             _logger.LogInformation("Initialization successful");
             return await Task.FromResult(true);
@@ -122,9 +130,17 @@ public class ZeroBufferServe
             
             // Collect all logs generated during this step
             var logs = _loggerProvider.GetAllLogs();
-            result.Logs.AddRange(logs);
             
-            return result;
+            // Combine existing logs with new logs
+            var allLogs = (result.Logs ?? ImmutableList<LogResponse>.Empty)
+                .AddRange(logs);
+            
+            return new StepResponse(
+                Success: result.Success,
+                Error: result.Error,
+                Context: result.Context,
+                Logs: allLogs
+            );
         }
         catch (Exception ex)
         {
@@ -133,12 +149,12 @@ public class ZeroBufferServe
             // Get all logs including the error
             var logs = _loggerProvider.GetAllLogs();
             
-            return new StepResponse
-            {
-                Success = false,
-                Error = ex.Message,
-                Logs = logs
-            };
+            return new StepResponse(
+                Success: false,
+                Error: ex.Message,
+                Context: null,
+                Logs: logs.ToImmutableList()
+            );
         }
     }
     
@@ -148,7 +164,15 @@ public class ZeroBufferServe
         
         try
         {
-            _testContext.Cleanup();
+            // Clear ScenarioContext
+            var scenarioContext = _serviceProvider.GetService<TechTalk.SpecFlow.ScenarioContext>();
+            if (scenarioContext != null)
+            {
+                scenarioContext.Clear();
+            }
+            
+            // Note: TestContext cleanup removed - using ScenarioContext only
+            
             await Task.CompletedTask;
         }
         catch (Exception ex)

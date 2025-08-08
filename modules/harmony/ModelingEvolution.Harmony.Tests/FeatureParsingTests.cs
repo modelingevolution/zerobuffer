@@ -9,7 +9,7 @@ namespace ModelingEvolution.Harmony.Tests;
 public class FeatureParsingTests
 {
     private readonly ITestOutputHelper _output;
-    private readonly IGherkinParser _parser;
+    private readonly GherkinParser _parser;
     
     public FeatureParsingTests(ITestOutputHelper output)
     {
@@ -25,7 +25,7 @@ public class FeatureParsingTests
         var featurePath = Path.Combine("Features", "BasicCommunication.feature");
         
         // Act
-        var scenarios = _parser.ParseFeatureFile(featurePath).ToList();
+        var scenarios = _parser.ParseFeatureFile(featurePath, FeatureIdMapper.GetFeatureId).ToList();
         
         // Assert
         scenarios.Should().NotBeEmpty();
@@ -61,7 +61,7 @@ public class FeatureParsingTests
     {
         // Arrange
         var featurePath = Path.Combine("Features", "BasicCommunication.feature");
-        var scenarios = _parser.ParseFeatureFile(featurePath).ToList();
+        var scenarios = _parser.ParseFeatureFile(featurePath, FeatureIdMapper.GetFeatureId).ToList();
         var simpleWriteRead = scenarios.First(s => s.Name.Contains("Simple Write-Read Cycle"));
         
         // Act
@@ -95,7 +95,7 @@ public class FeatureParsingTests
             var fileName = Path.GetFileName(featureFile);
             _output.WriteLine($"\n{fileName}:");
             
-            var scenarios = _parser.ParseFeatureFile(featureFile).ToList();
+            var scenarios = _parser.ParseFeatureFile(featureFile, FeatureIdMapper.GetFeatureId).ToList();
             scenarios.Should().NotBeEmpty($"{fileName} should contain scenarios");
             
             var totalProcesses = new HashSet<string>();

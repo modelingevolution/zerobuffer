@@ -5,10 +5,12 @@
  * - Content-Length header support (LSP-style)
  * - 30-second timeout for step execution
  * - Proper JSON-RPC error handling
+ * - Fixed logging to stderr before global objects are created
  */
 
 #include "step_definitions/step_registry.h"
 #include "step_definitions/test_context.h"
+#include "log_collector.h"
 
 #include <zerobuffer/logger.h>
 #include <nlohmann/json.hpp>
@@ -18,11 +20,75 @@
 #include <sstream>
 #include <future>
 #include <chrono>
+#include <thread>
+#include <cstdlib>
+
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#else
+#include <unistd.h>
+#endif
 #include <algorithm>
 #include <cctype>
 
 using json = nlohmann::json;
 using namespace zerobuffer::steps;
+
+// Helper function to get JSON value case-insensitively
+std::string getJsonStringCaseInsensitive(const json& obj, const std::string& key, const std::string& defaultValue = "") {
+    if (!obj.is_object()) {
+        return defaultValue;
+    }
+    
+    // First try exact match
+    if (obj.contains(key)) {
+        auto val = obj[key];
+        return val.is_string() ? val.get<std::string>() : defaultValue;
+    }
+    
+    // Try case-insensitive match
+    std::string lowerKey = key;
+    std::transform(lowerKey.begin(), lowerKey.end(), lowerKey.begin(), ::tolower);
+    
+    for (auto& [objKey, value] : obj.items()) {
+        std::string lowerObjKey = objKey;
+        std::transform(lowerObjKey.begin(), lowerObjKey.end(), lowerObjKey.begin(), ::tolower);
+        
+        if (lowerObjKey == lowerKey) {
+            return value.is_string() ? value.get<std::string>() : defaultValue;
+        }
+    }
+    
+    return defaultValue;
+}
+
+// Initialize logging before any global objects are created
+// This ensures that BufferNamingService logs go to stderr, not stdout
+namespace {
+    struct LogInitializer {
+        LogInitializer() {
+            // Check for ZEROBUFFER_LOG_LEVEL environment variable
+            const char* log_level_env = std::getenv("ZEROBUFFER_LOG_LEVEL");
+            boost::log::trivial::severity_level log_level = boost::log::trivial::info;
+            
+            if (log_level_env) {
+                std::string level_str(log_level_env);
+                if (level_str == "TRACE") log_level = boost::log::trivial::trace;
+                else if (level_str == "DEBUG") log_level = boost::log::trivial::debug;
+                else if (level_str == "INFO") log_level = boost::log::trivial::info;
+                else if (level_str == "WARNING") log_level = boost::log::trivial::warning;
+                else if (level_str == "ERROR") log_level = boost::log::trivial::error;
+                else if (level_str == "FATAL") log_level = boost::log::trivial::fatal;
+            }
+            
+            // Initialize logging to stderr
+            zerobuffer::init_logging(log_level);
+        }
+    };
+    // This will be initialized before g_testContext
+    static LogInitializer g_logInit;
+}
 
 // Global test context (will be managed better in iteration 5)
 static TestContext g_testContext;
@@ -31,7 +97,7 @@ static TestContext g_testContext;
 static constexpr auto STEP_TIMEOUT = std::chrono::seconds(30);
 
 /**
- * Read Content-Length header and JSON body
+ * Read Content-Length header and JSON body using C++ streams
  */
 std::string readJsonRequest() {
     std::string line;
@@ -61,7 +127,7 @@ std::string readJsonRequest() {
         }
     }
     
-    // If no Content-Length, return empty (for backward compatibility with line mode)
+    // If no Content-Length, return empty
     if (contentLength == 0) {
         ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "No Content-Length, returning empty";
         return "";
@@ -70,6 +136,14 @@ std::string readJsonRequest() {
     // Read JSON body
     std::string jsonBody(contentLength, '\0');
     std::cin.read(&jsonBody[0], contentLength);
+    
+    // Check if read was successful
+    if (std::cin.gcount() != static_cast<std::streamsize>(contentLength)) {
+        ZEROBUFFER_LOG_ERROR("zerobuffer-serve") << "Failed to read full body. Expected " 
+                                                  << contentLength << " bytes, got " 
+                                                  << std::cin.gcount();
+        return "";
+    }
     
     ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "Read body (" << contentLength << " bytes): " << jsonBody;
     
@@ -92,7 +166,7 @@ void writeJsonResponse(const json& response) {
 }
 
 /**
- * Execute step with timeout
+ * Execute step with timeout and log collection
  */
 json executeStepWithTimeout(const std::string& stepText) {
     json result = {
@@ -100,6 +174,11 @@ json executeStepWithTimeout(const std::string& stepText) {
         {"data", json::object()},
         {"logs", json::array()}
     };
+    
+    // Clear any previous logs and start collecting
+    auto& logCollector = zerobuffer::serve::get_log_collector();
+    logCollector.clear_logs();
+    logCollector.start_collecting();
     
     try {
         // Launch step execution asynchronously
@@ -125,6 +204,11 @@ json executeStepWithTimeout(const std::string& stepText) {
         ZEROBUFFER_LOG_ERROR("zerobuffer-serve") << "Step execution exception: " << e.what();
         result["error"] = std::string("Exception: ") + e.what();
     }
+    
+    // Collect all logs generated during step execution
+    auto logs = logCollector.get_logs_as_json();
+    ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Collected " << logs.size() << " log entries for step: " << stepText;
+    result["logs"] = logs;
     
     return result;
 }
@@ -162,17 +246,25 @@ json handleRequest(const json& request) {
                 json stepRequest = params[0];
                 
                 // Log all fields in the request
-                ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Step request fields:";
+                ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "Step request fields:";
                 for (auto& [key, value] : stepRequest.items()) {
                     if (value.is_string()) {
-                        ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "  " << key << ": " << value.get<std::string>();
+                        ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "  " << key << ": " << value.get<std::string>();
                     } else {
-                        ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "  " << key << ": " << value.dump();
+                        ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "  " << key << ": " << value.dump();
                     }
                 }
                 
-                stepType = stepRequest.value("stepType", "");
-                stepText = stepRequest.value("step", "");
+                // Get fields - try PascalCase first (C# default), then camelCase
+                stepType = getJsonStringCaseInsensitive(stepRequest, "StepType");
+                if (stepType.empty()) {
+                    stepType = getJsonStringCaseInsensitive(stepRequest, "stepType");
+                }
+                
+                stepText = getJsonStringCaseInsensitive(stepRequest, "Step");
+                if (stepText.empty()) {
+                    stepText = getJsonStringCaseInsensitive(stepRequest, "step");
+                }
                 
                 // Handle case-insensitive stepType
                 if (!stepType.empty()) {
@@ -180,9 +272,17 @@ json handleRequest(const json& request) {
                     stepType[0] = std::toupper(stepType[0]);
                 }
             } else if (params.is_object()) {
-                // Direct object format: {"stepType": "Given", "step": "..."}
-                stepType = params.value("stepType", "");
-                stepText = params.value("step", "");
+                // Direct object format: {"StepType": "Given", "Step": "..."} or {"stepType": "Given", "step": "..."}
+                // Get fields - try PascalCase first (C# default), then camelCase
+                stepType = getJsonStringCaseInsensitive(params, "StepType");
+                if (stepType.empty()) {
+                    stepType = getJsonStringCaseInsensitive(params, "stepType");
+                }
+                
+                stepText = getJsonStringCaseInsensitive(params, "Step");
+                if (stepText.empty()) {
+                    stepText = getJsonStringCaseInsensitive(params, "step");
+                }
                 
                 // Handle case-insensitive stepType
                 if (!stepType.empty()) {
@@ -208,7 +308,19 @@ json handleRequest(const json& request) {
             ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Executing step: " << stepText;
             
             // Execute the step with timeout
-            response["result"] = executeStepWithTimeout(stepText);
+            auto stepResult = executeStepWithTimeout(stepText);
+            ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Step result logs count: " << stepResult["logs"].size();
+            
+            // Check if this is a direct call (integration test) or wrapped call (Harmony)
+            if (params.is_object() && !params.contains("stepType")) {
+                // Direct call from integration test - return result directly
+                ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Direct call detected - returning result directly";
+                response["result"] = stepResult;
+            } else {
+                // Call from Harmony with extra params - also wrap in result
+                ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Harmony call detected - wrapping in result";
+                response["result"] = stepResult;
+            }
             
         } else if (method == "health") {
             // Simple health check
@@ -221,8 +333,15 @@ json handleRequest(const json& request) {
             
             // Extract test info if provided
             json params = request.value("params", json::object());
-            if (params.contains("testName")) {
-                std::string testName = params["testName"];
+            
+            // Handle both array-wrapped and direct params
+            if (params.is_array() && params.size() == 1 && params[0].is_object()) {
+                params = params[0];
+            }
+            
+            // Get testName case-insensitively
+            std::string testName = getJsonStringCaseInsensitive(params, "testName");
+            if (!testName.empty()) {
                 ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Running test: " << testName;
             }
             
@@ -286,11 +405,16 @@ json handleRequest(const json& request) {
 }
 
 int main() {
-    // Initialize logging
-    zerobuffer::init_logging(zerobuffer::debug);
+    // Set stdin/stdout to binary mode on Windows
+#ifdef _WIN32
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
     
+    // Logging already initialized by LogInitializer
     ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Starting JSON-RPC server (Iteration 4 - Harmony Compliant)";
     ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Protocol: Content-Length headers, 30-second timeout";
+    ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "PID: " << getpid();
     
     // Register all available step definitions
     StepRegistry::getInstance().registerAllSteps();
@@ -304,17 +428,21 @@ int main() {
     }
     
     // Main loop - read JSON with Content-Length headers
+    ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Entering main loop";
     while (true) {
         try {
+            ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "Waiting for request...";
+            
             // Read request (with Content-Length header)
             std::string jsonBody = readJsonRequest();
             
-            // If no body read (no Content-Length header), check for EOF
+            // If no body read, check for EOF
             if (jsonBody.empty()) {
                 if (std::cin.eof()) {
-                    ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "EOF reached, shutting down";
+                    ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Stream closed, shutting down";
                     break;
                 }
+                // Could be a temporary issue, continue
                 continue;
             }
             
@@ -330,12 +458,6 @@ int main() {
             // Check if shutdown was requested
             if (request.value("method", "") == "shutdown") {
                 ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Shutting down...";
-                break;
-            }
-            
-            // Check for EOF after processing the request
-            if (std::cin.eof()) {
-                ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "EOF reached after processing request";
                 break;
             }
             

@@ -50,7 +50,7 @@ public class ScenarioCountTest : TestBase
         foreach (var featureFile in Directory.GetFiles("Features", "*.feature"))
         {
             var featureName = Path.GetFileNameWithoutExtension(featureFile);
-            var scenarios = gherkinParser.ParseFeatureFile(featureFile).ToList();
+            var scenarios = gherkinParser.ParseFeatureFile(featureFile, FeatureIdMapper.GetFeatureId).ToList();
             scenariosByFeature[featureName] = scenarios.Select(s => s.Name).ToList();
         }
         
@@ -67,7 +67,7 @@ public class ScenarioCountTest : TestBase
             _output.WriteLine($"\n{feature}.feature: {scenarios.Count} scenarios");
             foreach (var scenario in scenarios)
             {
-                var processCount = gherkinParser.ParseFeatureFile($"Features/{feature}.feature")
+                var processCount = gherkinParser.ParseFeatureFile($"Features/{feature}.feature", FeatureIdMapper.GetFeatureId)
                     .First(s => s.Name == scenario)
                     .GetRequiredProcesses()
                     .Count();

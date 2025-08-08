@@ -1,6 +1,9 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ModelingEvolution.Harmony.Execution;
 using ModelingEvolution.Harmony.ProcessManagement;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ModelingEvolution.Harmony.Core;
 
@@ -29,7 +32,7 @@ public class ScenarioExecution
     /// <summary>
     /// Executes the scenario with the configured platform combination
     /// </summary>
-    public async Task<ExecutionResult> RunAsync(IStepExecutor stepExecutor, IProcessManager processManager,
+    public async Task<ScenarioExecutionResult> RunAsync(IStepExecutor stepExecutor, IProcessManager processManager,
         Action<string> Log, CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -39,7 +42,7 @@ public class ScenarioExecution
         {
             // Start required processes
             await StartProcessesAsync(processManager,cancellationToken);
-            
+            ImmutableDictionary<string,string> context = ImmutableDictionary<string, string>.Empty;
             // Execute background steps if any
             if (Scenario.Background != null)
             {
@@ -53,7 +56,7 @@ public class ScenarioExecution
                         logs.AddRange(specialResult.Logs);
                         if (!specialResult.Success)
                         {
-                            return new ExecutionResult
+                            return new ScenarioExecutionResult
                             {
                                 Success = false,
                                 Duration = stopwatch.Elapsed,
@@ -64,7 +67,8 @@ public class ScenarioExecution
                         continue;
                     }
                     
-                    var result = await stepExecutor.ExecuteStepAsync(step, Platforms, cancellationToken);
+                    var result = await stepExecutor.ExecuteStepAsync(step, Platforms, context,cancellationToken);
+                    context = result.Context;
                     logs.AddRange(result.Logs);
 
                     foreach(var log in result.Logs)
@@ -72,7 +76,7 @@ public class ScenarioExecution
 
                     if (!result.Success)
                     {
-                        return new ExecutionResult
+                        return new ScenarioExecutionResult
                         {
                             Success = false,
                             Duration = stopwatch.Elapsed,
@@ -94,7 +98,7 @@ public class ScenarioExecution
                     logs.AddRange(specialResult.Logs);
                     if (!specialResult.Success)
                     {
-                        return new ExecutionResult
+                        return new ScenarioExecutionResult
                         {
                             Success = false,
                             Duration = stopwatch.Elapsed,
@@ -105,7 +109,8 @@ public class ScenarioExecution
                     continue;
                 }
                 Debug.WriteLine($"==> {step}");
-                var result = await stepExecutor.ExecuteStepAsync(step, Platforms, cancellationToken);
+                var result = await stepExecutor.ExecuteStepAsync(step, Platforms, context, cancellationToken);
+                context = result.Context;
                 logs.AddRange(result.Logs);
 
                 foreach (var log in result.Logs)
@@ -117,7 +122,7 @@ public class ScenarioExecution
 
                 if (!result.Success)
                 {
-                    return new ExecutionResult
+                    return new ScenarioExecutionResult
                     {
                         Success = false,
                         Duration = stopwatch.Elapsed,
@@ -127,7 +132,7 @@ public class ScenarioExecution
                 }
             }
             
-            return new ExecutionResult
+            return new ScenarioExecutionResult
             {
                 Success = true,
                 Duration = stopwatch.Elapsed,
@@ -136,7 +141,7 @@ public class ScenarioExecution
         }
         catch (Exception ex)
         {
-            return new ExecutionResult
+            return new ScenarioExecutionResult
             {
                 Success = false,
                 Duration = stopwatch.Elapsed,
@@ -209,22 +214,25 @@ public class ScenarioExecution
             var seconds = int.Parse(waitMatch.Groups[1].Value);
             var logs = new List<LogEntry>
             {
-                new LogEntry
-                {
-                    Timestamp = DateTime.UtcNow,
-                    Process = "harmony",
-                    Level = "INFO",
-                    Message = $"Waiting for {seconds} seconds"
-                }
+                new LogEntry(
+                    Timestamp: DateTime.UtcNow,
+                    Process: "harmony",
+                    Platform: "harmony",
+                    Level: LogLevel.Information,
+                    Message: $"Waiting for {seconds} seconds"
+                )
             };
             
             await Task.Delay(TimeSpan.FromSeconds(seconds), cancellationToken);
             
-            return (true, new StepExecutionResult
-            {
-                Success = true,
-                Logs = logs
-            });
+            return (true, new StepExecutionResult(
+                Success: true,
+                Error: null,
+                Context: ImmutableDictionary<string, string>.Empty,
+                Exception: null,
+                Logs: logs.ToImmutableList(),
+                Duration: TimeSpan.Zero
+            ));
         }
         
         // 2. Process lifecycle steps (When only)
@@ -232,7 +240,7 @@ public class ScenarioExecution
         
         if (step.Type != StepType.When)
         {
-            return (false, null);
+            return (false, CreateEmptyStepExecutionResult());
         }
         
         var text = step.Text.ToLowerInvariant();
@@ -245,7 +253,7 @@ public class ScenarioExecution
         
         if (!processMatch.Success)
         {
-            return (false, null);
+            return (false, CreateEmptyStepExecutionResult());
         }
         
         var processName = processMatch.Groups[1].Value;
@@ -258,66 +266,68 @@ public class ScenarioExecution
             if (action.Contains("shutdown"))
             {
                 // Graceful shutdown
-                logs.Add(new LogEntry
-                {
-                    Timestamp = DateTime.UtcNow,
-                    Process = processName,
-                    Level = "INFO",
-                    Message = $"Gracefully shutting down process '{processName}'"
-                });
+                logs.Add(new LogEntry(
+                    Timestamp: DateTime.UtcNow,
+                    Process: processName,
+                    Platform: "unknown",
+                    Level: LogLevel.Information,
+                    Message: $"Gracefully shutting down process '{processName}'"
+                ));
                 
                 await GracefulShutdownAsync(processManager, processName, cancellationToken);
             }
             else if (action.Contains("killed"))
             {
                 // Force kill
-                logs.Add(new LogEntry
-                {
-                    Timestamp = DateTime.UtcNow,
-                    Process = processName,
-                    Level = "INFO",
-                    Message = $"Force killing process '{processName}'"
-                });
+                logs.Add(new LogEntry(
+                    Timestamp: DateTime.UtcNow,
+                    Process: processName,
+                    Platform: "unknown",
+                    Level: LogLevel.Information,
+                    Message: $"Force killing process '{processName}'"
+                ));
                 
                 await ForceKillProcessAsync(processManager, processName);
             }
             else if (action == "crashes")
             {
                 // Inject crash via JSON-RPC
-                logs.Add(new LogEntry
-                {
-                    Timestamp = DateTime.UtcNow,
-                    Process = processName,
-                    Level = "INFO",
-                    Message = $"Injecting crash into process '{processName}'"
-                });
+                logs.Add(new LogEntry(
+                    Timestamp: DateTime.UtcNow,
+                    Process: processName,
+                    Platform: "unknown",
+                    Level: LogLevel.Information,
+                    Message: $"Injecting crash into process '{processName}'"
+                ));
                 
                 await InjectCrashAsync(processManager, processName, cancellationToken);
             }
             
-            return (true, new StepExecutionResult
-            {
-                Success = true,
-                Logs = logs
-            });
+            return (true, new StepExecutionResult(
+                Success: true,
+                Error: null,
+                Context: ImmutableDictionary<string, string>.Empty,
+                Exception: null,
+                Logs: logs.ToImmutableList(),
+                Duration: TimeSpan.Zero
+            ));
         }
         catch (Exception ex)
         {
-            return (true, new StepExecutionResult
-            {
-                Success = false,
-                Error = $"Failed to {action} process '{processName}': {ex.Message}",
-                Logs = new List<LogEntry>
-                {
-                    new LogEntry
-                    {
-                        Timestamp = DateTime.UtcNow,
-                        Process = processName,
-                        Level = "ERROR",
-                        Message = ex.Message
-                    }
-                }
-            });
+            return (true, new StepExecutionResult(
+                Success: false,
+                Error: $"Failed to {action} process '{processName}': {ex.Message}",
+                Context: ImmutableDictionary<string, string>.Empty,
+                Exception: ex,
+                Logs: ImmutableList.Create(new LogEntry(
+                    Timestamp: DateTime.UtcNow,
+                    Process: processName,
+                    Platform: "unknown",
+                    Level: LogLevel.Error,
+                    Message: ex.Message
+                )),
+                Duration: TimeSpan.Zero
+            ));
         }
     }
     
@@ -325,7 +335,8 @@ public class ScenarioExecution
     {
         // Send shutdown signal via JSON-RPC
         var connection = processManager.GetConnection(processName);
-        await connection.InvokeAsync<object>("shutdown", new { }, cancellationToken);
+        var client = connection.CreateServoClient();
+        await client.ShutdownAsync(cancellationToken);
         
         // Give it a moment to shutdown gracefully
         await Task.Delay(1000, cancellationToken);
@@ -339,9 +350,18 @@ public class ScenarioExecution
     
     private async Task InjectCrashAsync(IProcessManager processManager, string processName, CancellationToken cancellationToken)
     {
-        // Send crash command via JSON-RPC
+        // Send crash command via JSON-RPC (not part of standard servo interface)
         var connection = processManager.GetConnection(processName);
-        await connection.InvokeAsync<object>("crash", new { }, cancellationToken);
+        
+        // Cast to concrete type to access JsonRpc for non-standard methods
+        if (connection is JsonRpcProcessConnection jsonRpcConnection)
+        {
+            await jsonRpcConnection.JsonRpc.InvokeAsync("crash", cancellationToken);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Cannot inject crash into non-JsonRpc connection for {processName}");
+        }
         
         // Give it a moment to crash
         await Task.Delay(500, cancellationToken);
@@ -374,23 +394,28 @@ public class ScenarioExecution
         
         return processNames.ToList();
     }
+    
+    private static StepExecutionResult CreateEmptyStepExecutionResult()
+    {
+        return new StepExecutionResult(
+            Success: true,
+            Error: null,
+            Context: ImmutableDictionary<string, string>.Empty,
+            Exception: null,
+            Logs: ImmutableList<LogEntry>.Empty,
+            Duration: TimeSpan.Zero
+        );
+    }
 }
 
-public class ExecutionResult
+/// <summary>
+/// Local execution result with additional properties for scenario execution
+/// </summary>
+public class ScenarioExecutionResult
 {
     public bool Success { get; init; }
     public TimeSpan Duration { get; init; }
     public string? Error { get; init; }
     public Exception? Exception { get; init; }
     public List<LogEntry> Logs { get; init; } = new();
-}
-
-[DebuggerDisplay("{Process} {Level} {Message}")]
-public class LogEntry
-{
-    public DateTime Timestamp { get; init; }
-    public string Process { get; init; } = "";
-    public string Platform { get; init; } = "";
-    public string Level { get; init; } = "INFO";
-    public string Message { get; init; } = "";
 }

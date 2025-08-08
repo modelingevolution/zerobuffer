@@ -1,15 +1,27 @@
-# C++ Scenario Development Guide
+# ZeroBuffer C++ Testing Guide
 
-## Prerequisites
-1. Read ZeroBuffer protocol documentation (all markdown files)
-2. Read harmony documentation (all markdown files)
-3. Understand the dual-mode testing approach (DESIGN.md)
+## Overview
+This directory contains the testing infrastructure for ZeroBuffer C++, including:
+- Generated tests from Gherkin feature files
+- Cross-platform test executables
+- Step definitions for BDD-style testing
 
-## File Locations
-- **ZeroBuffer Library**: `cpp/include/zerobuffer/` and `cpp/src/`
-- **Feature Files**: `cpp/build/features/` (auto-copied from `../../ZeroBuffer.Harmony.Tests/Features/`)
-- **Step Definitions**: `cpp/step_definitions/` (create as needed for each feature)
-- **Test Infrastructure**: `cpp/tests/` (StepRegistry, TestContext, etc.)
+## Test Structure
+
+### Generated Tests (`tests/generated/`)
+- Auto-generated from feature files using `harmony-cpp-gen` tool
+- Google Test based test files
+- One test file per feature (e.g., `test_basic_communication.cpp`)
+
+### Step Definitions (`step_definitions/`)
+- `step_registry.cpp` - Central registry for all step definitions
+- `test_context.cpp` - Test context management
+- `basic_communication_steps.cpp` - Steps for basic communication scenarios
+- Additional step files to be added as features are implemented
+
+### Cross-Platform Tests (`tests/cross-platform/`)
+- `test_reader.cpp` - Standalone reader executable for cross-platform testing
+- `test_writer.cpp` - Standalone writer executable for cross-platform testing
 
 ## Step Definition Implementation
 
@@ -85,33 +97,49 @@ registry.registerStep(
 3. **No unused steps** - delete if not in feature file
 4. **No process-specific logic** - treat all processes the same (reader/writer only)
 
-## Development Process - YOUR TODO LIST
+## Running Tests
 
-0. **READ THE PREREQUISITES** if you haven't!
-1. **Read scenario** in feature file; Try to understand it and assess if it makes sense
-2. **Identify required step definitions**
-3. **Analyze data exchange** - If processes need to exchange data, stop and ask for help
-4. **Implement each step** with actual ZeroBuffer operations
-5. **Run single test locally**: `cpp/test.sh 1.1` (runs via Google Test)
-6. **Fix issues** - Read protocol docs if test fails
-7. **Only if GREEN**, run with Harmony: `../../test.sh cpp 1.1`
-
-### Running Tests
-
-#### Local Testing (Google Test)
+### Local Testing (Google Test)
 ```bash
-cd cpp
-./test.sh 1.1        # Run Test 1.1
-./test.sh 1.2        # Run Test 1.2
-./test.sh basic      # Run all BasicCommunication tests
+# From cpp directory
+./test.sh            # Run all unit tests (default)
+./test.sh 1.1        # Run specific test by number
+./test.sh benchmark  # Run benchmarks
 ```
 
-#### Harmony Testing (Cross-platform)
+### Generating Tests
 ```bash
-cd ../..  # Go to zerobuffer root
-./test.sh cpp 1.1    # Run Test 1.1 with C++/C++
+# Generate tests from feature files
+harmony-cpp-gen --input ../ZeroBuffer.Harmony.Tests/Features --output tests/generated
+
+# Or use the helper script
+./generate_tests.sh
+```
+
+### Building
+```bash
+./build.sh           # Build with tests enabled (default)
+./build.sh Debug     # Debug build
+./build.sh Release clean  # Clean rebuild
+```
+
+### Harmony Integration Testing
+```bash
+# From zerobuffer root directory
+cd ..
+./test.sh cpp 1.1    # Run specific test with C++ implementation
 ./test.sh cpp        # Run all C++ tests
 ```
+
+## Logging Control
+
+The test infrastructure supports environment variable control:
+```bash
+ZEROBUFFER_LOG_LEVEL=DEBUG ./test.sh 1.1  # Show debug output
+ZEROBUFFER_LOG_LEVEL=ERROR ./test.sh      # Only show errors
+```
+
+Available log levels: TRACE, DEBUG, INFO, WARNING, ERROR, FATAL
 
 ### Troubleshooting
 

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ZeroBuffer.Serve.JsonRpc;
 
@@ -18,7 +19,7 @@ public class RegistryBasedStepExecutor : IStepExecutor
         _logger.LogInformation("Executing step via registry: {StepType} {Step}", request.StepType, request.Step);
         
         // The StepRegistry handles all the execution logic
-        return await _stepRegistry.ExecuteStepAsync(request.StepType, request.Step);
+        return await _stepRegistry.ExecuteStepAsync(request);
     }
     
     public StepRegistry GetStepRegistry()

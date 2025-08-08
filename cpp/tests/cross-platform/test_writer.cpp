@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     WriterConfig config;
     
     // Initialize logging with debug level for testing
-    zerobuffer::init_logging(zerobuffer::debug);
+    zerobuffer::init_logging(boost::log::trivial::debug);
     
     // Parse command line
     static struct option long_options[] = {

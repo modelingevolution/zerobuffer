@@ -44,6 +44,9 @@ struct OIEB {
 ./build.sh Debug        # Build in Debug mode
 ./build.sh Release clean # Clean build
 
+# Note: Initial builds can take up to 5 minutes due to dependency downloads
+# (Google Test, nlohmann/json, etc.). Subsequent builds are much faster.
+
 # Testing
 ./test.sh               # Run all tests (unit + benchmarks)
 ./test.sh unit          # Run unit tests only
@@ -72,6 +75,17 @@ ctest --output-on-failure
 
 ## Development Guidelines
 
+### Logging Best Practices
+- **ALWAYS use proper logging** instead of `std::cout` or `std::cerr` for debugging
+- Use the ZEROBUFFER_LOG macros (ZEROBUFFER_LOG_DEBUG, ZEROBUFFER_LOG_INFO, etc.)
+- Log to appropriate levels:
+  - DEBUG: Detailed debugging information
+  - INFO: General informational messages
+  - WARNING: Warning messages
+  - ERROR: Error conditions
+- Logging is controlled by ZEROBUFFER_LOG_LEVEL environment variable
+- Logs go to stderr to avoid interfering with stdout protocol communication
+
 ### Adding New Tests
 - Add test files to `tests/` directory
 - Update `tests/CMakeLists.txt` to include new test executables
@@ -91,6 +105,13 @@ ctest --output-on-failure
 - Test with different compilers and platforms
 
 ## Common Issues
+
+### Slow Initial Build
+- First build can take up to 5 minutes
+- CMake downloads dependencies (Google Test, nlohmann/json)
+- Network speed affects download time
+- Subsequent builds are much faster (usually under 30 seconds)
+- If build seems stuck, wait at least 5 minutes before cancelling
 
 ### Clock Skew Warnings
 - Common in WSL environments
@@ -116,3 +137,59 @@ The project includes comprehensive tests:
 - **Benchmarks**: Performance measurements for latency and throughput
 
 All tests should pass with 100% success rate.
+
+## Code Quality Rules
+
+### Best Practices
+**IMPORTANT**: Always follow established best practices for the language and framework being used:
+
+1. **Remove redundant code**: Eliminate duplicate fields, unnecessary parameters, and dead code
+2. **Use meaningful names**: Choose clear, descriptive names that convey intent
+3. **Keep it simple**: Prefer straightforward solutions over complex ones
+4. **Follow existing patterns**: Match the codebase's established conventions and style
+5. **Validate inputs**: Check parameters and handle edge cases appropriately
+6. **Clean up resources**: Ensure proper disposal of resources and cleanup in error paths
+
+### SOLID Principles
+Follow SOLID principles for maintainable, extensible code:
+
+1. **Single Responsibility Principle (SRP)**: Each class should have one reason to change
+2. **Open/Closed Principle (OCP)**: Open for extension, closed for modification
+3. **Liskov Substitution Principle (LSP)**: Subtypes must be substitutable for their base types
+4. **Interface Segregation Principle (ISP)**: Prefer many specific interfaces over one general-purpose interface
+5. **Dependency Inversion Principle (DIP)**: Depend on abstractions, not concretions
+
+### Separation of Concerns (SoC)
+Maintain clear separation between different aspects of the system:
+
+1. **Layer separation**: Keep presentation, business logic, and data access layers distinct
+2. **Cross-cutting concerns**: Handle logging, error handling, and security separately from business logic
+3. **Module boundaries**: Each module should have a well-defined responsibility and interface
+4. **Avoid mixing concerns**: Don't combine I/O operations with business logic, keep UI separate from data processing
+
+### JSON-RPC Communication
+**IMPORTANT**: Using `dynamic`, `object`, or anonymous types in JSON-RPC communication is **FORBIDDEN**.
+
+Always use strongly-typed classes for:
+- Request parameters
+- Response types
+- All RPC method invocations
+
+Examples:
+```csharp
+// WRONG - Using dynamic, object, or anonymous types
+var response = await jsonRpc.InvokeAsync<dynamic>("executeStep", request);
+var response = await jsonRpc.InvokeAsync<object>("executeStep", request);
+var request = new { step = stepText };  // Anonymous type
+
+// CORRECT - Using strongly-typed classes
+var response = await jsonRpc.InvokeAsync<StepResponse>("executeStep", request);
+var response = await jsonRpc.InvokeAsync<ExecutionResult>("executeStep", request);
+var request = new StepRequest { Step = stepText };  // Strongly-typed class
+```
+
+This rule applies to all languages (C#, Python, etc.) and ensures:
+- Type safety and compile-time checking
+- Better IDE support and IntelliSense
+- Clear API contracts
+- Easier debugging and maintenance

@@ -1,6 +1,7 @@
 #include "basic_communication_steps.h"
 #include "step_registry.h"
 #include "test_context.h"
+#include "test_data_patterns.h"
 
 #include <zerobuffer/reader.h>
 #include <zerobuffer/writer.h>
@@ -9,6 +10,8 @@
 
 #include <thread>
 #include <chrono>
+
+using json = nlohmann::json;
 
 namespace zerobuffer {
 namespace steps {
@@ -32,7 +35,7 @@ void registerBasicCommunicationSteps() {
         [](TestContext& ctx, const std::vector<std::string>& params) {
             // This step is for compatibility with multi-process scenarios
             // In single-process tests, we don't need to do anything
-            ZEROBUFFER_LOG_DEBUG("Step") << "All processes ready";
+            ZEROBUFFER_LOG_DEBUG("Step") << "All processes ready very very well";
         }
     );
     
@@ -106,11 +109,8 @@ void registerBasicCommunicationSteps() {
                 throw std::runtime_error("Writer not found for process: " + process);
             }
             
-            // Create metadata buffer with test pattern
-            std::vector<uint8_t> metadata(metadataSize);
-            for (int i = 0; i < metadataSize; ++i) {
-                metadata[i] = static_cast<uint8_t>(i % 256);
-            }
+            // Use TestDataPatterns to generate consistent metadata
+            auto metadata = TestDataPatterns::generateMetadata(metadataSize);
             
             writer->set_metadata(metadata.data(), metadataSize);
             ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote metadata with size " << metadataSize;
@@ -130,11 +130,8 @@ void registerBasicCommunicationSteps() {
                 throw std::runtime_error("Writer not found for process: " + process);
             }
             
-            // Create frame data with test pattern including sequence
-            std::vector<uint8_t> frameData(frameSize);
-            for (int i = 0; i < frameSize; ++i) {
-                frameData[i] = static_cast<uint8_t>((sequence + i) % 256);
-            }
+            // Use TestDataPatterns to generate consistent frame data
+            auto frameData = TestDataPatterns::generateFrameData(frameSize, sequence);
             
             writer->write_frame(frameData.data(), frameSize);
             ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote frame with size " << frameSize 
@@ -171,12 +168,23 @@ void registerBasicCommunicationSteps() {
                                        " but got " + std::to_string(frame.size()));
             }
             
-            // Verify frame content (check first byte for sequence pattern)
+            // Verify frame content matches the expected pattern
             const uint8_t* data = static_cast<const uint8_t*>(frame.data());
-            uint8_t expectedFirstByte = static_cast<uint8_t>(expectedSequence % 256);
-            if (data[0] != expectedFirstByte) {
-                throw std::runtime_error("Frame sequence mismatch: expected sequence " + 
-                                       std::to_string(expectedSequence) + " but got different data");
+            auto expectedData = TestDataPatterns::generateFrameData(expectedSize, expectedSequence);
+            
+            // Compare at least the first few bytes to verify sequence pattern
+            bool dataMatches = true;
+            size_t bytesToCheck = std::min(size_t(10), size_t(expectedSize));
+            for (size_t i = 0; i < bytesToCheck; ++i) {
+                if (data[i] != expectedData[i]) {
+                    dataMatches = false;
+                    break;
+                }
+            }
+            
+            if (!dataMatches) {
+                throw std::runtime_error("Frame data mismatch: expected sequence " + 
+                                       std::to_string(expectedSequence) + " pattern but got different data");
             }
             
             ZEROBUFFER_LOG_DEBUG("Step") << "Frame read by " << process << " with sequence " 
@@ -197,7 +205,8 @@ void registerBasicCommunicationSteps() {
             const std::string& process = params[0];
             
             // Check that we have a valid frame from previous read
-            if (ctx.getProperty("last_read_frame_valid") != "true") {
+            json prop = ctx.getProperty("last_read_frame_valid");
+            if (!prop.is_string() || prop.get<std::string>() != "true") {
                 throw std::runtime_error("No valid frame to validate");
             }
             
@@ -217,7 +226,8 @@ void registerBasicCommunicationSteps() {
             }
             
             // If we have a pending frame to release, do it now
-            if (ctx.getProperty("pending_frame_release") == "true") {
+            json prop = ctx.getProperty("pending_frame_release");
+            if (prop.is_string() && prop.get<std::string>() == "true") {
                 // In real implementation, we'd release the last frame here
                 // For now, just clear the flag
                 ctx.setProperty("pending_frame_release", "false");
@@ -280,6 +290,270 @@ void registerBasicCommunicationSteps() {
             // Release the frame
             reader->release_frame(frame);
             ZEROBUFFER_LOG_DEBUG("Step") << "Frame released";
+        }
+    );
+    
+    // Step: the 'writer' process writes frame with sequence '{int}' (Test 1.2)
+    registry.registerStep(
+        "the '([^']+)' process writes frame with sequence '([^']+)'",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            int sequence = std::stoi(params[1]);
+            
+            auto* writer = ctx.getWriter(process);
+            if (!writer) {
+                throw std::runtime_error("Writer not found for process: " + process);
+            }
+            
+            // Use default frame size for this step (1024 bytes)
+            const size_t frameSize = 1024;
+            auto frameData = TestDataPatterns::generateFrameData(frameSize, sequence);
+            
+            writer->write_frame(frameData.data(), frameSize);
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote frame with sequence " << sequence;
+            
+            // Track sequences for verification
+            json prop = ctx.getProperty("written_sequences");
+            std::string sequencesStr = prop.is_string() ? prop.get<std::string>() : "";
+            if (!sequencesStr.empty()) sequencesStr += ",";
+            sequencesStr += std::to_string(sequence);
+            ctx.setProperty("written_sequences", sequencesStr);
+        }
+    );
+    
+    // Step: the 'reader' process should read frame with sequence '{int}' (Test 1.2)
+    // Note: Feature file has semicolons at the end for some steps
+    // Define the lambda once and reuse it
+    auto readFrameWithSequence = [](TestContext& ctx, const std::vector<std::string>& params) {
+        const std::string& process = params[0];
+        int expectedSequence = std::stoi(params[1]);
+        
+        auto* reader = ctx.getReader(process);
+        if (!reader) {
+            throw std::runtime_error("Reader not found for process: " + process);
+        }
+        
+        auto frame = reader->read_frame(std::chrono::milliseconds(5000));
+        
+        if (!frame.valid()) {
+            throw std::runtime_error("Failed to read frame - timeout or invalid frame");
+        }
+        
+        // Verify frame content matches the expected sequence pattern
+        const uint8_t* data = static_cast<const uint8_t*>(frame.data());
+        auto expectedData = TestDataPatterns::generateFrameData(1024, expectedSequence);
+        
+        // Compare first few bytes to verify sequence
+        bool dataMatches = true;
+        size_t bytesToCheck = std::min(size_t(10), frame.size());
+        for (size_t i = 0; i < bytesToCheck; ++i) {
+            if (data[i] != expectedData[i]) {
+                dataMatches = false;
+                break;
+            }
+        }
+        
+        if (!dataMatches) {
+            throw std::runtime_error("Frame data mismatch: expected sequence " + 
+                                   std::to_string(expectedSequence) + " pattern but got different data");
+        }
+        
+        ZEROBUFFER_LOG_DEBUG("Step") << process << " read frame with sequence " << expectedSequence;
+        
+        // Track read sequences for verification
+        json prop = ctx.getProperty("read_sequences");
+        std::string sequencesStr = prop.is_string() ? prop.get<std::string>() : "";
+        if (!sequencesStr.empty()) sequencesStr += ",";
+        sequencesStr += std::to_string(expectedSequence);
+        ctx.setProperty("read_sequences", sequencesStr);
+        
+        // Store frame for later release
+        ctx.setLastFrame(frame);
+    };
+    
+    // Register with semicolon (for Test 1.2 feature file)
+    registry.registerStep(
+        "the '([^']+)' process should read frame with sequence '([^']+)';",
+        readFrameWithSequence
+    );
+    
+    // Register without semicolon (for other tests)  
+    registry.registerStep(
+        "the '([^']+)' process should read frame with sequence '([^']+)'",
+        readFrameWithSequence
+    );
+    
+    // Step: the 'reader' process should verify all frames maintain sequential order (Test 1.2)
+    registry.registerStep(
+        "the '([^']+)' process should verify all frames maintain sequential order",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            
+            json prop = ctx.getProperty("read_sequences");
+            std::string readSequences = prop.is_string() ? prop.get<std::string>() : "";
+            if (readSequences.empty()) {
+                throw std::runtime_error("No sequences were read to verify");
+            }
+            
+            // Parse the comma-separated sequences
+            std::vector<int> sequences;
+            size_t pos = 0;
+            while (pos < readSequences.length()) {
+                size_t nextComma = readSequences.find(',', pos);
+                if (nextComma == std::string::npos) {
+                    sequences.push_back(std::stoi(readSequences.substr(pos)));
+                    break;
+                } else {
+                    sequences.push_back(std::stoi(readSequences.substr(pos, nextComma - pos)));
+                    pos = nextComma + 1;
+                }
+            }
+            
+            // Verify sequences are in order
+            for (size_t i = 1; i < sequences.size(); ++i) {
+                if (sequences[i] != sequences[i-1] + 1) {
+                    throw std::runtime_error("Sequences not in order: " + 
+                                           std::to_string(sequences[i-1]) + " followed by " + 
+                                           std::to_string(sequences[i]));
+                }
+            }
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " verified all " << sequences.size() 
+                                        << " frames maintain sequential order";
+        }
+    );
+    
+    // Step: the 'writer' process writes frames until buffer is full (Test 1.3)
+    registry.registerStep(
+        "the '([^']+)' process writes frames until buffer is full",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            
+            auto* writer = ctx.getWriter(process);
+            if (!writer) {
+                throw std::runtime_error("Writer not found for process: " + process);
+            }
+            
+            // Set a short timeout for detecting when buffer is full
+            writer->set_write_timeout(std::chrono::milliseconds(100));
+            
+            // Write frames until buffer is full
+            const size_t frameSize = 1024;
+            int frameCount = 0;
+            
+            while (true) {
+                try {
+                    auto frameData = TestDataPatterns::generateFrameData(frameSize, frameCount + 1);
+                    writer->write_frame(frameData.data(), frameSize);
+                    frameCount++;
+                    ZEROBUFFER_LOG_DEBUG("Step") << "Wrote frame " << frameCount;
+                    
+                    // Safety limit to prevent infinite loop
+                    if (frameCount > 100) {
+                        break;
+                    }
+                } catch (const BufferFullException&) {
+                    // Buffer is full, this is expected
+                    ZEROBUFFER_LOG_DEBUG("Step") << "Buffer is full after " << frameCount << " frames";
+                    break;
+                }
+            }
+            
+            if (frameCount == 0) {
+                throw std::runtime_error("Could not write any frames to buffer");
+            }
+            
+            // Reset timeout to default for subsequent operations
+            writer->set_write_timeout(std::chrono::milliseconds(5000));
+            
+            ctx.setProperty("frames_written_until_full", std::to_string(frameCount));
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote " << frameCount 
+                                        << " frames to fill buffer";
+        }
+    );
+    
+    // Step: the 'writer' process should experience timeout on next write (Test 1.3)
+    registry.registerStep(
+        "the '([^']+)' process should experience timeout on next write",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            
+            auto* writer = ctx.getWriter(process);
+            if (!writer) {
+                throw std::runtime_error("Writer not found for process: " + process);
+            }
+            
+            // Set a short timeout
+            writer->set_write_timeout(std::chrono::milliseconds(100));
+            
+            // Try to write when buffer is full
+            const size_t frameSize = 1024;
+            auto frameData = TestDataPatterns::generateFrameData(frameSize, 999);
+            
+            bool timedOut = false;
+            try {
+                writer->write_frame(frameData.data(), frameSize);
+                // If we get here, the write succeeded when it shouldn't have
+                throw std::runtime_error("Write succeeded when buffer should be full");
+            } catch (const BufferFullException&) {
+                // Expected - buffer is full and timeout occurred
+                timedOut = true;
+                ZEROBUFFER_LOG_DEBUG("Step") << process << " experienced expected timeout on write";
+            }
+            
+            if (!timedOut) {
+                throw std::runtime_error("Expected BufferFullException due to timeout, but didn't get one");
+            }
+            
+            // Reset timeout to default
+            writer->set_write_timeout(std::chrono::milliseconds(5000));
+        }
+    );
+    
+    // Step: the 'reader' process reads one frame (Test 1.3)
+    registry.registerStep(
+        "the '([^']+)' process reads one frame",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            
+            auto* reader = ctx.getReader(process);
+            if (!reader) {
+                throw std::runtime_error("Reader not found for process: " + process);
+            }
+            
+            auto frame = reader->read_frame(std::chrono::milliseconds(5000));
+            
+            if (!frame.valid()) {
+                throw std::runtime_error("Failed to read frame");
+            }
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " read one frame of size " << frame.size();
+            
+            // Store frame for later release during "signals space available"
+            ctx.setLastFrame(frame);
+            ctx.setProperty("pending_frame_release", "true");
+        }
+    );
+    
+    // Step: the 'writer' process should write successfully immediately (Test 1.3)
+    registry.registerStep(
+        "the '([^']+)' process should write successfully immediately",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            
+            auto* writer = ctx.getWriter(process);
+            if (!writer) {
+                throw std::runtime_error("Writer not found for process: " + process);
+            }
+            
+            // Now that reader has freed space, write should succeed immediately
+            const size_t frameSize = 1024;
+            auto frameData = TestDataPatterns::generateFrameData(frameSize, 1000);
+            
+            // This should succeed without timeout
+            writer->write_frame(frameData.data(), frameSize);
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote frame successfully after space was freed";
         }
     );
     

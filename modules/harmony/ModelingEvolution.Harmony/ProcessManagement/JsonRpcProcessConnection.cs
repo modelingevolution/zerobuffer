@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using StreamJsonRpc;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ModelingEvolution.Harmony.ProcessManagement;
 
@@ -15,12 +16,16 @@ public class JsonRpcProcessConnection : IProcessConnection, IDisposable
     private readonly JsonRpc _jsonRpc;
     private readonly ILogger<JsonRpcProcessConnection> _logger;
     private readonly string _platform;
-    private readonly SemaphoreSlim _connectionLock = new(1, 1);
     private bool _disposed;
     
     public string ProcessName { get; }
     public string Platform => _platform;
     public bool IsConnected => !_disposed && !_process.HasExited;
+    
+    /// <summary>
+    /// Exposed for special non-standard methods like "crash" used in testing
+    /// </summary>
+    internal JsonRpc JsonRpc => _jsonRpc;
     
     public JsonRpcProcessConnection(
         string processName, 
@@ -47,7 +52,11 @@ public class JsonRpcProcessConnection : IProcessConnection, IDisposable
             platform, processName, _process.Id);
         
         // Set up JSON-RPC over stdin/stdout
-        _jsonRpc = new JsonRpc(_process.StandardInput.BaseStream, _process.StandardOutput.BaseStream);
+        // Newtonsoft.Json is case-insensitive by default, which allows it to match
+        // both "level"/"message" from C++ and "Level"/"Message" from C#
+        var formatter = new JsonMessageFormatter();
+        var handler = new HeaderDelimitedMessageHandler(_process.StandardOutput.BaseStream, _process.StandardInput.BaseStream, formatter);
+        _jsonRpc = new JsonRpc(handler);
         
         // Handle error output
         _process.ErrorDataReceived += (sender, e) =>
@@ -63,58 +72,18 @@ public class JsonRpcProcessConnection : IProcessConnection, IDisposable
         _jsonRpc.StartListening();
         
         // Log JSON-RPC traffic if debug logging is enabled
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (_logger.IsEnabled(Microsoft.Extensions.Logging.LogLevel.Debug))
         {
             _jsonRpc.TraceSource.Listeners.Add(new JsonRpcTraceListener(_logger, processName));
         }
     }
     
-    public async Task<T> InvokeAsync<T>(string method, object parameters, CancellationToken cancellationToken = default)
+    public IServoClient CreateServoClient()
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(JsonRpcProcessConnection));
             
-        await _connectionLock.WaitAsync(cancellationToken);
-        try
-        {
-            _logger.LogDebug("Invoking {Method} on {ProcessName} ({Platform})", method, ProcessName, Platform);
-            
-            // Log the request if debug is enabled
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                var requestJson = JsonSerializer.Serialize(parameters, new JsonSerializerOptions { WriteIndented = true });
-                _logger.LogDebug("Request to {ProcessName}:\n{Request}", ProcessName, requestJson);
-            }
-            
-            // Invoke the method
-            var result = await _jsonRpc.InvokeWithParameterObjectAsync<T>(
-                method, 
-                parameters, 
-                cancellationToken);
-                
-            // Log the response if debug is enabled
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                var responseJson = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-                _logger.LogDebug("Response from {ProcessName}:\n{Response}", ProcessName, responseJson);
-            }
-            
-            return result;
-        }
-        catch (RemoteInvocationException ex)
-        {
-            _logger.LogError(ex, "Remote invocation failed for {Method} on {ProcessName}", method, ProcessName);
-            throw new InvalidOperationException($"Remote process {ProcessName} failed: {ex.Message}", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to invoke {Method} on {ProcessName}", method, ProcessName);
-            throw;
-        }
-        finally
-        {
-            _connectionLock.Release();
-        }
+        return _jsonRpc.CreateServoClient(ProcessName);
     }
     
     public void Dispose()
@@ -144,7 +113,6 @@ public class JsonRpcProcessConnection : IProcessConnection, IDisposable
             }
             
             _process.Dispose();
-            _connectionLock.Dispose();
         }
         catch (Exception ex)
         {

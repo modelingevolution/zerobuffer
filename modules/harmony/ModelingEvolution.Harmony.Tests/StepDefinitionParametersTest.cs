@@ -77,9 +77,6 @@ public class StepDefinitionParametersTest
     {
         // This test shows what proper parameter extraction would look like
         
-        // Given a step text like:
-        var stepText = "creates buffer 'test-buffer' with metadata size '1024' and payload size '10240'";
-        
         // The parser should extract parameters based on the step pattern
         // For example, if the pattern is:
         // "creates buffer '(.+)' with metadata size '(\d+)' and payload size '(\d+)'"

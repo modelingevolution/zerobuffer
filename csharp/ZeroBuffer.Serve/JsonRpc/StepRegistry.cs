@@ -1,7 +1,9 @@
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ModelingEvolution.Harmony.Shared;
 using TechTalk.SpecFlow;
 
 namespace ZeroBuffer.Serve.JsonRpc;
@@ -92,7 +94,12 @@ public class StepRegistry
         //_logger.LogDebug("Registered {StepType} step: {Pattern} -> {Type}.{Method}",stepType, pattern, declaringType.Name, method.Name);
     }
     
-    public async Task<StepResponse> ExecuteStepAsync(string stepTypeStr, string stepText)
+    public async Task<StepResponse> ExecuteStepAsync(StepRequest request)
+    {
+        return await ExecuteStepAsync(request.StepType, request.Step, request.Parameters, request.Context);
+    }
+    
+    public async Task<StepResponse> ExecuteStepAsync(string stepTypeStr, string stepText, ImmutableDictionary<string, string>? parameters = null, ImmutableDictionary<string, string>? context = null)
     {
         try
         {
@@ -131,24 +138,26 @@ public class StepRegistry
             {
                 var error = $"No matching step definition found for: {stepTypeStr} {stepText}";
                 _logger.LogWarning(error);
-                return new StepResponse
-                {
-                    Success = false,
-                    Error = error
-                };
+                return new StepResponse(
+                    Success: false,
+                    Error: error,
+                    Context: null,
+                    Logs: null
+                );
             }
             
-            // Execute the step
-            return await ExecuteStepMethodAsync(matchingStep, match);
+            // Execute the step with context
+            return await ExecuteStepMethodAsync(matchingStep, match, context);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error executing step: {StepType} {StepText}", stepTypeStr, stepText);
-            return new StepResponse
-            {
-                Success = false,
-                Error = ex.Message
-            };
+            return new StepResponse(
+                Success: false,
+                Error: ex.Message,
+                Context: null,
+                Logs: null
+            );
         }
     }
     
@@ -171,10 +180,19 @@ public class StepRegistry
         return (null, null);
     }
     
-    private async Task<StepResponse> ExecuteStepMethodAsync(StepDefinitionInfo stepInfo, Match match)
+    private async Task<StepResponse> ExecuteStepMethodAsync(StepDefinitionInfo stepInfo, Match match, ImmutableDictionary<string, string>? context)
     {
         try
         {
+            // Get or create ScenarioContext for this request
+            var scenarioContext = _serviceProvider.GetService<ScenarioContext>();
+            
+            // Load incoming context into ScenarioContext
+            if (scenarioContext != null)
+            {
+                scenarioContext.LoadFrom(context);
+            }
+            
             // Create instance of the step class
             var instance = _serviceProvider.GetRequiredService(stepInfo.DeclaringType);
             
@@ -190,14 +208,17 @@ public class StepRegistry
                 await task;
             }
             
-            return new StepResponse
-            {
-                Success = true,
-                Logs = new List<LogEntry>
-                {
-                    new() { Level = "INFO", Message = $"Step executed: {stepInfo.Method.Name}" }
-                }
-            };
+            // Convert entire ScenarioContext back to ImmutableDictionary
+            var responseContext = scenarioContext?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty;
+            
+            return new StepResponse(
+                Success: true,
+                Error: null,
+                Context: responseContext,
+                Logs: ImmutableList.Create(
+                    new LogResponse(DateTime.UtcNow, LogLevel.Information, $"Step executed: {stepInfo.Method.Name}")
+                )
+            );
         }
         catch (Exception ex)
         {
@@ -206,15 +227,14 @@ public class StepRegistry
             // Get the actual exception (unwrap TargetInvocationException)
             var actualException = ex is TargetInvocationException tie ? tie.InnerException ?? ex : ex;
             
-            return new StepResponse
-            {
-                Success = false,
-                Error = actualException.Message,
-                Logs = new List<LogEntry>
-                {
-                    new() { Level = "ERROR", Message = actualException.Message }
-                }
-            };
+            return new StepResponse(
+                Success: false,
+                Error: actualException.Message,
+                Context: null,
+                Logs: ImmutableList.Create(
+                    new LogResponse(DateTime.UtcNow, LogLevel.Error, actualException.Message)
+                )
+            );
         }
     }
     
@@ -294,9 +314,9 @@ public class StepRegistry
         throw new NotSupportedException($"Parameter type {targetType.Name} is not supported");
     }
     
-    public List<StepInfo> GetAllSteps()
+    public List<ModelingEvolution.Harmony.Shared.StepInfo> GetAllSteps()
     {
-        var result = new List<StepInfo>();
+        var result = new List<ModelingEvolution.Harmony.Shared.StepInfo>();
         
         foreach (var kvp in _steps)
         {
@@ -305,11 +325,10 @@ public class StepRegistry
             
             foreach (var stepDef in stepDefinitions)
             {
-                result.Add(new StepInfo
-                {
-                    Type = stepType.ToString().ToLower(),
-                    Pattern = stepDef.Pattern
-                });
+                result.Add(new ModelingEvolution.Harmony.Shared.StepInfo(
+                    Type: stepType.ToString(),
+                    Pattern: stepDef.Pattern
+                ));
             }
         }
         

@@ -1,4 +1,5 @@
 using ModelingEvolution.Harmony.Core;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ModelingEvolution.Harmony.Execution;
 
@@ -10,13 +11,6 @@ public interface IStepExecutor
     Task<StepExecutionResult> ExecuteStepAsync(
         StepDefinition step, 
         PlatformCombination platforms,
+        IReadOnlyDictionary<string, string> context,
         CancellationToken cancellationToken = default);
-}
-
-public class StepExecutionResult
-{
-    public bool Success { get; init; }
-    public string? Error { get; init; }
-    public Dictionary<string, object> Data { get; init; } = new();
-    public List<LogEntry> Logs { get; init; } = new();
 }

@@ -4,9 +4,12 @@ cmake_minimum_required(VERSION 3.20)
 # Create zerobuffer-serve executable (v2 with Content-Length support)
 add_executable(zerobuffer-serve
     main_v2.cpp
+    log_collector.cpp
     ../step_definitions/step_registry.cpp
     ../step_definitions/test_context.cpp
     ../step_definitions/basic_communication_steps.cpp
+    ../step_definitions/buffer_naming_service.cpp
+    ../step_definitions/test_data_patterns.cpp
 )
 
 # Include directories

@@ -5,6 +5,7 @@
 #include <zerobuffer/writer.h>
 #include <zerobuffer/types.h>
 #include <nlohmann/json.hpp>
+#include "buffer_naming_service.h"
 
 #include <memory>
 #include <unordered_map>
@@ -28,7 +29,7 @@ using json = nlohmann::json;
  */
 class TestContext {
 public:
-    TestContext() = default;
+    TestContext();
     ~TestContext() = default;
     
     // Delete copy constructor, allow move
@@ -78,9 +79,15 @@ public:
     size_t getReaderCount() const;
     size_t getWriterCount() const;
     
+    // Get buffer naming service
+    BufferNamingService& getBufferNaming() { return bufferNaming_; }
+    
 private:
     // Thread safety
     mutable std::mutex mutex_;
+    
+    // Buffer naming service for test isolation
+    BufferNamingService bufferNaming_;
     
     // Process-based storage
     std::unordered_map<std::string, std::unique_ptr<Reader>> readers_;

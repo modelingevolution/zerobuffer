@@ -22,7 +22,7 @@ public class ScenarioGenerator(IGherkinParser parser) : IScenarioGenerator
         string featuresPath,
         params string[] platforms)
     {
-        var scenarios = _parser.ParseFeatureFiles(Path.Combine(featuresPath, "*.feature"));
+        var scenarios = _parser.ParseFeatureFiles(Path.Combine(featuresPath, "*.feature"), FeatureIdMapper.GetFeatureId);
         
         foreach (var scenario in scenarios)
         {

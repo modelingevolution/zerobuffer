@@ -23,6 +23,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cpp", "Cpp", "{1B1E498C-705
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Cpp.Integration.Tests", "..\cpp\ZeroBuffer.Cpp.Integration.Tests\ZeroBuffer.Cpp.Integration.Tests.csproj", "{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestGeneratorConsole", "CodeGeneration\TestGeneratorConsole.csproj", "{E72ECD3D-F150-05EA-3523-B91BCACEE9CD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Harmony", "Harmony", "{7EE7E74B-0482-44D3-9305-2B11A1646DDC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelingEvolution.Harmony.Shared", "..\modules\harmony\ModelingEvolution.Harmony.Shared\ModelingEvolution.Harmony.Shared.csproj", "{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelingEvolution.Harmony.Shared.Tests", "..\modules\harmony\ModelingEvolution.Harmony.Shared.Tests\ModelingEvolution.Harmony.Shared.Tests.csproj", "{DB085080-7E4A-460C-AE03-4F9E228FA61E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,13 +69,29 @@ Global
 		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E72ECD3D-F150-05EA-3523-B91BCACEE9CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E72ECD3D-F150-05EA-3523-B91BCACEE9CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E72ECD3D-F150-05EA-3523-B91BCACEE9CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E72ECD3D-F150-05EA-3523-B91BCACEE9CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB085080-7E4A-460C-AE03-4F9E228FA61E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB085080-7E4A-460C-AE03-4F9E228FA61E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB085080-7E4A-460C-AE03-4F9E228FA61E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB085080-7E4A-460C-AE03-4F9E228FA61E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{9E216934-18C1-EEB0-07BA-E93867D8B755} = {7EE7E74B-0482-44D3-9305-2B11A1646DDC}
+		{C5613208-DC25-AA54-3A51-A02D23BCE458} = {7EE7E74B-0482-44D3-9305-2B11A1646DDC}
 		{98F44E05-27E4-D8E5-6338-615BDBEF7BDC} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{4EC79A83-6C60-FB2D-24AC-9A36841F5AAE} = {1B1E498C-7059-49D5-88AC-2852DFAFBA6B}
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7} = {7EE7E74B-0482-44D3-9305-2B11A1646DDC}
+		{DB085080-7E4A-460C-AE03-4F9E228FA61E} = {7EE7E74B-0482-44D3-9305-2B11A1646DDC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {3AA60C14-7711-48C2-A8D5-1469A1BA4C25}

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using ZeroBuffer.Serve.JsonRpc;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ZeroBuffer.Serve.Logging;
 
@@ -39,11 +39,11 @@ public class DualLoggerProvider : ILoggerProvider
         }
     }
     
-    public List<LogEntry> GetAllLogs()
+    public List<LogResponse> GetAllLogs()
     {
         lock (_lock)
         {
-            var allLogs = new List<LogEntry>();
+            var allLogs = new List<LogResponse>();
             foreach (var collector in _collectors.Values)
             {
                 allLogs.AddRange(collector.GetAndClearLogs());

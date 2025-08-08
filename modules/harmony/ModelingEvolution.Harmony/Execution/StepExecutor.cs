@@ -1,7 +1,10 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ModelingEvolution.Harmony.Core;
 using ModelingEvolution.Harmony.ProcessManagement;
+using ModelingEvolution.Harmony.Shared;
+using StreamJsonRpc;
 
 namespace ModelingEvolution.Harmony.Execution;
 
@@ -22,6 +25,7 @@ public class StepExecutor : IStepExecutor
     public async Task<StepExecutionResult> ExecuteStepAsync(
         StepDefinition step,
         PlatformCombination platforms,
+        IReadOnlyDictionary<string, string> context,
         CancellationToken cancellationToken = default)
     {
         try
@@ -31,11 +35,20 @@ public class StepExecutor : IStepExecutor
             if (targetProcesses.Count == 0)
             {
                 _logger.LogWarning("No processes available for step: {Step}", step.Text);
-                return new StepExecutionResult
-                {
-                    Success = true,
-                    Logs = [new() { Message = $"No processes available: {step.Text}" }]
-                };
+                return new StepExecutionResult(
+                    Success: true,
+                    Error: null,
+                    Context: ImmutableDictionary<string, string>.Empty,
+                    Exception: null,
+                    Logs: ImmutableList.Create(new LogEntry(
+                        Timestamp: DateTime.UtcNow,
+                        Process: "system",
+                        Platform: "harmony",
+                        Level: LogLevel.Information,
+                        Message: $"No processes available: {step.Text}"
+                    )),
+                    Duration: TimeSpan.Zero
+                );
             }
             
             var isBroadcast = string.IsNullOrEmpty(step.Process);
@@ -46,7 +59,7 @@ public class StepExecutor : IStepExecutor
             
             var results = await Task.WhenAll(
                 targetProcesses.Select(processName => 
-                    ExecuteOnProcessAsync(step, processName, platforms, isBroadcast, cancellationToken)));
+                    ExecuteOnProcessAsync(step, processName, platforms, isBroadcast, context,cancellationToken)));
             
             return CombineResults(results, isBroadcast);
         }
@@ -54,12 +67,14 @@ public class StepExecutor : IStepExecutor
         {
             _logger.LogError(ex, "Failed to execute step: {Step}", step.Text);
             
-            return new StepExecutionResult
-            {
-                Success = false,
-                Error = ex.Message,
-                Logs = [CreateErrorLog(step.Process ?? "unknown", ex.Message)]
-            };
+            return new StepExecutionResult(
+                Success: false,
+                Error: ex.Message,
+                Context: ImmutableDictionary<string, string>.Empty,
+                Exception: ex,
+                Logs: ImmutableList.Create(CreateErrorLog(step.Process ?? "unknown", ex.Message)),
+                Duration: TimeSpan.Zero
+            );
         }
     }
     
@@ -75,6 +90,7 @@ public class StepExecutor : IStepExecutor
         string processName, 
         PlatformCombination platforms,
         bool isBroadcast,
+        IReadOnlyDictionary<string,string> context,
         CancellationToken cancellationToken)
     {
         try
@@ -82,12 +98,13 @@ public class StepExecutor : IStepExecutor
             var connection = _processManager.GetConnection(processName);
             var platform = platforms.GetPlatform(processName);
             
-            _logger.LogDebug("Executing step on {Process} ({Platform}): {Step}", 
-                processName, platform, step.Text);
+            _logger.LogDebug("Executing step on {Process} ({Platform}): {Step}", processName, platform, step.Text);
             
-            var request = CreateStepRequest(step, processName, isBroadcast);
-            var response = await connection.InvokeAsync<StepResponse>(
-                "executeStep", request, cancellationToken);
+            // Create strongly-typed client for this connection
+            var client = connection.CreateServoClient();
+            
+            var request = CreateStepRequest(step, processName, context, isBroadcast);
+            var response = await client.ExecuteStepAsync(request, cancellationToken);
             
             return ConvertResponse(response, processName, platform);
         }
@@ -95,46 +112,59 @@ public class StepExecutor : IStepExecutor
         {
             _logger.LogError(ex, "Failed to execute on {Process}", processName);
             
-            return new StepExecutionResult
-            {
-                Success = false,
-                Error = $"{processName}: {ex.Message}",
-                Logs = [CreateErrorLog(processName, ex.Message)]
-            };
+            return new StepExecutionResult(
+                Success: false,
+                Error: $"{processName}: {ex.Message}",
+                Context: ImmutableDictionary<string, string>.Empty,
+                Exception: ex,
+                Logs: ImmutableList.Create(CreateErrorLog(processName, ex.Message)),
+                Duration: TimeSpan.Zero
+            );
         }
     }
     
-    private object CreateStepRequest(StepDefinition step, string processName, bool isBroadcast)
+    private StepRequest CreateStepRequest(StepDefinition step, string processName,
+        IReadOnlyDictionary<string, string> context, bool isBroadcast)
     {
-        return new
-        {
-            process = processName,
-            stepType = step.Type.ToString().ToLowerInvariant(),
-            step = step.Text,  // Send full text, not stripped version
-            originalStep = step.Text,
-            parameters = step.Parameters,
-            isBroadcast
-        };
+        var parameters = step.Parameters.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value?.ToString() ?? "");
+        return new StepRequest(
+            Process: processName,
+            StepType: step.Type.ToString().ToLowerInvariant(),
+            Step: step.Text,
+            Parameters: parameters,
+            Context: context.ToImmutableDictionary(),
+            IsBroadcast: isBroadcast
+        );
     }
     
     private StepExecutionResult ConvertResponse(StepResponse response, string processName, string platform)
     {
-        var logs = response.Logs?.Select(log => new LogEntry
+        // Debug: Check what we got
+        _logger.LogInformation($"ConvertResponse for {processName}: Success={response.Success}, LogsCount={response.Logs?.Count ?? 0}");
+        if (response.Logs != null)
         {
-            Timestamp = DateTime.UtcNow,
-            Process = processName,
-            Platform = platform,
-            Level = log.Level ?? "INFO",
-            Message = log.Message ?? ""
-        }).ToList() ?? new List<LogEntry>();
+            foreach (var log in response.Logs)
+            {
+                _logger.LogInformation($"  Log: [{log.Level}] {log.Message}");
+            }
+        }
         
-        return new StepExecutionResult
-        {
-            Success = response.Success,
-            Error = response.Error,
-            Data = response.Data ?? new Dictionary<string, object>(),
-            Logs = logs
-        };
+        var logs = response.Logs?.Select(log => new LogEntry(
+            Timestamp: log.Timestamp,
+            Process: processName,
+            Platform: platform,
+            Level: log.Level,
+            Message: log.Message ?? ""
+        )).ToImmutableList() ?? ImmutableList<LogEntry>.Empty;
+        
+        return new StepExecutionResult(
+            Success: response.Success,
+            Error: response.Error,
+            Context: response.Context ?? ImmutableDictionary<string, string>.Empty,
+            Exception: null,
+            Logs: logs,
+            Duration: TimeSpan.Zero
+        );
     }
     
     private StepExecutionResult CombineResults(StepExecutionResult[] results, bool isBroadcast)
@@ -144,47 +174,39 @@ public class StepExecutor : IStepExecutor
         
         if (failures.Count == 0)
         {
-            return new StepExecutionResult
-            {
-                Success = true,
-                Logs = allLogs
-            };
+            return new StepExecutionResult(
+                Success: true,
+                Error: null,
+                Context: ImmutableDictionary<string, string>.Empty,
+                Exception: null,
+                Logs: allLogs.ToImmutableList(),
+                Duration: TimeSpan.Zero
+            );
         }
         
         var errorPrefix = isBroadcast ? "Broadcast failed on: " : "Execution failed: ";
         var errors = string.Join(", ", failures.Select(f => f.Error));
         
-        return new StepExecutionResult
-        {
-            Success = false,
-            Error = errorPrefix + errors,
-            Logs = allLogs
-        };
+        return new StepExecutionResult(
+            Success: false,
+            Error: errorPrefix + errors,
+            Context: ImmutableDictionary<string, string>.Empty,
+            Exception: null,
+            Logs: allLogs.ToImmutableList(),
+            Duration: TimeSpan.Zero
+        );
     }
     
     private LogEntry CreateErrorLog(string process, string message)
     {
-        return new LogEntry
-        {
-            Timestamp = DateTime.UtcNow,
-            Process = process,
-            Platform = "unknown",
-            Level = "ERROR",
-            Message = $"Step execution failed: {message}"
-        };
+        return new LogEntry(
+            Timestamp: DateTime.UtcNow,
+            Process: process,
+            Platform: "unknown",
+            Level: LogLevel.Error,
+            Message: $"Step execution failed: {message}"
+        );
     }
     
-    private class StepResponse
-    {
-        public bool Success { get; set; }
-        public string? Error { get; set; }
-        public Dictionary<string, object>? Data { get; set; }
-        public List<LogResponse>? Logs { get; set; }
-    }
-    [DebuggerDisplay("{Level} {Message}")]
-    private class LogResponse
-    {
-        public string? Level { get; set; }
-        public string? Message { get; set; }
-    }
+    // StepResponse, LogResponse, and StepRequest moved to ModelingEvolution.Harmony.Shared
 }

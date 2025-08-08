@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
-using ZeroBuffer.Serve.JsonRpc;
+using ModelingEvolution.Harmony.Shared;
+
 
 namespace ZeroBuffer.Serve.Logging;
 
@@ -9,7 +10,7 @@ namespace ZeroBuffer.Serve.Logging;
 public class LogCollector : ILogger
 {
     private readonly string _categoryName;
-    private readonly List<LogEntry> _logs = new();
+    private readonly List<LogResponse> _logs = new();
     private readonly object _lock = new();
     
     public LogCollector(string categoryName)
@@ -17,7 +18,7 @@ public class LogCollector : ILogger
         _categoryName = categoryName;
     }
     
-    public List<LogEntry> GetAndClearLogs()
+    public List<LogResponse> GetAndClearLogs()
     {
         lock (_lock)
         {
@@ -29,9 +30,9 @@ public class LogCollector : ILogger
     
     public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
     
-    public bool IsEnabled(LogLevel logLevel) => true;
+    public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
     
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         if (!IsEnabled(logLevel))
             return;
@@ -40,19 +41,20 @@ public class LogCollector : ILogger
         
         lock (_lock)
         {
-            _logs.Add(new LogEntry
-            {
-                Level = logLevel.ToString().ToUpper(),
-                Message = message
-            });
+            LogLevel harmonyLevel = logLevel;
+            _logs.Add(new LogResponse(
+                Timestamp: DateTime.UtcNow,
+                Level: harmonyLevel,
+                Message: message
+            ));
             
             if (exception != null)
             {
-                _logs.Add(new LogEntry
-                {
-                    Level = "ERROR",
-                    Message = exception.ToString()
-                });
+                _logs.Add(new LogResponse(
+                    Timestamp: DateTime.UtcNow,
+                    Level: LogLevel.Error,
+                    Message: exception.ToString()
+                ));
             }
         }
     }

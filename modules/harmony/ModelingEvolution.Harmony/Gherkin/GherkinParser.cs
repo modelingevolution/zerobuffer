@@ -9,8 +9,7 @@ namespace ModelingEvolution.Harmony.Gherkin;
 /// </summary>
 public interface IGherkinParser
 {
-    IEnumerable<ScenarioDefinition> ParseFeatureFile(string path);
-    IEnumerable<ScenarioDefinition> ParseFeatureFiles(string pattern);
+    IEnumerable<ScenarioDefinition> ParseFeatureFiles(string pattern, Func<string, int> featureMap);
 }
 
 public class GherkinParser : IGherkinParser
@@ -24,7 +23,7 @@ public class GherkinParser : IGherkinParser
         _parser = new Parser();
     }
     
-    public IEnumerable<ScenarioDefinition> ParseFeatureFile(string path)
+    public IEnumerable<ScenarioDefinition> ParseFeatureFile(string path, Func<string,int> featureId)
     {
         var document = _parser.Parse(path);
         var feature = document.Feature;
@@ -47,14 +46,14 @@ public class GherkinParser : IGherkinParser
             {
                 var scenarioDefinition = ParseScenario(scenario, background);
                 scenarioDefinition.FeatureFile = featureFileName;
-                scenarioDefinition.FeatureId = FeatureIdMapper.GetFeatureId(featureFileName);
+                scenarioDefinition.FeatureId = featureId(featureFileName);
                 yield return scenarioDefinition;
             }
             // Skip ScenarioOutline for now - not supported in newer Gherkin versions
         }
     }
     
-    public IEnumerable<ScenarioDefinition> ParseFeatureFiles(string pattern)
+    public IEnumerable<ScenarioDefinition> ParseFeatureFiles(string pattern, Func<string, int> featureMap)
     {
         var files = Directory.GetFiles(
             Path.GetDirectoryName(pattern) ?? ".",
@@ -64,7 +63,7 @@ public class GherkinParser : IGherkinParser
         
         foreach (var file in files)
         {
-            foreach (var scenario in ParseFeatureFile(file))
+            foreach (var scenario in ParseFeatureFile(file,featureMap))
             {
                 yield return scenario;
             }

@@ -127,41 +127,41 @@ namespace ZeroBuffer.Tests.Features
 #line 13
         testRunner.And("performs multiple write operations", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-                TechTalk.SpecFlow.Table table11 = new TechTalk.SpecFlow.Table(new string[] {
+                TechTalk.SpecFlow.Table table3 = new TechTalk.SpecFlow.Table(new string[] {
                             "field",
                             "condition"});
-                table11.AddRow(new string[] {
+                table3.AddRow(new string[] {
                             "payload_written_count",
                             "increments by 1"});
-                table11.AddRow(new string[] {
+                table3.AddRow(new string[] {
                             "payload_free_bytes",
                             "decreases by frame size"});
-                table11.AddRow(new string[] {
+                table3.AddRow(new string[] {
                             "payload_write_pos",
                             "advances correctly"});
-                table11.AddRow(new string[] {
+                table3.AddRow(new string[] {
                             "all values",
                             "are 64-byte aligned"});
 #line 15
-        testRunner.Then("the \'writer\' process should verify after each write:", ((string)(null)), table11, "Then ");
+        testRunner.Then("the \'writer\' process should verify after each write:", ((string)(null)), table3, "Then ");
 #line hidden
 #line 22
         testRunner.When("the \'reader\' process performs multiple read operations", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-                TechTalk.SpecFlow.Table table12 = new TechTalk.SpecFlow.Table(new string[] {
+                TechTalk.SpecFlow.Table table4 = new TechTalk.SpecFlow.Table(new string[] {
                             "field",
                             "condition"});
-                table12.AddRow(new string[] {
+                table4.AddRow(new string[] {
                             "payload_read_count",
                             "increments by 1"});
-                table12.AddRow(new string[] {
+                table4.AddRow(new string[] {
                             "payload_free_bytes",
                             "increases by frame size"});
-                table12.AddRow(new string[] {
+                table4.AddRow(new string[] {
                             "payload_read_pos",
                             "advances correctly"});
 #line 24
-        testRunner.Then("the \'reader\' process should verify after each read:", ((string)(null)), table12, "Then ");
+        testRunner.Then("the \'reader\' process should verify after each read:", ((string)(null)), table4, "Then ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -280,20 +280,20 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-                TechTalk.SpecFlow.Table table13 = new TechTalk.SpecFlow.Table(new string[] {
+                TechTalk.SpecFlow.Table table5 = new TechTalk.SpecFlow.Table(new string[] {
                             "buffer_name",
                             "description"});
-                table13.AddRow(new string[] {
+                table5.AddRow(new string[] {
                             "550e8400-e29b-41d4-a716-446655440000",
                             "UUID format"});
-                table13.AddRow(new string[] {
+                table5.AddRow(new string[] {
                             "test_buffer-123",
                             "alphanumeric with special chars"});
-                table13.AddRow(new string[] {
+                table5.AddRow(new string[] {
                             "very_long_buffer_name_that_tests_maximum_length_limits",
                             "max length"});
 #line 57
-        testRunner.Given("create buffers with various names:", ((string)(null)), table13, "Given ");
+        testRunner.Given("create buffers with various names:", ((string)(null)), table5, "Given ");
 #line hidden
 #line 63
         testRunner.Then("verify semaphores created as \'sem-w-{name}\' and \'sem-r-{name}\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");

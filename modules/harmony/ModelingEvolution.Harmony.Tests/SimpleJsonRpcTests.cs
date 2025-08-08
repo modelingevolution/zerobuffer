@@ -14,7 +14,7 @@ namespace ModelingEvolution.Harmony.Tests;
 public class SimpleJsonRpcTests
 {
     private readonly ITestOutputHelper _output;
-    private readonly IGherkinParser _parser;
+    private readonly GherkinParser _parser;
     private readonly IScenarioGenerator _generator;
     
     public SimpleJsonRpcTests(ITestOutputHelper output)
@@ -33,7 +33,7 @@ public class SimpleJsonRpcTests
         var platforms = new[] { "csharp", "python", "cpp" };
         
         // Act - Parse feature file and get first scenario
-        var scenarios = _parser.ParseFeatureFile(featurePath).ToList();
+        var scenarios = _parser.ParseFeatureFile(featurePath, FeatureIdMapper.GetFeatureId).ToList();
         var scenario = scenarios.First(s => s.Name.Contains("Simple Write-Read Cycle"));
         var processes = scenario.GetRequiredProcesses().ToList();
         
@@ -139,7 +139,7 @@ public class SimpleJsonRpcTests
         
         foreach (var featureFile in featureFiles)
         {
-            var scenarios = _parser.ParseFeatureFile(featureFile).ToList();
+            var scenarios = _parser.ParseFeatureFile(featureFile, FeatureIdMapper.GetFeatureId).ToList();
             scenarioCount += scenarios.Count;
             
             foreach (var scenario in scenarios)
@@ -161,7 +161,7 @@ public class SimpleJsonRpcTests
         }
         
         // Show example of multi-process scenario
-        var multiProcessScenario = _parser.ParseFeatureFile(featureFiles.First())
+        var multiProcessScenario = _parser.ParseFeatureFile(featureFiles.First(), FeatureIdMapper.GetFeatureId)
             .FirstOrDefault(s => s.GetRequiredProcesses().Count() > 2);
             
         if (multiProcessScenario != null)

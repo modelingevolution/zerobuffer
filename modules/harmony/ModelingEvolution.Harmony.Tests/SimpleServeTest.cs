@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using StreamJsonRpc;
@@ -18,6 +19,27 @@ public class SimpleServeTest : IDisposable
     public SimpleServeTest(ITestOutputHelper output)
     {
         _output = output;
+    }
+    
+    // Response types - strongly typed instead of dynamic
+    private class InitializeResponse
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+    }
+    
+    private class StepResponse
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+        public Dictionary<string, object>? Data { get; set; }
+        public List<LogEntry>? Logs { get; set; }
+    }
+    
+    private class LogEntry
+    {
+        public string Level { get; set; } = "INFO";
+        public string Message { get; set; } = "";
     }
     
     [Fact]
@@ -77,17 +99,14 @@ public class SimpleServeTest : IDisposable
             TestRunId = "test-123"
         };
         
-        // Don't pass the cancellation token directly - let JSON-RPC handle it
-        var initResponse = await _jsonRpc.InvokeAsync<dynamic>(
+        // Use strongly typed response
+        var initResponse = await _jsonRpc.InvokeAsync<InitializeResponse>(
             "initialize", 
             initRequest);
         
-        _output.WriteLine($"Initialize response: {initResponse}");
+        _output.WriteLine($"Initialize response: Success={initResponse.Success}");
         Assert.NotNull(initResponse);
-        
-        // Access the JSON properties correctly
-        var jsonElement = (System.Text.Json.JsonElement)initResponse;
-        Assert.True(jsonElement.GetProperty("Success").GetBoolean());
+        Assert.True(initResponse.Success);
         
         // Test a simple step
         _output.WriteLine("Sending step request...");
@@ -98,32 +117,28 @@ public class SimpleServeTest : IDisposable
             Step = "creates buffer 'test' with size '1024'"
         };
         
-        var stepResponse = await _jsonRpc.InvokeAsync<dynamic>(
+        var stepResponse = await _jsonRpc.InvokeAsync<StepResponse>(
             "executeStep",
             stepRequest);
         
-        _output.WriteLine($"Step response: {stepResponse}");
+        _output.WriteLine($"Step response: Success={stepResponse.Success}");
         Assert.NotNull(stepResponse);
-        
-        var stepJsonElement = (System.Text.Json.JsonElement)stepResponse;
-        Assert.True(stepJsonElement.GetProperty("Success").GetBoolean());
+        Assert.True(stepResponse.Success);
         
         // Check logs
-        if (stepJsonElement.TryGetProperty("Logs", out var logs))
+        if (stepResponse.Logs != null && stepResponse.Logs.Count > 0)
         {
             _output.WriteLine("Logs from step:");
-            foreach (var log in logs.EnumerateArray())
+            foreach (var log in stepResponse.Logs)
             {
-                var level = log.GetProperty("Level").GetString();
-                var message = log.GetProperty("Message").GetString();
-                _output.WriteLine($"  [{level}] {message}");
+                _output.WriteLine($"  [{log.Level}] {log.Message}");
             }
         }
         
-        // Cleanup
-        await _jsonRpc.InvokeAsync("cleanup");
+        // Cleanup - returns void/bool
+        await _jsonRpc.InvokeAsync<bool>("cleanup");
         
-        // Shutdown gracefully
+        // Shutdown gracefully - returns void/bool
         _output.WriteLine("Sending shutdown...");
         await _jsonRpc.NotifyAsync("shutdown");
         await Task.Delay(100);
@@ -151,10 +166,8 @@ public class SimpleServeTest : IDisposable
                 }
             }
             catch { }
-            finally
-            {
-                _serveProcess.Dispose();
-            }
+            
+            _serveProcess.Dispose();
         }
     }
 }

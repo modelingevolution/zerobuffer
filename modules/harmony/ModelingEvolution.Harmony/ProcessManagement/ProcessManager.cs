@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using StreamJsonRpc;
 using ModelingEvolution.Harmony.Core;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ModelingEvolution.Harmony.ProcessManagement;
 
@@ -12,11 +13,13 @@ public class ProcessManager : IProcessManager, IDisposable
 {
     private readonly MultiprocessConfiguration _configuration;
     private readonly ILogger<ProcessManager> _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly Dictionary<string, ProcessInfo> _processes = new();
     
     public ProcessManager(MultiprocessConfiguration configuration, ILoggerFactory loggerFactory)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         _logger = loggerFactory.CreateLogger<ProcessManager>();
     }
     
@@ -77,15 +80,38 @@ public class ProcessManager : IProcessManager, IDisposable
         if(!Directory.Exists(startInfo.WorkingDirectory))
             throw new Exception("Working directory not exists! " + startInfo.WorkingDirectory);
 
-        var process = new Process { StartInfo = startInfo };
-        process.Start();
+        // Create connection using JsonRpcProcessConnection (which starts the process)
+        var connection = new JsonRpcProcessConnection(
+            processName, 
+            platform, 
+            startInfo, 
+            _loggerFactory.CreateLogger<JsonRpcProcessConnection>());
+            
+        // Create strongly-typed client
+        var client = connection.CreateServoClient();
         
-        var connection = new ProcessConnection(processName, platform, process);
-        await connection.InitializeAsync(hostPid, featureId, cancellationToken);
+        // Health check (parameterless ping)
+        var healthResult = await client.HealthAsync(cancellationToken);
+        if (!healthResult)
+        {
+            throw new InvalidOperationException($"Process {processName} health check failed");
+        }
+        
+        // Initialize
+        if (hostPid > 0 && featureId > 0)
+        {
+            var initParams = new InitializeRequest(
+                Role: processName,
+                Platform: platform,
+                Scenario: "test", // This should come from context
+                HostPid: hostPid,
+                FeatureId: featureId
+            );
+            await client.InitializeAsync(initParams, cancellationToken);
+        }
         
         _processes[key] = new ProcessInfo
         {
-            Process = process,
             Connection = connection
         };
         
@@ -118,7 +144,7 @@ public class ProcessManager : IProcessManager, IDisposable
     {
         var running = _processes.Any(kvp => 
             kvp.Key.StartsWith($"{processName}:") && 
-            !kvp.Value.Process.HasExited);
+            kvp.Value.Connection.IsConnected);
         
         return Task.FromResult(running);
     }
@@ -140,15 +166,8 @@ public class ProcessManager : IProcessManager, IDisposable
         
         try
         {
+            // JsonRpcProcessConnection.Dispose() handles process cleanup
             info.Connection.Dispose();
-            
-            if (!info.Process.HasExited)
-            {
-                info.Process.Kill();
-                await info.Process.WaitForExitAsync();
-            }
-            
-            info.Process.Dispose();
         }
         catch (Exception ex)
         {
@@ -163,67 +182,8 @@ public class ProcessManager : IProcessManager, IDisposable
     
     private class ProcessInfo
     {
-        public Process Process { get; init; } = null!;
-        public ProcessConnection Connection { get; init; } = null!;
+        public JsonRpcProcessConnection Connection { get; init; } = null!;
     }
 }
 
-/// <summary>
-/// JSON-RPC connection to a test process
-/// </summary>
-public class ProcessConnection : IProcessConnection, IDisposable
-{
-    private readonly Process _process;
-    private JsonRpc? _rpc;
-    
-    public string ProcessName { get; }
-    public string Platform { get; }
-    public bool IsConnected => _rpc != null && !_process.HasExited;
-    
-    public ProcessConnection(string processName, string platform, Process process)
-    {
-        ProcessName = processName;
-        Platform = platform;
-        _process = process;
-    }
-    
-    public async Task InitializeAsync(CancellationToken cancellationToken)
-    {
-        await InitializeAsync(0, 0, cancellationToken);
-    }
-
-    public async Task InitializeAsync(int hostPid, int featureId, CancellationToken cancellationToken)
-    {
-        _rpc = new JsonRpc(_process.StandardInput.BaseStream, _process.StandardOutput.BaseStream);
-        _rpc.StartListening();
-        
-        // Initialize process with resource isolation parameters
-        var initParams = new { hostPid, featureId };
-        var healthResult = await InvokeAsync<bool>("health", initParams, cancellationToken);
-        if (!healthResult)
-        {
-            throw new InvalidOperationException("Process health check failed");
-        }
-        
-        // Send initialization message with host PID and feature ID for resource isolation
-        if (hostPid > 0 && featureId > 0)
-        {
-            await InvokeAsync<bool>("initialize", initParams, cancellationToken);
-        }
-    }
-    
-    public async Task<T> InvokeAsync<T>(string method, object parameters, CancellationToken cancellationToken = default)
-    {
-        if (_rpc == null)
-        {
-            throw new InvalidOperationException("Connection not initialized");
-        }
-        
-        return await _rpc.InvokeWithCancellationAsync<T>(method, [parameters], cancellationToken);
-    }
-    
-    public void Dispose()
-    {
-        _rpc?.Dispose();
-    }
-}
+// ProcessConnection class removed - using JsonRpcProcessConnection instead

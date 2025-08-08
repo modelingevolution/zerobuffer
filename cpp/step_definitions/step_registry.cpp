@@ -36,16 +36,16 @@ StepRegistry& StepRegistry::getInstance() {
         
         // Check for ZEROBUFFER_LOG_LEVEL environment variable
         const char* log_level_env = std::getenv("ZEROBUFFER_LOG_LEVEL");
-        zerobuffer::severity_level log_level = zerobuffer::info;
+        boost::log::trivial::severity_level log_level = boost::log::trivial::info;
         
         if (log_level_env) {
             std::string level_str(log_level_env);
-            if (level_str == "TRACE") log_level = zerobuffer::trace;
-            else if (level_str == "DEBUG") log_level = zerobuffer::debug;
-            else if (level_str == "INFO") log_level = zerobuffer::info;
-            else if (level_str == "WARNING") log_level = zerobuffer::warning;
-            else if (level_str == "ERROR") log_level = zerobuffer::error;
-            else if (level_str == "FATAL") log_level = zerobuffer::fatal;
+            if (level_str == "TRACE") log_level = boost::log::trivial::trace;
+            else if (level_str == "DEBUG") log_level = boost::log::trivial::debug;
+            else if (level_str == "INFO") log_level = boost::log::trivial::info;
+            else if (level_str == "WARNING") log_level = boost::log::trivial::warning;
+            else if (level_str == "ERROR") log_level = boost::log::trivial::error;
+            else if (level_str == "FATAL") log_level = boost::log::trivial::fatal;
         }
         
         zerobuffer::init_logging(log_level);

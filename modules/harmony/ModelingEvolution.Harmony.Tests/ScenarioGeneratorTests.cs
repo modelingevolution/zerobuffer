@@ -38,7 +38,7 @@ public class ScenarioGeneratorTests
         };
         
         _parserMock
-            .Setup(p => p.ParseFeatureFiles(It.IsAny<string>()))
+            .Setup(p => p.ParseFeatureFiles(It.IsAny<string>(), FeatureIdMapper.GetFeatureId))
             .Returns(new[] { scenario });
         
         var platforms = new[] { "csharp", "python", "cpp" };
@@ -78,7 +78,7 @@ public class ScenarioGeneratorTests
         };
         
         _parserMock
-            .Setup(p => p.ParseFeatureFiles(It.IsAny<string>()))
+            .Setup(p => p.ParseFeatureFiles(It.IsAny<string>(), FeatureIdMapper.GetFeatureId))
             .Returns(new[] { scenario });
         
         var platforms = new[] { "csharp", "python", "cpp" };
@@ -114,7 +114,7 @@ public class ScenarioGeneratorTests
         };
         
         _parserMock
-            .Setup(p => p.ParseFeatureFiles(It.IsAny<string>()))
+            .Setup(p => p.ParseFeatureFiles(It.IsAny<string>(), FeatureIdMapper.GetFeatureId))
             .Returns(new[] { scenario });
         
         var platforms = new[] { "csharp", "python" };
@@ -143,7 +143,7 @@ public class ScenarioGeneratorTests
         };
         
         _parserMock
-            .Setup(p => p.ParseFeatureFiles(It.IsAny<string>()))
+            .Setup(p => p.ParseFeatureFiles(It.IsAny<string>(), FeatureIdMapper.GetFeatureId))
             .Returns(new[] { scenario });
         
         // Act
