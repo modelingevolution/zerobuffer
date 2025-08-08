@@ -118,3 +118,6 @@ vcpkg_installed/
 /tools/harmony-cpp-gen/bin/Debug/net9.0
 /tools/harmony-cpp-gen/obj
 /tools/harmony-cpp-gen/nupkg
+/modules/harmony/ModelingEvolution.Harmony.Shared/obj
+/modules/harmony/ModelingEvolution.Harmony.Shared.Tests/obj
+/modules/harmony/ModelingEvolution.Harmony.Shared.Tests/bin/Debug/net9.0
