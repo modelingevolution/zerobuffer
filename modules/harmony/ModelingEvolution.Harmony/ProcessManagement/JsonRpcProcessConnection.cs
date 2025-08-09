@@ -55,7 +55,7 @@ public class JsonRpcProcessConnection : IProcessConnection, IDisposable
         // Newtonsoft.Json is case-insensitive by default, which allows it to match
         // both "level"/"message" from C++ and "Level"/"Message" from C#
         var formatter = new JsonMessageFormatter();
-        var handler = new HeaderDelimitedMessageHandler(_process.StandardOutput.BaseStream, _process.StandardInput.BaseStream, formatter);
+        var handler = new HeaderDelimitedMessageHandler(_process.StandardInput.BaseStream, _process.StandardOutput.BaseStream, formatter);
         _jsonRpc = new JsonRpc(handler);
         
         // Handle error output
