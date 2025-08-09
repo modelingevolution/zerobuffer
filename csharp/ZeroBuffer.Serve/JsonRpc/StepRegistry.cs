@@ -96,47 +96,25 @@ public class StepRegistry
     
     public async Task<StepResponse> ExecuteStepAsync(StepRequest request)
     {
-        return await ExecuteStepAsync(request.StepType, request.Step, request.Parameters, request.Context);
+        return await ExecuteStepAsync(request.Step, request.StepType, request.Parameters, request.Context);
     }
     
-    public async Task<StepResponse> ExecuteStepAsync(string stepTypeStr, string stepText, ImmutableDictionary<string, string>? parameters = null, ImmutableDictionary<string, string>? context = null)
+    public async Task<StepResponse> ExecuteStepAsync(string stepText, StepType stepType, ImmutableDictionary<string, string>? parameters = null, ImmutableDictionary<string, string>? context = null)
     {
         try
         {
-            _logger.LogDebug("Executing step: {StepType} {StepText}", stepTypeStr, stepText);
+            _logger.LogDebug("Executing step: {StepType} {StepText}", stepType, stepText);
             
-            // Parse step type
-            if (!Enum.TryParse<StepType>(stepTypeStr, true, out var stepType))
-            {
-                // Handle "and" steps - they can match any type
-                stepType = StepType.Given; // We'll try all types
-            }
             
             // Find matching step
             StepDefinitionInfo? matchingStep = null;
             Match? match = null;
-            
-            if (stepTypeStr.Equals("and", StringComparison.OrdinalIgnoreCase))
-            {
-                // For "and" steps, try all step types
-                foreach (var type in Enum.GetValues<StepType>())
-                {
-                    (matchingStep, match) = FindMatchingStep(type, stepText);
-                    if (matchingStep != null)
-                    {
-                        _logger.LogDebug("Found matching {StepType} step for 'and' step", type);
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                (matchingStep, match) = FindMatchingStep(stepType, stepText);
-            }
-            
+
+			(matchingStep, match) = FindMatchingStep(stepType, stepText);
+
             if (matchingStep == null || match == null)
             {
-                var error = $"No matching step definition found for: {stepTypeStr} {stepText}";
+                var error = $"No matching step definition found for: [{stepType}] {stepText}";
                 _logger.LogWarning(error);
                 return new StepResponse(
                     Success: false,
@@ -151,7 +129,7 @@ public class StepRegistry
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing step: {StepType} {StepText}", stepTypeStr, stepText);
+            _logger.LogError(ex, "Error executing step: {StepType} {StepText}", stepType, stepText);
             return new StepResponse(
                 Success: false,
                 Error: ex.Message,
@@ -163,12 +141,10 @@ public class StepRegistry
     
     private (StepDefinitionInfo? step, Match? match) FindMatchingStep(StepType stepType, string stepText)
     {
-        if (!_steps.ContainsKey(stepType))
-        {
+        if (!_steps.TryGetValue(stepType, out var steps))
             return (null, null);
-        }
         
-        foreach (var step in _steps[stepType])
+        foreach (var step in steps)
         {
             var match = step.Regex.Match(stepText);
             if (match.Success)
@@ -335,12 +311,7 @@ public class StepRegistry
         return result.OrderBy(x => x.Type).ThenBy(x => x.Pattern).ToList();
     }
     
-    private enum StepType
-    {
-        Given,
-        When,
-        Then
-    }
+    
     
     private class StepDefinitionInfo
     {

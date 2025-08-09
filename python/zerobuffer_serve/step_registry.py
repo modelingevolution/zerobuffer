@@ -27,7 +27,8 @@ else:
         pytest_then = None
         pytest_parsers = None
 
-from .models import StepInfo, StepResponse, TableData, LogEntry
+from .models import StepInfo, StepResponse, TableData, LogEntry, LogResponse
+from datetime import datetime
 
 
 class StepType(Enum):
@@ -218,14 +219,28 @@ class StepRegistry:
             if not matching_step or not match:
                 error = f"No matching step definition found for: {step_type} {step_text}"
                 self._logger.warning(error)
-                return StepResponse(success=False, error=error)
+                return StepResponse(
+                    success=False, 
+                    error=error,
+                    context={},
+                    logs=[]
+                )
                 
             # Execute the step
             return await self._execute_step_method(matching_step, match, parameters, table)
             
         except Exception as e:
             self._logger.error(f"Error executing step: {e}", exc_info=True)
-            return StepResponse(success=False, error=str(e))
+            return StepResponse(
+                success=False, 
+                error=str(e),
+                context={},
+                logs=[LogResponse(
+                    timestamp=datetime.utcnow().isoformat() + 'Z',
+                    level=4,  # Error level
+                    message=str(e)
+                )]
+            )
             
     def _find_matching_step(
         self,
@@ -272,9 +287,16 @@ class StepRegistry:
             # Log success
             self._logger.info(f"Step executed: {step_info.method.__name__}")
             
+            # Return success with proper contract format
             return StepResponse(
                 success=True,
-                logs=[LogEntry(level="INFO", message=f"Step executed: {step_info.method.__name__}")]
+                error=None,
+                context={},  # Empty context for now
+                logs=[LogResponse(
+                    timestamp=datetime.utcnow().isoformat() + 'Z',
+                    level=2,  # Information level
+                    message=f"Step executed: {step_info.method.__name__}"
+                )]
             )
             
         except Exception as e:
@@ -282,7 +304,12 @@ class StepRegistry:
             return StepResponse(
                 success=False,
                 error=str(e),
-                logs=[LogEntry(level="ERROR", message=str(e))]
+                context={},  # Empty context for error case
+                logs=[LogResponse(
+                    timestamp=datetime.utcnow().isoformat() + 'Z',
+                    level=4,  # Error level
+                    message=str(e)
+                )]
             )
             
     def _extract_parameters(

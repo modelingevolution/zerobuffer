@@ -1,4 +1,5 @@
 using ModelingEvolution.Harmony.Core;
+using ModelingEvolution.Harmony.Shared;
 using Xunit;
 
 namespace ModelingEvolution.Harmony.Tests;

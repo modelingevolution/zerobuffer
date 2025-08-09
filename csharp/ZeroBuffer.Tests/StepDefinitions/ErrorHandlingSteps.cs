@@ -10,17 +10,18 @@ namespace ZeroBuffer.Tests.StepDefinitions
     [Binding]
     public class ErrorHandlingSteps
     {
+        // Own copies of readers and writers - no dependency on other step files
+        private readonly Dictionary<string, Reader> _readers = new();
+        private readonly Dictionary<string, Writer> _writers = new();
         private readonly Dictionary<string, byte[]> _metadata = new();
         private readonly Dictionary<string, byte[]> _originalMetadata = new();
         private readonly IBufferNamingService _bufferNaming;
-        private readonly BasicCommunicationSteps _basicSteps;
         private string _currentBuffer = "";
         private Exception? _lastException;
 
-        public ErrorHandlingSteps(IBufferNamingService bufferNaming, BasicCommunicationSteps basicSteps)
+        public ErrorHandlingSteps(IBufferNamingService bufferNaming)
         {
             _bufferNaming = bufferNaming;
-            _basicSteps = basicSteps;
         }
 
         // Note: WhenProcessWritesMetadataWithSize is already defined in BasicCommunicationSteps
@@ -30,9 +31,9 @@ namespace ZeroBuffer.Tests.StepDefinitions
         public void AfterMetadataWrite()
         {
             // If metadata was just written, capture it for verification
-            if (_basicSteps._writers.Count > 0)
+            if (_writers.Count > 0)
             {
-                _currentBuffer = _basicSteps._writers.Keys.LastOrDefault() ?? _basicSteps._readers.Keys.LastOrDefault() ?? "";
+                _currentBuffer = _writers.Keys.LastOrDefault() ?? _readers.Keys.LastOrDefault() ?? "";
                 // Store metadata if it was written (we'll check in verification steps)
             }
         }
@@ -48,7 +49,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             try
             {
                 // Get the writer for this buffer
-                var writer = _basicSteps._writers.Values.LastOrDefault();
+                var writer = _writers.Values.LastOrDefault();
                 if (writer == null)
                 {
                     throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -97,7 +98,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Debug: "Verifying original metadata remains unchanged");
             
             // Get the reader for this buffer
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader == null)
             {
                 throw new InvalidOperationException($"No reader found for buffer");
@@ -118,7 +119,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             try
             {
                 // Get the writer for this buffer
-                var writer = _basicSteps._writers.Values.LastOrDefault();
+                var writer = _writers.Values.LastOrDefault();
                 if (writer == null)
                 {
                     throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -163,7 +164,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Debug: "Writing frames without metadata");
             
             // Get the writer for this buffer
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -183,7 +184,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Debug: "Verifying frames can be read successfully");
             
             // Get the reader for this buffer
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader == null)
             {
                 throw new InvalidOperationException($"No reader found for process '{process}'");
@@ -209,7 +210,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Debug: "Verifying system works without metadata");
             
             // Get the reader for this buffer
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader == null)
             {
                 throw new InvalidOperationException($"No reader found for buffer");

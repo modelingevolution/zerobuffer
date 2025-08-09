@@ -129,7 +129,7 @@ public class StepExecutor : IStepExecutor
         var parameters = step.Parameters.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value?.ToString() ?? "");
         return new StepRequest(
             Process: processName,
-            StepType: step.Type.ToString().ToLowerInvariant(),
+            StepType: step.Type,
             Step: step.Text,
             Parameters: parameters,
             Context: context.ToImmutableDictionary(),

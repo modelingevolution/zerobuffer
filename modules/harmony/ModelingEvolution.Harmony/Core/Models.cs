@@ -1,3 +1,5 @@
+using ModelingEvolution.Harmony.Shared;
+
 namespace ModelingEvolution.Harmony.Core;
 
 /// <summary>
@@ -35,14 +37,7 @@ public class StepDefinition
     public Dictionary<string, object> Parameters { get; init; } = new();
 }
 
-public enum StepType
-{
-    Given,
-    When,
-    Then,
-    And,
-    But
-}
+
 
 /// <summary>
 /// Represents a combination of platforms for each process role

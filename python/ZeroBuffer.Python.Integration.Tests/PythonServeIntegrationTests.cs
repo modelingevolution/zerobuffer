@@ -1,24 +1,30 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using ModelingEvolution.Harmony.Shared;
 using StreamJsonRpc;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace ZeroBuffer.Python.Integration.Tests
 {
+    /// <summary>
+    /// Integration tests for Python servo implementation using Harmony shared library contracts.
+    /// These tests verify that the Python servo correctly implements the IServoClient interface.
+    /// </summary>
     public class PythonServeIntegrationTests : IAsyncLifetime
     {
         private readonly ITestOutputHelper _output;
         private Process? _pythonProcess;
         private JsonRpc? _jsonRpc;
+        private IServoClient? _servoClient;
         private readonly List<string> _pythonErrors = new();
 
         public PythonServeIntegrationTests(ITestOutputHelper output)
@@ -36,6 +42,12 @@ namespace ZeroBuffer.Python.Integration.Tests
             
             _output.WriteLine($"Python root: {pythonRoot}");
             _output.WriteLine($"Serve executable: {servePath}");
+            
+            // Verify the serve executable exists
+            if (!File.Exists(servePath))
+            {
+                throw new FileNotFoundException($"Python serve executable not found at: {servePath}");
+            }
             
             // Start Python serve process using the SAME executable that Harmony uses
             var psi = new ProcessStartInfo
@@ -55,7 +67,7 @@ namespace ZeroBuffer.Python.Integration.Tests
                 throw new InvalidOperationException("Failed to start Python process");
             }
 
-            // Capture stderr in background
+            // Capture stderr in background for debugging
             _ = Task.Run(async () =>
             {
                 var reader = _pythonProcess.StandardError;
@@ -70,6 +82,9 @@ namespace ZeroBuffer.Python.Integration.Tests
             _jsonRpc = new JsonRpc(_pythonProcess.StandardInput.BaseStream, _pythonProcess.StandardOutput.BaseStream);
             _jsonRpc.StartListening();
 
+            // Create strongly-typed servo client using Harmony shared library
+            _servoClient = new JsonRpcServoClient(_jsonRpc, "python-servo");
+
             // Give the process time to initialize
             await Task.Delay(500);
             _output.WriteLine("Python process started successfully");
@@ -77,6 +92,11 @@ namespace ZeroBuffer.Python.Integration.Tests
 
         public async Task DisposeAsync()
         {
+            if (_servoClient is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+
             if (_jsonRpc != null)
             {
                 _jsonRpc.Dispose();
@@ -84,8 +104,22 @@ namespace ZeroBuffer.Python.Integration.Tests
 
             if (_pythonProcess != null && !_pythonProcess.HasExited)
             {
-                _pythonProcess.Kill();
-                await _pythonProcess.WaitForExitAsync();
+                try
+                {
+                    // Try graceful shutdown first
+                    await _servoClient?.ShutdownAsync()!;
+                    await Task.Delay(500);
+                }
+                catch
+                {
+                    // Ignore shutdown errors
+                }
+
+                if (!_pythonProcess.HasExited)
+                {
+                    _pythonProcess.Kill();
+                    await _pythonProcess.WaitForExitAsync();
+                }
                 _pythonProcess.Dispose();
             }
 
@@ -100,79 +134,57 @@ namespace ZeroBuffer.Python.Integration.Tests
             }
         }
 
-        private void LogStepResult(ExecutionResult result, string stepName)
+        private void LogStepResult(StepResponse response, string stepName)
         {
-            _output.WriteLine($"Step '{stepName}' result: {(result.Success ? "SUCCESS" : "FAILED")}");
+            _output.WriteLine($"Step '{stepName}' result: {(response.Success ? "SUCCESS" : "FAILED")}");
             
-            if (!string.IsNullOrEmpty(result.Error))
+            if (!string.IsNullOrEmpty(response.Error))
             {
-                _output.WriteLine($"  Error: {result.Error}");
+                _output.WriteLine($"  Error: {response.Error}");
             }
             
-            // Log all execution logs from Python
-            if (result.Logs != null && result.Logs.Count > 0)
+            // Log execution logs from Python
+            if (response.Logs != null && response.Logs.Count > 0)
             {
-                _output.WriteLine($"  Execution logs ({result.Logs.Count} entries):");
-                foreach (var log in result.Logs)
+                _output.WriteLine($"  Execution logs ({response.Logs.Count} entries):");
+                foreach (var log in response.Logs)
                 {
-                    // Skip very verbose DEBUG logs unless they're important
-                    if (log.Level == "DEBUG" && log.Message.StartsWith("Sent response") && result.Logs.Count > 20)
-                        continue;
-                        
                     _output.WriteLine($"    [{log.Level}] {log.Message}");
                 }
-            }
-            
-            // Log duration if available
-            if (result.Duration != TimeSpan.Zero)
-            {
-                _output.WriteLine($"  Duration: {result.Duration.TotalMilliseconds}ms");
             }
         }
 
         [Fact]
         public async Task HealthCheck_ShouldReturnTrue()
         {
-            // Act
-            var result = await _jsonRpc!.InvokeAsync<bool>("health");
+            // Act - Health check should be parameterless according to new contract
+            var result = await _servoClient!.HealthAsync();
 
             // Assert
-            result.Should().BeTrue("health check should always return true");
+            result.Should().BeTrue("health check should always return true for a running servo");
             _output.WriteLine("Health check passed");
         }
 
         [Fact]
         public async Task Initialize_ShouldAcceptValidParameters_AndReturnTrue()
         {
-            // Arrange
-            var initParams = new
-            {
-                role = "reader",
-                platform = "python",
-                scenario = "Test1_1", 
-                testRunId = Guid.NewGuid().ToString(),
-                hostPid = Process.GetCurrentProcess().Id,
-                featureId = 123
-            };
+            // Arrange - Use the correct Harmony contract
+            var request = new InitializeRequest(
+                Role: "reader",
+                Platform: "python",
+                Scenario: "Test1_1",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 123
+            );
 
             // Act
-            var result = await _jsonRpc!.InvokeAsync<bool>("initialize", initParams);
+            var result = await _servoClient!.InitializeAsync(request);
 
             // Assert
             result.Should().BeTrue("initialization should succeed with valid parameters");
-            _output.WriteLine($"Initialization succeeded with role={initParams.role}, platform={initParams.platform}");
+            _output.WriteLine($"Initialization succeeded with role={request.Role}, platform={request.Platform}, testRunId={request.TestRunId}");
         }
 
-        public class DiscoverResponse
-        {
-            public List<StepInfo> Steps { get; set; } = new();
-        }
-
-        public class StepInfo
-        {
-            public string Type { get; set; } = string.Empty;
-            public string Pattern { get; set; } = string.Empty;
-        }
         [Fact]
         public async Task Discover_ShouldReturnStepDefinitions()
         {
@@ -180,14 +192,15 @@ namespace ZeroBuffer.Python.Integration.Tests
             await Task.Delay(1000);
             
             // Act
-            var result = await _jsonRpc!.InvokeAsync<DiscoverResponse>("discover");
+            var response = await _servoClient!.DiscoverAsync();
 
-            
-            
+            // Assert
+            response.Should().NotBeNull();
+            response.Steps.Should().NotBeNull();
             
             // Log discovered steps
-            _output.WriteLine($"Discovered {result.Steps!.Count} step definitions:");
-            if (result.Steps.Count == 0)
+            _output.WriteLine($"Discovered {response.Steps.Count} step definitions:");
+            if (response.Steps.Count == 0)
             {
                 _output.WriteLine("  ERROR: No steps found! Step discovery is broken.");
                 
@@ -204,147 +217,252 @@ namespace ZeroBuffer.Python.Integration.Tests
             else
             {
                 // Log a sample of discovered steps (first 10)
-                
-                foreach (var step in result.Steps)
+                foreach (var step in response.Steps.Take(10))
                 {
-                    _output.WriteLine($"{step.Type} {step.Pattern}");
+                    _output.WriteLine($"  {step.Type} {step.Pattern}");
+                }
+                
+                if (response.Steps.Count > 10)
+                {
+                    _output.WriteLine($"  ... and {response.Steps.Count - 10} more");
                 }
             }
 
             // Assert that steps were discovered
-            _output.WriteLine($"ASSERTION: Checking if {result.Steps.Count} > 0");
-            result.Steps.Count.Should().BeGreaterThan(0, "there should be at least one step definition available");
+            response.Steps.Count.Should().BeGreaterThan(0, "there should be at least one step definition available");
         }
 
         [Fact]
         public async Task ExecuteStep_CreateBuffer_ShouldSucceed()
         {
             // Arrange - Initialize first
-            await _jsonRpc!.InvokeAsync<bool>("initialize", new
-            {
-                role = "reader",
-                platform = "python",
-                scenario = "TestCreateBuffer",
-                testRunId = Guid.NewGuid().ToString()
-            });
+            var initRequest = new InitializeRequest(
+                Role: "reader",
+                Platform: "python",
+                Scenario: "TestCreateBuffer",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 1
+            );
+            
+            var initialized = await _servoClient!.InitializeAsync(initRequest);
+            initialized.Should().BeTrue("initialization should succeed");
 
-            // Act - Create buffer
-            var result = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new
-            {
-                process = "reader",
-                stepType = "Given",
-                step = "creates buffer 'test-integration-buffer' with metadata size '1024' and payload size '10240'",
-                originalStep = "the reader process creates buffer 'test-integration-buffer' with metadata size '1024' and payload size '10240'",
-                parameters = new { }
-            });
+            // Act - Create buffer using Harmony contract
+            var stepRequest = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: "the 'reader' process creates buffer 'test-integration-buffer' with metadata size '1024' and payload size '10240'",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty,
+                IsBroadcast: false
+            );
+            
+            var response = await _servoClient.ExecuteStepAsync(stepRequest);
 
             // Assert and log
-            result.Should().NotBeNull();
-            LogStepResult(result, "create buffer");
-            result.Success.Should().BeTrue("create buffer step should succeed");
+            response.Should().NotBeNull();
+            LogStepResult(response, "create buffer");
+            response.Success.Should().BeTrue("create buffer step should succeed");
         }
 
         [Fact]
         public async Task ExecuteStep_ConnectAndWriteMetadata_ShouldSucceed()
         {
-            // Arrange - Initialize and create buffer first
-            await _jsonRpc!.InvokeAsync<bool>("initialize", new
-            {
-                role = "writer",
-                platform = "python", 
-                scenario = "TestWriteMetadata",
-                testRunId = Guid.NewGuid().ToString()
-            });
+            // Arrange - Initialize as writer
+            var initRequest = new InitializeRequest(
+                Role: "writer",
+                Platform: "python",
+                Scenario: "TestWriteMetadata",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 2
+            );
+            
+            var initialized = await _servoClient!.InitializeAsync(initRequest);
+            initialized.Should().BeTrue("initialization should succeed");
 
             // First create a buffer as reader
-            var createResult = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new
-            {
-                process = "reader",
-                stepType = "Given", 
-                step = "creates buffer 'test-metadata-buffer' with metadata size '1024' and payload size '10240'",
-                originalStep = "the reader process creates buffer 'test-metadata-buffer' with metadata size '1024' and payload size '10240'",
-                parameters = new { }
-            });
-            LogStepResult(createResult, "create buffer for metadata test");
+            var createRequest = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: "the 'reader' process creates buffer 'test-metadata-buffer' with metadata size '1024' and payload size '10240'",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty,
+                IsBroadcast: false
+            );
+            
+            var createResponse = await _servoClient.ExecuteStepAsync(createRequest);
+            LogStepResult(createResponse, "create buffer for metadata test");
 
             // Act - Connect as writer
-            var connectResult = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new
-            {
-                process = "writer",
-                stepType = "When",
-                step = "connects to buffer 'test-metadata-buffer'",
-                originalStep = "the writer process connects to buffer 'test-metadata-buffer'",
-                parameters = new { }
-            });
+            var connectRequest = new StepRequest(
+                Process: "writer",
+                StepType: StepType.When,
+                Step: "the 'writer' process connects to buffer 'test-metadata-buffer'",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty,
+                IsBroadcast: false
+            );
+            
+            var connectResponse = await _servoClient.ExecuteStepAsync(connectRequest);
 
             // Assert and log connect
-            connectResult.Should().NotBeNull();
-            LogStepResult(connectResult, "connect to buffer");
-            connectResult.Success.Should().BeTrue("connect to buffer should succeed");
+            connectResponse.Should().NotBeNull();
+            LogStepResult(connectResponse, "connect to buffer");
+            connectResponse.Success.Should().BeTrue("connect to buffer should succeed");
 
             // Act - Write metadata
-            var writeResult = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new
-            {
-                process = "writer",
-                stepType = "When",
-                step = "writes metadata with size '100'",
-                originalStep = "the writer process writes metadata with size '100'",
-                parameters = new { }
-            });
+            var writeRequest = new StepRequest(
+                Process: "writer",
+                StepType: StepType.When,
+                Step: "the 'writer' process writes metadata with size '100'",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty,
+                IsBroadcast: false
+            );
+            
+            var writeResponse = await _servoClient.ExecuteStepAsync(writeRequest);
 
             // Assert and log write
-            writeResult.Should().NotBeNull();
-            LogStepResult(writeResult, "write metadata");
-            writeResult.Success.Should().BeTrue("write metadata should succeed");
+            writeResponse.Should().NotBeNull();
+            LogStepResult(writeResponse, "write metadata");
+            writeResponse.Success.Should().BeTrue("write metadata should succeed");
         }
 
         [Fact]
         public async Task ExecuteStep_InvalidStep_ShouldReturnError()
         {
             // Arrange
-            await _jsonRpc!.InvokeAsync<bool>("initialize", new
-            {
-                role = "reader",
-                platform = "python",
-                scenario = "TestInvalidStep",
-                testRunId = Guid.NewGuid().ToString()
-            });
+            var initRequest = new InitializeRequest(
+                Role: "reader",
+                Platform: "python",
+                Scenario: "TestInvalidStep",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 3
+            );
+            
+            await _servoClient!.InitializeAsync(initRequest);
 
             // Act - Try to execute non-existent step
-            var result = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new
-            {
-                process = "reader",
-                stepType = "Action",
-                step = "this_step_does_not_exist",
-                parameters = new { }
-            });
+            var stepRequest = new StepRequest(
+                Process: "reader",
+                StepType: StepType.When,
+                Step: "this_step_does_not_exist",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty,
+                IsBroadcast: false
+            );
+            
+            var response = await _servoClient.ExecuteStepAsync(stepRequest);
 
             // Assert and log
-            result.Should().NotBeNull();
-            LogStepResult(result, "invalid step (expected to fail)");
-            result.Success.Should().BeFalse("invalid step should fail");
-            result.Error.Should().NotBeNull("error message should be provided");
-
-            var errorMessage = result.Error;
-            errorMessage.Should().Contain("No matching step", "error should indicate step not found");
+            response.Should().NotBeNull();
+            LogStepResult(response, "invalid step (expected to fail)");
+            response.Success.Should().BeFalse("invalid step should fail");
+            response.Error.Should().NotBeNullOrEmpty("error message should be provided");
+            response.Error.Should().Contain("No matching step", "error should indicate step not found");
         }
-    }
-    public class ExecutionResult
-    {
-        public bool Success { get; init; }
-        public TimeSpan Duration { get; init; }
-        public string? Error { get; init; }
-        public Exception? Exception { get; init; }
-        public List<LogEntry> Logs { get; init; } = new();
-    }
 
-    [DebuggerDisplay("{Process} {Level} {Message}")]
-    public class LogEntry
-    {
-        public DateTime Timestamp { get; init; }
-        public string Process { get; init; } = "";
-        public string Platform { get; init; } = "";
-        public string Level { get; init; } = "INFO";
-        public string Message { get; init; } = "";
+        [Fact]
+        public async Task Cleanup_ShouldNotThrow()
+        {
+            // Arrange - Initialize first
+            var initRequest = new InitializeRequest(
+                Role: "reader",
+                Platform: "python",
+                Scenario: "TestCleanup",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 4
+            );
+            
+            await _servoClient!.InitializeAsync(initRequest);
+
+            // Act & Assert - Cleanup should not throw
+            var act = async () => await _servoClient.CleanupAsync();
+            await act.Should().NotThrowAsync("cleanup should handle errors gracefully");
+            
+            _output.WriteLine("Cleanup completed successfully");
+        }
+
+        [Fact]
+        public async Task Shutdown_ShouldNotThrow()
+        {
+            // Act & Assert - Shutdown should not throw even if called multiple times
+            var act = async () => await _servoClient!.ShutdownAsync();
+            await act.Should().NotThrowAsync("shutdown should handle errors gracefully");
+            
+            _output.WriteLine("Shutdown completed successfully");
+        }
+
+        [Fact]
+        public async Task FullScenario_CreateWriteRead_ShouldWork()
+        {
+            // This test simulates a complete scenario using the Harmony contract
+            
+            // Initialize as reader
+            var initRequest = new InitializeRequest(
+                Role: "reader",
+                Platform: "python",
+                Scenario: "FullScenario",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 5
+            );
+            
+            await _servoClient!.InitializeAsync(initRequest);
+
+            // Create buffer
+            var createRequest = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: "the 'reader' process creates buffer 'full-scenario-buffer' with metadata size '1024' and payload size '10240'",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
+            
+            var createResponse = await _servoClient.ExecuteStepAsync(createRequest);
+            LogStepResult(createResponse, "create buffer");
+            createResponse.Success.Should().BeTrue();
+
+            // Re-initialize as writer
+            var writerInitRequest = new InitializeRequest(
+                Role: "writer",
+                Platform: "python",
+                Scenario: "FullScenario",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 5
+            );
+            
+            await _servoClient.InitializeAsync(writerInitRequest);
+
+            // Connect as writer
+            var connectRequest = new StepRequest(
+                Process: "writer",
+                StepType: StepType.When,
+                Step: "the 'writer' process connects to buffer 'full-scenario-buffer'",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
+            
+            var connectResponse = await _servoClient.ExecuteStepAsync(connectRequest);
+            LogStepResult(connectResponse, "connect as writer");
+            connectResponse.Success.Should().BeTrue();
+
+            // Write data
+            var writeRequest = new StepRequest(
+                Process: "writer",
+                StepType: StepType.When,
+                Step: "the 'writer' process writes frame with data 'Hello, ZeroBuffer!'",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
+            
+            var writeResponse = await _servoClient.ExecuteStepAsync(writeRequest);
+            LogStepResult(writeResponse, "write frame");
+            writeResponse.Success.Should().BeTrue();
+
+            // Cleanup
+            await _servoClient.CleanupAsync();
+            
+            _output.WriteLine("Full scenario completed successfully");
+        }
     }
 }

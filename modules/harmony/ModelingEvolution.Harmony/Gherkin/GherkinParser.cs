@@ -1,6 +1,7 @@
 using Gherkin;
 using Gherkin.Ast;
 using ModelingEvolution.Harmony.Core;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ModelingEvolution.Harmony.Gherkin;
 
@@ -95,21 +96,7 @@ public class GherkinParser : IGherkinParser
         };
     }
     
-    // ScenarioOutline support removed - not available in newer Gherkin versions
-    // Would need to implement custom parsing or use an older version if needed
-    
-    private StepType ParseStepType(string keyword)
-    {
-        return keyword.ToLowerInvariant() switch
-        {
-            "given" => StepType.Given,
-            "when" => StepType.When,
-            "then" => StepType.Then,
-            "and" => StepType.And,
-            "but" => StepType.But,
-            _ => StepType.And
-        };
-    }
+   
     
     private class StepParser
     {
@@ -128,28 +115,17 @@ public class GherkinParser : IGherkinParser
             var (process, processedText) = _contextExtractor.ExtractContext(step.Text);
             
             // Handle And/But inheritance
-            if (stepType == StepType.And || stepType == StepType.But)
+            if (!stepType.ToString().Equals(step.Keyword, StringComparison.InvariantCultureIgnoreCase)) // given/when/then != and/but
             {
-                // And/But inherit the type from the last Given/When/Then
-                stepType = _lastStepType;
-                
                 // If no process was extracted and we have a previous process, use it
-                if (process == null && _lastProcess != null)
-                {
+                if (process == null && _lastProcess != null) 
                     process = _lastProcess;
-                }
             }
-            else
-            {
-                // For Given/When/Then, update the last step type
-                _lastStepType = stepType;
-            }
-            
+            _lastStepType = stepType;
+
             // Always update last process if we have one
-            if (process != null)
-            {
+            if (process != null) 
                 _lastProcess = process;
-            }
             
             return new StepDefinition
             {
@@ -167,9 +143,7 @@ public class GherkinParser : IGherkinParser
                 "given" => StepType.Given,
                 "when" => StepType.When,
                 "then" => StepType.Then,
-                "and" => StepType.And,
-                "but" => StepType.But,
-                _ => StepType.And
+                _ => _lastStepType
             };
         }
     }

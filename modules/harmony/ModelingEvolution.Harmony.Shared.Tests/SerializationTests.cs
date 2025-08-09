@@ -72,7 +72,7 @@ public class SerializationTests
         // Arrange
         var request = new StepRequest(
             Process: "writer",
-            StepType: "When",
+            StepType: StepType.When,
             Step: "the writer writes a frame with size 1024",
             Parameters: ImmutableDictionary<string, string>.Empty
                 .Add("size", "1024")
@@ -271,7 +271,7 @@ public class SerializationTests
         // Arrange
         var request = new StepRequest(
             Process: "test",
-            StepType: "Given",
+            StepType: StepType.Given,
             Step: "a simple step",
             Parameters: ImmutableDictionary<string, string>.Empty,
             Context: ImmutableDictionary<string, string>.Empty,
@@ -361,7 +361,7 @@ public class SerializationTests
         // This test ensures all contracts can be serialized and deserialized successfully
         var contracts = new object[]
         {
-            new StepRequest("proc", "When", "step", ImmutableDictionary<string, string>.Empty, ImmutableDictionary<string, string>.Empty,false),
+            new StepRequest("proc", StepType.When, "step", ImmutableDictionary<string, string>.Empty, ImmutableDictionary<string, string>.Empty,false),
             new StepResponse(true, null, null, null),
             new LogResponse(DateTime.UtcNow, LogLevel.Information, "test"),
             new InitializeRequest("role", "platform", "scenario", 123, 456),
@@ -394,7 +394,7 @@ public class SerializationTests
         // Verify that default Newtonsoft.Json serialization uses PascalCase
         var request = new StepRequest(
             Process: "test",
-            StepType: "Given",
+            StepType: StepType.Given,
             Step: "test step",
             Parameters: ImmutableDictionary<string, string>.Empty.Add("key", "value"),
             Context: ImmutableDictionary<string, string>.Empty,
@@ -423,7 +423,7 @@ public class SerializationTests
         // Example of how these contracts would be used in actual JSON-RPC messages
         var request = new StepRequest(
             Process: "writer",
-            StepType: "When",
+            StepType: StepType.When,
             Step: "the writer writes a frame",
             Parameters: ImmutableDictionary<string, string>.Empty,
             Context: ImmutableDictionary<string, string>.Empty,

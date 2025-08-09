@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelingEvolution.Harmony.Shared;
 using StreamJsonRpc;
-using TechTalk.SpecFlow;
 using ZeroBuffer.Serve.JsonRpc;
 using ZeroBuffer.Serve.Logging;
 
@@ -96,8 +95,8 @@ public class ZeroBufferServe
         
         try
         {
-            // Store initialization data in ScenarioContext for step access
-            var scenarioContext = _serviceProvider.GetService<TechTalk.SpecFlow.ScenarioContext>();
+            // Store initialization data in IScenarioContext for step access
+            var scenarioContext = _serviceProvider.GetService<ModelingEvolution.Harmony.Shared.IScenarioContext>();
             if (scenarioContext != null)
             {
                 scenarioContext["role"] = request.Role;
@@ -120,7 +119,7 @@ public class ZeroBufferServe
     
     private async Task<StepResponse> ExecuteStepAsync(StepRequest request)
     {
-        _logger.LogInformation("Executing step: {StepType} {Step}", request.StepType, request.Step);
+        _logger.LogInformation("Executing step: [{StepType}] {Step}", request.StepType.ToString(), request.Step);
         
         try
         {
@@ -164,14 +163,14 @@ public class ZeroBufferServe
         
         try
         {
-            // Clear ScenarioContext
-            var scenarioContext = _serviceProvider.GetService<TechTalk.SpecFlow.ScenarioContext>();
+            // Clear IScenarioContext
+            var scenarioContext = _serviceProvider.GetService<ModelingEvolution.Harmony.Shared.IScenarioContext>();
             if (scenarioContext != null)
             {
                 scenarioContext.Clear();
             }
             
-            // Note: TestContext cleanup removed - using ScenarioContext only
+            // Note: TestContext cleanup removed - using IScenarioContext only
             
             await Task.CompletedTask;
         }

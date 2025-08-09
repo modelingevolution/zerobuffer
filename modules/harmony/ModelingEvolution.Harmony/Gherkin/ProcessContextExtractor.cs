@@ -35,25 +35,32 @@ public class ProcessContextExtractor : IProcessContextExtractor
     
     public (string? Process, string ProcessedText) ExtractContext(string stepText)
     {
+        // First, try to match the common pattern: [keyword] the 'process' process [rest]
+        var processPattern = @"^\s*(?:Given|When|Then|And|But)?\s*the\s+'([^']+)'\s+process\s+(.*)$";
+        var match = Regex.Match(stepText, processPattern, RegexOptions.IgnoreCase);
+        if (match.Success)
+        {
+            return (match.Groups[1].Value, match.Groups[2].Value.Trim());
+        }
+        
+        // Try patterns from the list
         foreach (var pattern in ProcessPatterns)
         {
-            var match = pattern.Match(stepText);
-            if (match.Success)
+            match = pattern.Match(stepText);
+            if (!match.Success) continue;
+            var process = match.Groups["process"].Value;
+                
+            // For the "two readers/writers" pattern, we need special handling
+            if (process == "readers" || process == "writers")
             {
-                var process = match.Groups["process"].Value;
-                
-                // For the "two readers/writers" pattern, we need special handling
-                if (process == "readers" || process == "writers")
-                {
-                    // Convert plural to singular
-                    process = process.TrimEnd('s');
-                }
-                
-                // For patterns that have rest group, use it. Otherwise keep original text
-                var rest = match.Groups["rest"].Success ? match.Groups["rest"].Value : stepText;
-                
-                return (process, rest.Trim());
+                // Convert plural to singular
+                process = process.TrimEnd('s');
             }
+                
+            // For patterns that have rest group, use it. Otherwise keep original text
+            var rest = match.Groups["rest"].Success ? match.Groups["rest"].Value : stepText;
+                
+            return (process, rest.Trim());
         }
         
         // No process context found

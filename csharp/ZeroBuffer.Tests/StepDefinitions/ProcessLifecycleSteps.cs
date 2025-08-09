@@ -15,15 +15,16 @@ namespace ZeroBuffer.Tests.StepDefinitions
     [Binding]
     public class ProcessLifecycleSteps
     {
+        // Own copies of readers and writers - no dependency on other step files
+        private readonly Dictionary<string, Reader> _readers = new();
+        private readonly Dictionary<string, Writer> _writers = new();
         private readonly Dictionary<string, Process> _processes = new();
         private readonly IBufferNamingService _bufferNaming;
-        private readonly BasicCommunicationSteps _basicSteps;
         private Exception? _lastException;
 
-        public ProcessLifecycleSteps(IBufferNamingService bufferNaming, BasicCommunicationSteps basicSteps)
+        public ProcessLifecycleSteps(IBufferNamingService bufferNaming)
         {
             _bufferNaming = bufferNaming;
-            _basicSteps = basicSteps;
         }
 
         [Given(@"we run in harmony")]
@@ -57,7 +58,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         public void ThenProcessShouldReadFrameWithData(string process, string expectedData)
         {
             // Accept process parameter but ignore it
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader == null)
             {
                 throw new InvalidOperationException($"No reader found for process '{process}'");
@@ -75,7 +76,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         public void WhenProcessWritesFrameWithSequence(string process, string sequence)
         {
             // Accept process parameter but ignore it
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -88,7 +89,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         public void ThenProcessShouldReadFrameWithSequence(string process, string sequence)
         {
             // Accept process parameter but ignore it
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader == null)
             {
                 throw new InvalidOperationException($"No reader found for process '{process}'");
@@ -115,21 +116,21 @@ namespace ZeroBuffer.Tests.StepDefinitions
             if (process == "writer")
             {
                 // Close and remove the writer
-                var writer = _basicSteps._writers.Values.LastOrDefault();
+                var writer = _writers.Values.LastOrDefault();
                 if (writer != null)
                 {
                     writer.Dispose();
-                    _basicSteps._writers.Clear();
+                    _writers.Clear();
                 }
             }
             else if (process == "reader")
             {
                 // Close and remove the reader
-                var reader = _basicSteps._readers.Values.LastOrDefault();
+                var reader = _readers.Values.LastOrDefault();
                 if (reader != null)
                 {
                     reader.Dispose();
-                    _basicSteps._readers.Clear();
+                    _readers.Clear();
                 }
             }
         }
@@ -146,23 +147,23 @@ namespace ZeroBuffer.Tests.StepDefinitions
             if (process == "writer")
             {
                 // Simulate writer crash by disposing without cleanup
-                var writer = _basicSteps._writers.Values.LastOrDefault();
+                var writer = _writers.Values.LastOrDefault();
                 if (writer != null)
                 {
                     // Simulate abrupt termination
                     writer.Dispose();
-                    _basicSteps._writers.Clear();
+                    _writers.Clear();
                 }
             }
             else if (process == "reader")
             {
                 // Simulate reader crash by disposing without cleanup
-                var reader = _basicSteps._readers.Values.LastOrDefault();
+                var reader = _readers.Values.LastOrDefault();
                 if (reader != null)
                 {
                     // Simulate abrupt termination
                     reader.Dispose();
-                    _basicSteps._readers.Clear();
+                    _readers.Clear();
                 }
             }
         }
@@ -172,7 +173,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug;
             
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -199,7 +200,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug;
             
-            var bufferName = _basicSteps._readers.Keys.LastOrDefault();
+            var bufferName = _readers.Keys.LastOrDefault();
             if (string.IsNullOrEmpty(bufferName))
             {
                 // No buffer name found in readers
@@ -212,7 +213,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             Reader? reader = null;
             
             // Try to get existing reader or create a new one
-            if (_basicSteps._readers.TryGetValue(bufferName, out var existingReader))
+            if (_readers.TryGetValue(bufferName, out var existingReader))
             {
                 reader = existingReader;
                 // Debug;
@@ -235,7 +236,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug;
             
-            var bufferName = _basicSteps._writers.Keys.LastOrDefault();
+            var bufferName = _writers.Keys.LastOrDefault();
             if (string.IsNullOrEmpty(bufferName))
             {
                 throw new InvalidOperationException("No buffer name found");
@@ -244,7 +245,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             var actualBufferName = _bufferNaming.GetBufferName(bufferName);
             // Attempting to check reader death
             
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -285,13 +286,13 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 // Since we're connecting to existing buffer, we assume default config
                 var config = new BufferConfig(1024, 10240); // Use default sizes
                 var reader = new Reader(actualBufferName, config);
-                _basicSteps._readers[bufferName] = reader;
+                _readers[bufferName] = reader;
             }
             else if (process == "writer")
             {
                 // Create new writer for existing buffer
                 var writer = new Writer(actualBufferName);
-                _basicSteps._writers[bufferName] = writer;
+                _writers[bufferName] = writer;
             }
         }
 
@@ -300,8 +301,8 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug;
             
-            var reader = _basicSteps._readers.Values.LastOrDefault();
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             
             if (reader != null && writer != null)
             {
@@ -366,20 +367,20 @@ namespace ZeroBuffer.Tests.StepDefinitions
             
             if (process == "writer")
             {
-                var writer = _basicSteps._writers.Values.LastOrDefault();
+                var writer = _writers.Values.LastOrDefault();
                 if (writer != null)
                 {
                     writer.Dispose();
-                    _basicSteps._writers.Clear();
+                    _writers.Clear();
                 }
             }
             else if (process == "reader")
             {
-                var reader = _basicSteps._readers.Values.LastOrDefault();
+                var reader = _readers.Values.LastOrDefault();
                 if (reader != null)
                 {
                     reader.Dispose();
-                    _basicSteps._readers.Clear();
+                    _readers.Clear();
                 }
             }
         }
@@ -390,7 +391,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Debug;
             
             // Check that there are no active writers
-            Assert.Empty(_basicSteps._writers);
+            Assert.Empty(_writers);
         }
 
         [Then(@"the '(.*)' process cleanup should succeed")]
@@ -403,7 +404,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             if (process == "reader")
             {
                 // Reader should still exist but writer should be gone
-                Assert.NotEmpty(_basicSteps._readers);
+                Assert.NotEmpty(_readers);
             }
         }
     }

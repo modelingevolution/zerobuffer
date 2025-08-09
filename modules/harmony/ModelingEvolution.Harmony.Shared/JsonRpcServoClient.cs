@@ -30,10 +30,9 @@ public class JsonRpcServoClient : IServoClient
     {
         try
         {
-            // Health check is parameterless
+            // Health check is parameterless - don't pass any arguments
             return await _jsonRpc.InvokeAsync<bool>(
-                ServoMethods.Health, 
-                cancellationToken);
+                ServoMethods.Health);
         }
         catch (RemoteInvocationException)
         {
@@ -49,11 +48,10 @@ public class JsonRpcServoClient : IServoClient
         
         try
         {
-            // Use InvokeWithParameterObjectAsync to ensure proper serialization
-            return await _jsonRpc.InvokeWithParameterObjectAsync<bool>(
+            // Pass the request as a single argument
+            return await _jsonRpc.InvokeAsync<bool>(
                 ServoMethods.Initialize, 
-                request, 
-                cancellationToken);
+                request);
         }
         catch (RemoteInvocationException ex)
         {
@@ -67,9 +65,9 @@ public class JsonRpcServoClient : IServoClient
     {
         try
         {
+            // Discover is also parameterless - don't pass cancellationToken
             return await _jsonRpc.InvokeAsync<DiscoverResponse>(
-                ServoMethods.Discover, 
-                cancellationToken);
+                ServoMethods.Discover);
         }
         catch (RemoteInvocationException ex)
         {
@@ -84,10 +82,10 @@ public class JsonRpcServoClient : IServoClient
         
         try
         {
-            return await _jsonRpc.InvokeWithParameterObjectAsync<StepResponse>(
+            // Pass the request as a single argument
+            return await _jsonRpc.InvokeAsync<StepResponse>(
                 ServoMethods.ExecuteStep, 
-                request, 
-                cancellationToken);
+                request);
         }
         catch (RemoteInvocationException ex)
         {
@@ -106,9 +104,9 @@ public class JsonRpcServoClient : IServoClient
     {
         try
         {
+            // Cleanup is parameterless
             await _jsonRpc.InvokeAsync(
-                ServoMethods.Cleanup, 
-                cancellationToken);
+                ServoMethods.Cleanup);
         }
         catch (RemoteInvocationException)
         {
@@ -121,9 +119,9 @@ public class JsonRpcServoClient : IServoClient
     {
         try
         {
+            // Shutdown is parameterless
             await _jsonRpc.InvokeAsync(
-                ServoMethods.Shutdown, 
-                cancellationToken);
+                ServoMethods.Shutdown);
         }
         catch (RemoteInvocationException)
         {

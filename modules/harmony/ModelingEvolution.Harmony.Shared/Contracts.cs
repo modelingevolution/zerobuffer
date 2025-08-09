@@ -4,13 +4,19 @@ using Microsoft.Extensions.Logging;
 
 namespace ModelingEvolution.Harmony.Shared;
 
+public enum StepType
+{
+    Given,
+    When,
+    Then
+}
 /// <summary>
 /// Request to execute a step in a test process
 /// </summary>
 [DebuggerDisplay("{Process} {StepType}: {Step}")]
 public record StepRequest(
     string Process,
-    string StepType,
+    StepType StepType,
     string Step,
     ImmutableDictionary<string, string> Parameters,
     ImmutableDictionary<string, string> Context,

@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using ModelingEvolution.Harmony.Core;
 using ModelingEvolution.Harmony.Gherkin;
+using ModelingEvolution.Harmony.Shared;
 using Xunit;
 
 namespace ModelingEvolution.Harmony.Tests;
@@ -25,7 +26,7 @@ Feature: Test Parameters
         Then the 'reader' process should read frame with sequence '1'
 ";
         
-        var tempFile = Path.GetTempFileName();
+        var tempFile = Path.Combine(Path.GetTempPath(), "01-TestParameters.feature");
         File.WriteAllText(tempFile, featureContent);
         
         try
@@ -77,7 +78,7 @@ Feature: Simple Test
         Given a simple step without parameters
 ";
         
-        var tempFile = Path.GetTempFileName();
+        var tempFile = Path.Combine(Path.GetTempPath(), "01-SimpleTest.feature");
         File.WriteAllText(tempFile, featureContent);
         
         try
@@ -134,7 +135,7 @@ Feature: And/But Context Test
         But not too much data
 ";
         
-        var tempFile = Path.GetTempFileName();
+        var tempFile = Path.Combine(Path.GetTempPath(), "01-AndButContext.feature");
         File.WriteAllText(tempFile, featureContent);
         
         try
@@ -149,15 +150,15 @@ Feature: And/But Context Test
             
             // First "And" should inherit "reader" process
             Assert.Equal("reader", steps[1].Process);
-            Assert.Equal(StepType.And, steps[1].Type);
+            Assert.Equal(StepType.Given, steps[1].Type);
             
             // Second "And" should inherit "writer" process
             Assert.Equal("writer", steps[3].Process);
-            Assert.Equal(StepType.And, steps[3].Type);
+            Assert.Equal(StepType.When, steps[3].Type);
             
             // "But" should also inherit "writer" process
             Assert.Equal("writer", steps[4].Process);
-            Assert.Equal(StepType.But, steps[4].Type);
+            Assert.Equal(StepType.When, steps[4].Type);
         }
         finally
         {

@@ -5,6 +5,7 @@ using Xunit.Abstractions;
 using ModelingEvolution.Harmony.Core;
 using ModelingEvolution.Harmony.Execution;
 using ModelingEvolution.Harmony.Gherkin;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ModelingEvolution.Harmony.Tests;
 

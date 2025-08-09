@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ModelingEvolution.Harmony.Core;
 using ModelingEvolution.Harmony.Execution;
 using ModelingEvolution.Harmony.ProcessManagement;
+using ModelingEvolution.Harmony.Shared;
 using Xunit.Abstractions;
 using Xunit.Extensions.Logging;
 

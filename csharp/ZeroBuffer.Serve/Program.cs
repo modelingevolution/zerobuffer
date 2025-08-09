@@ -23,11 +23,11 @@ services.AddLogging(builder =>
 // Register services
 services.AddSingleton(loggerProvider);
 
-// Test context removed - using ScenarioContext for context bridging
+// Test context removed - using custom IScenarioContext for context bridging
 
-// Register ScenarioContext for servo context bridging (not used in normal SpecFlow tests)
+// Register custom IScenarioContext for servo context bridging (replaces SpecFlow's ScenarioContext)
 // This allows us to bridge JSON-RPC Context with step execution
-services.AddScoped<ScenarioContext>();
+services.AddScoped<ModelingEvolution.Harmony.Shared.IScenarioContext, ModelingEvolution.Harmony.Shared.ServoContext>();
 
 // Register buffer naming service
 services.AddSingleton<ZeroBuffer.Tests.Services.IBufferNamingService, ZeroBuffer.Tests.Services.BufferNamingService>();

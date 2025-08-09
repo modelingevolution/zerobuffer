@@ -12,13 +12,14 @@ from typing import Dict, Any, Callable, Optional, BinaryIO, Union, List
 from io import BufferedReader, BufferedWriter
 
 from .models import (
-    HealthRequest,
     InitializeRequest,
     StepRequest,
     StepResponse,
     DiscoverResponse,
-    LogEntry
+    LogEntry,
+    LogResponse
 )
+from datetime import datetime
 from .step_registry import StepRegistry
 from .test_context import TestContext
 from .logging.dual_logger import DualLoggerProvider
@@ -194,23 +195,10 @@ class ZeroBufferServe:
         # self._logger.debug(f"Sent response with Content-Length: {content_length}: {response}")  # Too verbose
     
     async def _handle_health(self, params: Union[Dict[str, Any], List[Any]]) -> bool:
-        """Handle health check request"""
-        # Handle various parameter formats from different clients
-        if isinstance(params, list):
-            if len(params) == 1 and isinstance(params[0], dict):
-                # Harmony format: [{'hostPid': 123, 'featureId': 1}]
-                request = HealthRequest(**params[0])
-            elif len(params) >= 2:
-                # Pure positional parameters [hostPid, featureId]
-                request = HealthRequest(hostPid=params[0], featureId=params[1])
-            else:
-                # Default values for minimal health check
-                request = HealthRequest(hostPid=0, featureId=0)
-        else:
-            # Direct named parameters (must be dict if not list)
-            request = HealthRequest(**params)
-            
-        self._logger.info(f"Health check requested with hostPid: {request.hostPid}, featureId: {request.featureId}")
+        """Handle health check request - now parameterless per Harmony contract"""
+        # Health check is now parameterless according to Harmony contract
+        # We ignore any parameters sent for backward compatibility
+        self._logger.info("Health check requested")
         return True
     
     async def _handle_initialize(self, params: Union[Dict[str, Any], List[Any]]) -> bool:
@@ -234,8 +222,19 @@ class ZeroBufferServe:
             else:
                 raise ValueError(f"Invalid initialize parameters: {params}")
         elif isinstance(params, dict):
-            # Direct named parameters
-            request = InitializeRequest(**params)
+            # Direct named parameters - normalize field names to lowercase
+            # C# sends uppercase (Role, Platform) while Python expects lowercase
+            normalized_params = {}
+            for key, value in params.items():
+                # Convert PascalCase to lowercase
+                normalized_key = key[0].lower() + key[1:] if key else key
+                normalized_params[normalized_key] = value
+            
+            # Remove testRunId as it's a computed property in Python
+            if 'testRunId' in normalized_params:
+                normalized_params.pop('testRunId')
+                
+            request = InitializeRequest(**normalized_params)
         else:
             raise ValueError(f"Invalid initialize parameters: {params}")
             
@@ -300,14 +299,30 @@ class ZeroBufferServe:
                 raise ValueError(f"Invalid executeStep parameters: {params}")
         elif isinstance(params, dict):
             # Direct named parameters - handle different parameter names
+            # Normalize field names from PascalCase to camelCase
+            normalized_params = {}
+            for key, value in params.items():
+                # Convert PascalCase to camelCase
+                if key and key[0].isupper():
+                    normalized_key = key[0].lower() + key[1:] if len(key) > 1 else key.lower()
+                else:
+                    normalized_key = key
+                normalized_params[normalized_key] = value
+            
             # Map common variations to expected names
-            if 'type' in params and 'stepType' not in params:
-                params['stepType'] = params.pop('type')
-            if 'text' in params and 'step' not in params:
-                params['step'] = params.pop('text')
-            request = StepRequest(**params)
+            if 'type' in normalized_params and 'stepType' not in normalized_params:
+                normalized_params['stepType'] = normalized_params.pop('type')
+            if 'text' in normalized_params and 'step' not in normalized_params:
+                normalized_params['step'] = normalized_params.pop('text')
+            request = StepRequest(**normalized_params)
         else:
             raise ValueError(f"Invalid executeStep parameters: {params}")
+        
+        # Ensure parameters and context are dicts (not None)
+        if request.parameters is None:
+            request.parameters = {}
+        if request.context is None:
+            request.context = {}
             
         self._logger.info(f"Executing step: {request.stepType} {request.step}")
         
@@ -322,18 +337,50 @@ class ZeroBufferServe:
             
             self._logger.info("Step executed successfully")
             
-            # Collect logs
-            logs = self._logger_provider.get_all_logs()
-            result.logs.extend(logs)
+            # Collect logs and convert to LogResponse format
+            collected_logs = self._logger_provider.get_all_logs()
             
-            # Convert to dict for JSON serialization
+            # Map string log levels to Microsoft.Extensions.Logging.LogLevel enum values
+            level_map = {
+                "TRACE": 0,
+                "DEBUG": 1, 
+                "INFO": 2,
+                "INFORMATION": 2,
+                "WARNING": 3,
+                "WARN": 3,
+                "ERROR": 4,
+                "CRITICAL": 5,
+                "FATAL": 5,
+                "NONE": 6
+            }
+            
+            log_responses = [
+                LogResponse(
+                    timestamp=datetime.utcnow().isoformat() + 'Z',
+                    level=level_map.get(log.level.upper(), 2),  # Default to Information (2)
+                    message=log.message
+                )
+                for log in collected_logs
+            ]
+            
+            # Add collected logs to result
+            if result.logs is None:
+                result.logs = log_responses
+            else:
+                result.logs.extend(log_responses)
+            
+            # Convert to dict for JSON serialization matching Harmony contract
             return {
                 'success': result.success,
                 'error': result.error,
-                'data': result.data,
+                'context': result.context or {},  # Use context instead of data
                 'logs': [
-                    {'level': log.level, 'message': log.message}
-                    for log in result.logs
+                    {
+                        'timestamp': log.timestamp,
+                        'level': log.level,  # Already numeric from LogResponse
+                        'message': log.message
+                    }
+                    for log in (result.logs or [])
                 ]
             }
             
@@ -343,14 +390,34 @@ class ZeroBufferServe:
             # Get all logs including the error
             logs = self._logger_provider.get_all_logs()
             
+            # Convert logs to LogResponse format with numeric log levels
+            level_map = {
+                "TRACE": 0,
+                "DEBUG": 1, 
+                "INFO": 2,
+                "INFORMATION": 2,
+                "WARNING": 3,
+                "WARN": 3,
+                "ERROR": 4,
+                "CRITICAL": 5,
+                "FATAL": 5,
+                "NONE": 6
+            }
+            
+            log_responses = [
+                {
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                    'level': level_map.get(log.level.upper(), 2),  # Default to Information (2)
+                    'message': log.message
+                }
+                for log in logs
+            ]
+            
             return {
                 'success': False,
                 'error': str(e),
-                'data': {},
-                'logs': [
-                    {'level': log.level, 'message': log.message}
-                    for log in logs
-                ]
+                'context': {},  # Use context instead of data
+                'logs': log_responses
             }
     
     async def _handle_cleanup(self, params: Union[Dict[str, Any], List[Any], None]) -> None:

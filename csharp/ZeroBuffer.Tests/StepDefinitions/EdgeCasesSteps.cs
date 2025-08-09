@@ -13,7 +13,9 @@ namespace ZeroBuffer.Tests.StepDefinitions
     public class EdgeCasesSteps
     {
         private readonly IBufferNamingService _bufferNaming;
-        private readonly BasicCommunicationSteps _basicSteps;
+        // Own copies of readers and writers - no dependency on other step files
+        private readonly Dictionary<string, Reader> _readers = new();
+        private readonly Dictionary<string, Writer> _writers = new();
         private readonly Dictionary<string, bool> _wrapAroundOccurred = new();
         private readonly Dictionary<string, bool> _deadlockDetected = new();
         private readonly Dictionary<string, int> _framesSent = new();
@@ -22,10 +24,9 @@ namespace ZeroBuffer.Tests.StepDefinitions
         private bool _writeBlocked = false;
         private Task? _largeWriteTask;
 
-        public EdgeCasesSteps(IBufferNamingService bufferNaming, BasicCommunicationSteps basicSteps)
+        public EdgeCasesSteps(IBufferNamingService bufferNaming)
         {
             _bufferNaming = bufferNaming;
-            _basicSteps = basicSteps;
         }
 
         [When(@"the '(.*)' process writes large frame using '(.*)' of buffer")]
@@ -33,7 +34,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug: "Writing large frame using {Percent} of buffer", percentStr);
             
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -65,7 +66,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug: "Writing small frame of {Size} bytes", size);
             
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -83,7 +84,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug: "Attempting to write large frame again");
             
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -159,7 +160,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             if (_writeBlocked && _largeWriteTask != null)
             {
                 // Reader should be able to read and free space
-                var reader = _basicSteps._readers.Values.LastOrDefault();
+                var reader = _readers.Values.LastOrDefault();
                 if (reader != null)
                 {
                     // Read a frame to free space
@@ -184,7 +185,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug: "Writing {Count} frames rapidly", count);
             
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -219,7 +220,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug: "Reader waking and processing all frames");
             
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader == null)
             {
                 throw new InvalidOperationException($"No reader found for process '{process}'");
@@ -286,7 +287,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             
             try
             {
-                var writer = _basicSteps._writers.Values.LastOrDefault();
+                var writer = _writers.Values.LastOrDefault();
                 if (writer == null)
                 {
                     throw new InvalidOperationException($"No writer found");
@@ -319,7 +320,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug: "Writing frame without metadata");
             
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -337,7 +338,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             
             // If we got here without exception, write succeeded
             // Can also verify by reading the frame
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader != null)
             {
                 var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(100));
@@ -350,7 +351,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug: "Verifying system works without metadata");
             
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader == null)
             {
                 throw new InvalidOperationException($"No reader found");
@@ -376,7 +377,16 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 PayloadSize = 10240
             };
             var reader = new ZeroBuffer.Reader(actualBufferName, config);
-            _basicSteps._readers[bufferName] = reader;
+            _readers[bufferName] = reader;
+        }
+        
+        // Helper method to connect writer - duplicated logic for independence
+        [When(@"the '(.*)' process connects to buffer '(.*)'")]
+        public void WhenProcessConnectsToBuffer(string process, string bufferName)
+        {
+            var actualBufferName = _bufferNaming.GetBufferName(bufferName);
+            var writer = new ZeroBuffer.Writer(actualBufferName);
+            _writers[bufferName] = writer;
         }
 
         [Given(@"the '(.*)' process creates buffer '(.*)' with minimum viable size '(.*)'")]
@@ -395,7 +405,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 PayloadSize = minSize  // This is the total buffer size
             };
             var reader = new ZeroBuffer.Reader(actualBufferName, config);
-            _basicSteps._readers[bufferName] = reader;
+            _readers[bufferName] = reader;
         }
 
         [When(@"writes single byte frame")]
@@ -407,7 +417,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         [When(@"the '(.*)' process writes single byte frame")]
         public void WhenProcessWritesSingleByteFrame(string process)
         {
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -431,7 +441,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Debug: "Filling buffer to {Percent} capacity", percentStr);
             
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -510,7 +520,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         [When(@"the '(.*)' process attempts to write '(.*)' byte frame")]
         public void WhenProcessAttemptsToWriteByteFrame(string process, string size)
         {
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException($"No writer found for process '{process}'");
@@ -563,7 +573,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             }
             
             // Fallback: Try to write one more frame - should block or timeout
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer != null)
             {
                 var blockingTask = Task.Run(() =>
@@ -590,7 +600,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         [When(@"the '(.*)' process writes continuously at high speed")]
         public void WhenWritesContinuouslyAtHighSpeed(string process = null)
         {
-            var writer = _basicSteps._writers.Values.LastOrDefault();
+            var writer = _writers.Values.LastOrDefault();
             if (writer == null)
             {
                 throw new InvalidOperationException("No writer found");
@@ -647,7 +657,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         [When(@"the '(.*)' process reads with '(.*)' ms delay per frame")]
         public void WhenProcessReadsWithDelayPerFrame(string process, string delayMs)
         {
-            var reader = _basicSteps._readers.Values.LastOrDefault();
+            var reader = _readers.Values.LastOrDefault();
             if (reader == null)
             {
                 throw new InvalidOperationException("No reader found");
