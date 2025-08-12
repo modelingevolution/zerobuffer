@@ -121,3 +121,5 @@ vcpkg_installed/
 /modules/harmony/ModelingEvolution.Harmony.Shared/obj
 /modules/harmony/ModelingEvolution.Harmony.Shared.Tests/obj
 /modules/harmony/ModelingEvolution.Harmony.Shared.Tests/bin/Debug/net9.0
+/cpp/ZeroBuffer.Cpp.Integration.Tests/bin/Release/net9.0
+/python/ZeroBuffer.Python.Integration.Tests/bin/Release/net9.0
