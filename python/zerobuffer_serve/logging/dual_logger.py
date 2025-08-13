@@ -9,7 +9,13 @@ import sys
 from typing import List, Dict, Any, Optional, Mapping
 from threading import Lock
 
-from ..models import LogEntry
+from dataclasses import dataclass
+
+@dataclass
+class LogEntry:
+    """Simple log entry for internal use"""
+    level: str
+    message: str
 
 
 class LogCollector:
@@ -63,7 +69,7 @@ class DualLoggerProvider:
         handler = logging.StreamHandler(sys.stderr)
         handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
-            '[%(asctime)s.%(msecs)03d] %(name)s: %(message)s',
+            '[%(asctime)s.%(msecs)03d] [%(levelname)s] %(name)s: %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
         handler.setFormatter(formatter)
@@ -73,7 +79,12 @@ class DualLoggerProvider:
         """Get or create a dual logger"""
         if name not in self._loggers:
             # Create custom logger class instance
-            logger = DualLogger(f"zerobuffer.serve.{name}", self._collector)
+            # Don't prepend zerobuffer.serve if it's already in the name
+            if name.startswith("zerobuffer.serve"):
+                logger_name = name
+            else:
+                logger_name = f"zerobuffer.serve.{name}"
+            logger = DualLogger(logger_name, self._collector)
             logger.setLevel(logging.DEBUG)
             logger.addHandler(self._handler)
             logger.propagate = False

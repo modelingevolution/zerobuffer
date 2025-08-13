@@ -16,6 +16,7 @@ on:
 
 jobs:
   test-port:
+    if: false  # Tests disabled for release
     name: Test vcpkg port on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:

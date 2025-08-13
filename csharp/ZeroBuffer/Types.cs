@@ -117,7 +117,7 @@ namespace ZeroBuffer
         /// Get span for direct zero-copy access to frame data in shared memory
         /// </summary>
         public ReadOnlySpan<byte> Span => _dataPtr != null ? new ReadOnlySpan<byte>(_dataPtr, _length) : ReadOnlySpan<byte>.Empty;
-        
+        public byte* Pointer => _dataPtr;
         /// <summary>
         /// Get mutable span for direct zero-copy write access to frame data.
         /// Use with caution - modifying shared memory requires coordination.

@@ -42,12 +42,12 @@ var stepDefinitionTypes = testsAssembly.GetTypes()
     .Where(t => t.GetCustomAttribute<BindingAttribute>() != null && !t.IsAbstract && t.IsClass)
     .ToList();
 
-Console.Error.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] Registering {stepDefinitionTypes.Count} step definition classes as singletons");
+Console.Error.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] [Information] Registering {stepDefinitionTypes.Count} step definition classes as singletons");
 
 foreach (var stepType in stepDefinitionTypes)
 {
     services.AddSingleton(stepType);
-    Console.Error.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] Registered: {stepType.Name}");
+    Console.Error.WriteLine($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] [Information] Registered: {stepType.Name}");
 }
 
 services.AddSingleton<ZeroBufferServe>();

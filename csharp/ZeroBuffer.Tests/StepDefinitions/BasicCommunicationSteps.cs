@@ -57,6 +57,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             _currentBuffer = bufferName;
         }
 
+        [Given(@"the '(.*)' process connects to buffer '(.*)'")]
         [When(@"the '(.*)' process connects to buffer '(.*)'")]
         public void WhenProcessConnectsToBuffer(string process, string bufferName)
         {
@@ -427,6 +428,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             }
         }
 
+        [Given(@"the '(.*)' process writes frame with data '(.*)'")]
         [When(@"the '(.*)' process writes frame with data '(.*)'")]
         public void WhenProcessWritesFrameWithData(string process, string data)
         {

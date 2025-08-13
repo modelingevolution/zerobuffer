@@ -10,6 +10,8 @@
 
 #include <thread>
 #include <chrono>
+#include <cstring>
+#include <cstdint>
 
 using json = nlohmann::json;
 
@@ -554,6 +556,243 @@ void registerBasicCommunicationSteps() {
             writer->write_frame(frameData.data(), frameSize);
             
             ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote frame successfully after space was freed";
+        }
+    );
+    
+    // Zero-copy operations (Test 1.4)
+    
+    // Step: the 'writer' process requests zero-copy frame of size 'X'
+    registry.registerStep(
+        "the '([^']+)' process requests zero-copy frame of size '([^']+)'",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            const size_t frameSize = std::stoull(params[1]);
+            
+            // Just store the size for the next step
+            // The actual zero-copy operation will happen in the fill step
+            ctx.setProperty("zerocopy_size", frameSize);
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " will request zero-copy buffer of size " 
+                                         << frameSize;
+        }
+    );
+    
+    // Step: the 'writer' process fills zero-copy buffer with test pattern
+    registry.registerStep(
+        "the '([^']+)' process fills zero-copy buffer with test pattern",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            
+            auto* writer = ctx.getWriter(process);
+            if (!writer) {
+                throw std::runtime_error("Writer not found for process: " + process);
+            }
+            
+            size_t size = ctx.getProperty("zerocopy_size");
+            
+            // Request zero-copy buffer
+            uint64_t sequenceNumber = 0;
+            void* buffer = writer->get_frame_buffer(size, sequenceNumber);
+            
+            if (!buffer) {
+                throw std::runtime_error("Failed to get zero-copy buffer");
+            }
+            
+            // Generate test pattern based on sequence number
+            auto testPattern = TestDataPatterns::generateFrameData(size, sequenceNumber);
+            
+            // Fill the zero-copy buffer directly
+            std::memcpy(buffer, testPattern.data(), size);
+            
+            // Store the size and sequence to regenerate the pattern later for verification
+            ctx.setProperty("test_pattern_size", size);
+            ctx.setProperty("test_pattern_sequence", sequenceNumber);
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " filled zero-copy buffer with test pattern";
+        }
+    );
+    
+    // Step: the 'writer' process commits zero-copy frame
+    registry.registerStep(
+        "the '([^']+)' process commits zero-copy frame",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            
+            auto* writer = ctx.getWriter(process);
+            if (!writer) {
+                throw std::runtime_error("Writer not found for process: " + process);
+            }
+            
+            // Commit the zero-copy frame
+            writer->commit_frame();
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " committed zero-copy frame";
+        }
+    );
+    
+    // Step: the 'reader' process should read frame with size 'X'
+    registry.registerStep(
+        "the '([^']+)' process should read frame with size '([^']+)'",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            const size_t expectedSize = std::stoull(params[1]);
+            
+            auto* reader = ctx.getReader(process);
+            if (!reader) {
+                throw std::runtime_error("Reader not found for process: " + process);
+            }
+            
+            auto frame = reader->read_frame(std::chrono::seconds(5));
+            
+            if (!frame.valid()) {
+                throw std::runtime_error("Failed to read frame - timeout or invalid frame");
+            }
+            
+            // Verify frame size
+            if (frame.size() != expectedSize) {
+                throw std::runtime_error("Frame size mismatch: expected " + std::to_string(expectedSize) + 
+                                       " but got " + std::to_string(frame.size()));
+            }
+            
+            // Store frame data for verification in next step
+            // We need to copy the data since the frame pointer won't be valid later
+            std::vector<uint8_t> frameData(
+                static_cast<const uint8_t*>(frame.data()),
+                static_cast<const uint8_t*>(frame.data()) + frame.size()
+            );
+            ctx.setProperty("last_frame_data", frameData);
+            ctx.setProperty("last_frame_sequence", frame.sequence());
+            
+            // Release the frame
+            reader->release_frame(frame);
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " read frame with size " << expectedSize;
+        }
+    );
+    
+    // Step: the 'reader' process should verify frame data matches test pattern
+    registry.registerStep(
+        "the '([^']+)' process should verify frame data matches test pattern",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            
+            // Get the frame data we stored in the previous step
+            json frameDataJson = ctx.getProperty("last_frame_data");
+            if (!frameDataJson.is_array()) {
+                throw std::runtime_error("No frame data available to verify");
+            }
+            
+            // Convert JSON array back to vector
+            std::vector<uint8_t> frameData;
+            for (const auto& byte : frameDataJson) {
+                frameData.push_back(byte.get<uint8_t>());
+            }
+            
+            // Get the sequence number we stored when reading the frame
+            json sequenceJson = ctx.getProperty("last_frame_sequence");
+            uint64_t expectedSequence = 0;
+            if (sequenceJson.is_number()) {
+                expectedSequence = sequenceJson.get<uint64_t>();
+            }
+            
+            // Regenerate the expected pattern using the frame size and sequence
+            auto expectedPattern = TestDataPatterns::generateFrameData(frameData.size(), expectedSequence);
+            
+            // Compare data
+            if (frameData.size() != expectedPattern.size()) {
+                throw std::runtime_error("Frame size mismatch: expected " + 
+                    std::to_string(expectedPattern.size()) + " but got " + 
+                    std::to_string(frameData.size()));
+            }
+            
+            if (std::memcmp(frameData.data(), expectedPattern.data(), frameData.size()) != 0) {
+                throw std::runtime_error("Frame data does not match test pattern");
+            }
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " verified frame data matches test pattern";
+        }
+    );
+    
+    // Step: the 'writer' process writes frame with size 'X' (no sequence)
+    registry.registerStep(
+        "the '([^']+)' process writes frame with size '([^']+)'$",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            const size_t frameSize = std::stoull(params[1]);
+            
+            auto* writer = ctx.getWriter(process);
+            if (!writer) {
+                throw std::runtime_error("Writer not found for process: " + process);
+            }
+            
+            // Use simple test data pattern (not sequence-based)
+            auto frameData = TestDataPatterns::generateSimpleFrameData(frameSize);
+            
+            writer->write_frame(frameData.data(), frameSize);
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " wrote frame with size " << frameSize;
+        }
+    );
+    
+    // Step: the 'reader' process should read X frames with sizes 'Y,Z' in order
+    registry.registerStep(
+        "the '([^']+)' process should read ([0-9]+) frames with sizes '([^']+)' in order",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            const int frameCount = std::stoi(params[1]);
+            const std::string& sizesStr = params[2];
+            
+            auto* reader = ctx.getReader(process);
+            if (!reader) {
+                throw std::runtime_error("Reader not found for process: " + process);
+            }
+            
+            // Parse expected sizes
+            std::vector<size_t> expectedSizes;
+            size_t pos = 0;
+            while (pos < sizesStr.length()) {
+                size_t nextComma = sizesStr.find(',', pos);
+                if (nextComma == std::string::npos) {
+                    expectedSizes.push_back(std::stoull(sizesStr.substr(pos)));
+                    break;
+                } else {
+                    expectedSizes.push_back(std::stoull(sizesStr.substr(pos, nextComma - pos)));
+                    pos = nextComma + 1;
+                }
+            }
+            
+            if (expectedSizes.size() != static_cast<size_t>(frameCount)) {
+                throw std::runtime_error("Frame count mismatch: expected " + std::to_string(frameCount) + 
+                    " sizes but got " + std::to_string(expectedSizes.size()));
+            }
+            
+            // Read and verify each frame
+            for (int i = 0; i < frameCount; i++) {
+                auto frame = reader->read_frame(std::chrono::seconds(5));
+                
+                if (!frame.valid()) {
+                    throw std::runtime_error("Failed to read frame " + std::to_string(i + 1));
+                }
+                
+                if (frame.size() != expectedSizes[i]) {
+                    throw std::runtime_error("Frame " + std::to_string(i + 1) + 
+                        " size mismatch: expected " + std::to_string(expectedSizes[i]) + 
+                        " but got " + std::to_string(frame.size()));
+                }
+                
+                // Verify frame data integrity using TestDataPatterns
+                const uint8_t* frameData = static_cast<const uint8_t*>(frame.data());
+                if (!TestDataPatterns::verifySimpleFrameData(frameData, frame.size())) {
+                    throw std::runtime_error("Frame " + std::to_string(i + 1) + 
+                        " data does not match expected pattern");
+                }
+                
+                reader->release_frame(frame);
+                ZEROBUFFER_LOG_DEBUG("Step") << "Read and verified frame " << (i + 1) 
+                                             << " with size " << expectedSizes[i];
+            }
+            
+            ZEROBUFFER_LOG_DEBUG("Step") << process << " read " << frameCount 
+                                        << " frames with expected sizes";
         }
     );
     

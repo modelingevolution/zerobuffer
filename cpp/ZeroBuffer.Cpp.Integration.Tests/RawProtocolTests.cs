@@ -7,9 +7,18 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+using Newtonsoft.Json;
+using ModelingEvolution.Harmony.Shared;
+using System.Collections.Immutable;
+using StreamJsonRpc;
+using StreamJsonRpc.Protocol;
 
 namespace ZeroBuffer.Cpp.Integration.Tests
 {
+    /// <summary>
+    /// Tests the raw JSON-RPC protocol using shared Harmony contracts.
+    /// These tests verify the protocol at the wire level while still using proper contract types.
+    /// </summary>
     public class RawProtocolTests : IAsyncLifetime
     {
         private readonly ITestOutputHelper _output;
@@ -56,12 +65,12 @@ namespace ZeroBuffer.Cpp.Integration.Tests
                 throw new InvalidOperationException("Failed to start C++ process");
             }
 
-            // Use binary stream directly to avoid encoding issues
-            _writer = new StreamWriter(_cppProcess.StandardInput.BaseStream, Encoding.UTF8, bufferSize: 1)
+            // Use streams with reasonable buffer sizes
+            _writer = new StreamWriter(_cppProcess.StandardInput.BaseStream, Encoding.UTF8)
             {
                 AutoFlush = true
             };
-            _reader = new StreamReader(_cppProcess.StandardOutput.BaseStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 1);
+            _reader = new StreamReader(_cppProcess.StandardOutput.BaseStream, Encoding.UTF8);
 
             // Capture stderr in background
             _ = Task.Run(async () =>
@@ -75,8 +84,8 @@ namespace ZeroBuffer.Cpp.Integration.Tests
             });
 
             // Give process time to start
-            await Task.Delay(500);
-            _output.WriteLine("Process started");
+            await Task.Delay(100);
+            _output.WriteLine("Process started and ready");
         }
 
         public async Task DisposeAsync()
@@ -92,16 +101,21 @@ namespace ZeroBuffer.Cpp.Integration.Tests
             }
         }
 
-        [Fact(Skip = "Temporarily disabled - logs interfering with stdout JSON-RPC protocol")]
+        [Fact]
         public async Task SendRawHealthRequest_ShouldReceiveResponse()
         {
-            // Arrange - Create a simple health request (42 bytes)
-            string jsonRequest = "{\"jsonrpc\":\"2.0\",\"method\":\"health\",\"id\":1}";
+            // Arrange - Create a health request using proper JSON-RPC format
+            var request = new
+            {
+                jsonrpc = "2.0",
+                method = ServoMethods.Health,
+                id = 1
+            };
+            string jsonRequest = JsonConvert.SerializeObject(request);
             byte[] jsonBytes = Encoding.UTF8.GetBytes(jsonRequest);
             
-            _output.WriteLine($"Sending JSON request: {jsonRequest}");
+            _output.WriteLine($"Sending health request: {jsonRequest}");
             _output.WriteLine($"Content-Length: {jsonBytes.Length}");
-            _output.WriteLine($"Actual byte count: {jsonBytes.Length}");
             
             // Act - Send with Content-Length header
             await _writer!.WriteAsync($"Content-Length: {jsonBytes.Length}\r\n");
@@ -168,8 +182,10 @@ namespace ZeroBuffer.Cpp.Integration.Tests
                     string responseJson = new string(buffer, 0, totalRead);
                     _output.WriteLine($"Response body: {responseJson}");
                     
-                    // Assert
-                    responseJson.Should().Contain("\"result\":true", "health check should return true");
+                    // Assert - Deserialize and verify the response
+                    dynamic response = JsonConvert.DeserializeObject(responseJson)!;
+                    ((bool)response.result).Should().BeTrue("health check should return true");
+                    responseJson.Should().Contain("\"id\":1", "response should echo the request ID");
                 }
                 else
                 {
@@ -198,20 +214,45 @@ namespace ZeroBuffer.Cpp.Integration.Tests
             }
         }
 
-        [Fact(Skip = "Temporarily disabled - logs interfering with stdout JSON-RPC protocol")]
+        [Fact]
         public async Task SendMultipleRequests_ShouldReceiveResponses()
         {
-            // Test 1: Health check
-            await SendAndReceiveRawRequest("{\"jsonrpc\":\"2.0\",\"method\":\"health\",\"id\":1}");
+            // Test 1: Health check using proper contract
+            var healthRequest = new
+            {
+                jsonrpc = "2.0",
+                method = ServoMethods.Health,
+                id = 1
+            };
+            await SendAndReceiveRawRequest(JsonConvert.SerializeObject(healthRequest));
             
-            // Test 2: Initialize
-            string initRequest = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{" +
-                "\"role\":\"reader\",\"platform\":\"cpp\",\"scenario\":\"Test\"," +
-                "\"testRunId\":\"test-123\",\"hostPid\":123,\"featureId\":1},\"id\":2}";
-            await SendAndReceiveRawRequest(initRequest);
+            // Test 2: Initialize using shared InitializeRequest contract
+            var initRequest = new InitializeRequest(
+                Role: "reader",
+                Platform: "cpp",
+                Scenario: "RawProtocolTest",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 1
+            );
+            
+            // Serialize the InitializeRequest properly for JSON-RPC
+            var initJsonRpc = new
+            {
+                jsonrpc = "2.0",
+                method = ServoMethods.Initialize,
+                @params = initRequest,  // Use the shared contract object
+                id = 2
+            };
+            await SendAndReceiveRawRequest(JsonConvert.SerializeObject(initJsonRpc));
             
             // Test 3: Another health check
-            await SendAndReceiveRawRequest("{\"jsonrpc\":\"2.0\",\"method\":\"health\",\"id\":3}");
+            var healthRequest2 = new
+            {
+                jsonrpc = "2.0",
+                method = ServoMethods.Health,
+                id = 3
+            };
+            await SendAndReceiveRawRequest(JsonConvert.SerializeObject(healthRequest2));
         }
 
         private async Task<string> SendAndReceiveRawRequest(string jsonRequest)
@@ -252,6 +293,61 @@ namespace ZeroBuffer.Cpp.Integration.Tests
             }
             
             throw new Exception("No response received");
+        }
+
+        [Fact]
+        public async Task SendStepRequest_UsingSharedContract_ShouldWork()
+        {
+            // First initialize using the shared contract
+            var initRequest = new InitializeRequest(
+                Role: "reader",
+                Platform: "cpp",
+                Scenario: "StepTestScenario",
+                HostPid: Process.GetCurrentProcess().Id,
+                FeatureId: 42
+            );
+            
+            var initJsonRpc = new
+            {
+                jsonrpc = "2.0",
+                method = ServoMethods.Initialize,
+                @params = initRequest,
+                id = 1
+            };
+            
+            string initResponse = await SendAndReceiveRawRequest(JsonConvert.SerializeObject(initJsonRpc));
+            _output.WriteLine($"Initialize response: {initResponse}");
+            
+            // Now send a step request using the shared StepRequest contract
+            var stepRequest = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: "the test environment is initialized",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
+            
+            // The C++ servo expects simpler format, so we adapt it
+            var adaptedStepRequest = new
+            {
+                stepType = stepRequest.StepType.ToString(),
+                step = stepRequest.Step
+            };
+            
+            var stepJsonRpc = new
+            {
+                jsonrpc = "2.0",
+                method = ServoMethods.ExecuteStep,
+                @params = adaptedStepRequest,
+                id = 2
+            };
+            
+            string stepResponse = await SendAndReceiveRawRequest(JsonConvert.SerializeObject(stepJsonRpc));
+            _output.WriteLine($"Step response: {stepResponse}");
+            
+            // Verify the response
+            dynamic response = JsonConvert.DeserializeObject(stepResponse)!;
+            ((bool)response.result.success).Should().BeTrue("step should execute successfully");
         }
     }
 }

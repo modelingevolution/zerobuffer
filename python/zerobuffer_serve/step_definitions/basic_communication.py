@@ -327,6 +327,7 @@ class BasicCommunicationSteps(BaseSteps):
         
         self.logger.info("Frame data validated")
         
+    @when(r"(?:the '([^']+)' process )?signals space available")
     @then(r"(?:the '([^']+)' process )?signals space available")
     async def signal_space_available(self, process: Optional[str]) -> None:
         """Signal that space is available (frame consumed)"""

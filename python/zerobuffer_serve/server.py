@@ -16,7 +16,6 @@ from .models import (
     StepRequest,
     StepResponse,
     DiscoverResponse,
-    LogEntry,
     LogResponse
 )
 from datetime import datetime
@@ -207,8 +206,18 @@ class ZeroBufferServe:
         if isinstance(params, list):
             if len(params) == 1 and isinstance(params[0], dict):
                 # Harmony format: [{'hostPid': 123, 'featureId': 1, ...}]
+                # Or C# format with PascalCase: [{'Role': 'reader', 'Platform': 'csharp', ...}]
                 param_dict = params[0]
-                request = InitializeRequest(**param_dict)
+                # Normalize field names from PascalCase to camelCase
+                normalized_params = {}
+                for key, value in param_dict.items():
+                    # Convert PascalCase to camelCase
+                    normalized_key = key[0].lower() + key[1:] if key else key
+                    normalized_params[normalized_key] = value
+                # Remove testRunId as it's a computed property in Python
+                if 'testRunId' in normalized_params:
+                    normalized_params.pop('testRunId')
+                request = InitializeRequest(**normalized_params)
             elif len(params) >= 6:
                 # Pure positional parameters [hostPid, featureId, role, platform, scenario, testRunId]
                 request = InitializeRequest(
@@ -216,8 +225,7 @@ class ZeroBufferServe:
                     featureId=params[1], 
                     role=params[2],
                     platform=params[3],
-                    scenario=params[4],
-                    testRunId=params[5] if len(params) > 5 else ""
+                    scenario=params[4]
                 )
             else:
                 raise ValueError(f"Invalid initialize parameters: {params}")
@@ -286,14 +294,29 @@ class ZeroBufferServe:
         if isinstance(params, list):
             if len(params) == 1 and isinstance(params[0], dict):
                 # Harmony format: [{'stepType': 'Given', 'step': '...', ...}]
-                request = StepRequest(**params[0])
-            elif len(params) >= 4:
-                # Pure positional parameters [stepType, step, parameters, table]
+                # Or C# format with PascalCase: [{'StepType': 'Given', 'Step': '...', ...}]
+                param_dict = params[0]
+                # Normalize field names from PascalCase to camelCase
+                normalized_params = {}
+                for key, value in param_dict.items():
+                    # Convert PascalCase to camelCase
+                    if key and key[0].isupper():
+                        normalized_key = key[0].lower() + key[1:] if len(key) > 1 else key.lower()
+                    else:
+                        normalized_key = key
+                    normalized_params[normalized_key] = value
+                # Handle stepType as integer enum from C#
+                if 'stepType' in normalized_params and isinstance(normalized_params['stepType'], int):
+                    step_types = ['Given', 'When', 'Then']
+                    normalized_params['stepType'] = step_types[normalized_params['stepType']] if normalized_params['stepType'] < len(step_types) else 'Given'
+                request = StepRequest(**normalized_params)
+            elif len(params) >= 3:
+                # Pure positional parameters [stepType, step, parameters, context]
                 request = StepRequest(
                     stepType=params[0],
                     step=params[1],
                     parameters=params[2] if len(params) > 2 else {},
-                    table=params[3] if len(params) > 3 else None
+                    context=params[3] if len(params) > 3 else {}
                 )
             else:
                 raise ValueError(f"Invalid executeStep parameters: {params}")
@@ -327,12 +350,12 @@ class ZeroBufferServe:
         self._logger.info(f"Executing step: {request.stepType} {request.step}")
         
         try:
-            # Execute the step
+            # Execute the step with context
             result = await self._step_registry.execute_step(
                 step_type=request.stepType,
                 step_text=request.step,
                 parameters=request.parameters,
-                table=request.table
+                context=request.context
             )
             
             self._logger.info("Step executed successfully")
@@ -404,7 +427,7 @@ class ZeroBufferServe:
                 "NONE": 6
             }
             
-            log_responses = [
+            error_log_responses: List[Dict[str, Any]] = [
                 {
                     'timestamp': datetime.utcnow().isoformat() + 'Z',
                     'level': level_map.get(log.level.upper(), 2),  # Default to Information (2)
@@ -417,7 +440,7 @@ class ZeroBufferServe:
                 'success': False,
                 'error': str(e),
                 'context': {},  # Use context instead of data
-                'logs': log_responses
+                'logs': error_log_responses
             }
     
     async def _handle_cleanup(self, params: Union[Dict[str, Any], List[Any], None]) -> None:

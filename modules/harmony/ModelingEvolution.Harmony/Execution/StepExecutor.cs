@@ -140,12 +140,12 @@ public class StepExecutor : IStepExecutor
     private StepExecutionResult ConvertResponse(StepResponse response, string processName, string platform)
     {
         // Debug: Check what we got
-        _logger.LogInformation($"ConvertResponse for {processName}: Success={response.Success}, LogsCount={response.Logs?.Count ?? 0}");
+        //_logger.LogInformation($"ConvertResponse for {processName}: Success={response.Success}, LogsCount={response.Logs?.Count ?? 0}");
         if (response.Logs != null)
         {
             foreach (var log in response.Logs)
             {
-                _logger.LogInformation($"  Log: [{log.Level}] {log.Message}");
+                //_logger.LogInformation($"  Log: [{log.Level}] {log.Message}");
             }
         }
         
@@ -174,10 +174,13 @@ public class StepExecutor : IStepExecutor
         
         if (failures.Count == 0)
         {
+            // BUG: Context is always returned as Empty when combining results from broadcast
+            // This means any Context modifications from broadcast steps are lost
+            // Should consider: merge contexts, use first non-empty, or track per-process contexts
             return new StepExecutionResult(
                 Success: true,
                 Error: null,
-                Context: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty,  // TODO: Context is discarded!
                 Exception: null,
                 Logs: allLogs.ToImmutableList(),
                 Duration: TimeSpan.Zero
@@ -187,10 +190,11 @@ public class StepExecutor : IStepExecutor
         var errorPrefix = isBroadcast ? "Broadcast failed on: " : "Execution failed: ";
         var errors = string.Join(", ", failures.Select(f => f.Error));
         
+        // BUG: Same issue here - Context is discarded on failure
         return new StepExecutionResult(
             Success: false,
             Error: errorPrefix + errors,
-            Context: ImmutableDictionary<string, string>.Empty,
+            Context: ImmutableDictionary<string, string>.Empty,  // TODO: Context is discarded on failure too!
             Exception: null,
             Logs: allLogs.ToImmutableList(),
             Duration: TimeSpan.Zero

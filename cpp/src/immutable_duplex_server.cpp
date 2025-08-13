@@ -123,14 +123,14 @@ void ImmutableDuplexServer::process_requests(RequestHandler handler, const std::
             ZEROBUFFER_LOG_DEBUG("ImmutableDuplexServer") << "Received request seq=" << request.sequence() << " size=" << request.size();
             
             // Process request and get response data
-            std::span<const uint8_t> response_data;
+            std::vector<uint8_t> response_data;
             try {
                 response_data = handler(request);
             }
             catch (const std::exception& ex) {
                 // Log error and send empty response
                 ZEROBUFFER_LOG_ERROR(channel_name_) << "Error in request handler: " << ex.what();
-                response_data = {};
+                response_data.clear();
             }
             
             // Allocate buffer for sequence number + response data

@@ -29,6 +29,10 @@ add_library(zerobuffer STATIC
     ${PLATFORM_SOURCES}
 )
 
+# Enable position independent code for static library
+# This is required when linking into shared libraries (like GStreamer plugins)
+set_property(TARGET zerobuffer PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 # Include directories
 target_include_directories(zerobuffer
     PUBLIC

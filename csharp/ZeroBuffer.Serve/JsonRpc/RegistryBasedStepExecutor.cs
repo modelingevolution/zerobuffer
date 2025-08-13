@@ -16,7 +16,7 @@ public class RegistryBasedStepExecutor : IStepExecutor
     
     public async Task<StepResponse> ExecuteAsync(StepRequest request)
     {
-        _logger.LogInformation("Executing step via registry: {StepType} {Step}", request.StepType, request.Step);
+        //_logger.LogInformation("Executing step via registry: {StepType} {Step}", request.StepType, request.Step);
         
         // The StepRegistry handles all the execution logic
         return await _stepRegistry.ExecuteStepAsync(request);

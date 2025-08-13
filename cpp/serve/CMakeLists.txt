@@ -10,6 +10,7 @@ add_executable(zerobuffer-serve
     ../step_definitions/basic_communication_steps.cpp
     ../step_definitions/buffer_naming_service.cpp
     ../step_definitions/test_data_patterns.cpp
+    ../step_definitions/duplex_channel_steps.cpp
 )
 
 # Include directories

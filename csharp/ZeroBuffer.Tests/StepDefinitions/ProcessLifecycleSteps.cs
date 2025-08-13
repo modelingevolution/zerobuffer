@@ -18,7 +18,6 @@ namespace ZeroBuffer.Tests.StepDefinitions
         // Own copies of readers and writers - no dependency on other step files
         private readonly Dictionary<string, Reader> _readers = new();
         private readonly Dictionary<string, Writer> _writers = new();
-        private readonly Dictionary<string, Process> _processes = new();
         private readonly IBufferNamingService _bufferNaming;
         private Exception? _lastException;
 
@@ -45,14 +44,8 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Running under Harmony - proceeding with test
         }
 
-        // Note: GivenProcessCreatesBufferWithSizes is already defined in BasicCommunicationSteps
-        // Removed to avoid ambiguity
-
-        // Note: WhenProcessConnectsToBuffer is already defined in BasicCommunicationSteps
-        // Removed to avoid ambiguity
-
-        // Note: WhenProcessWritesFrameWithData is already defined in BasicCommunicationSteps
-        // Removed to avoid ambiguity
+        // Note: These steps are already defined in BasicCommunicationSteps.cs
+        // We should not duplicate them here to avoid ambiguity
 
         [Then(@"the '(.*)' process should read frame with data '(.*)'")]
         public void ThenProcessShouldReadFrameWithData(string process, string expectedData)
@@ -133,6 +126,13 @@ namespace ZeroBuffer.Tests.StepDefinitions
                     _readers.Clear();
                 }
             }
+        }
+
+        [Then(@"wait for '(.*)' seconds")]
+        public void ThenWaitForSeconds(string seconds)
+        {
+            var delay = int.Parse(seconds);
+            Thread.Sleep(TimeSpan.FromSeconds(delay));
         }
 
         [When(@"the '(.*)' process crashes")]
@@ -360,52 +360,5 @@ namespace ZeroBuffer.Tests.StepDefinitions
                        $"Expected writer already exists error but got: {_lastException.Message}");
         }
 
-        [When(@"the '(.*)' process closes connection gracefully")]
-        public void WhenProcessClosesConnectionGracefully(string process)
-        {
-            // Debug;
-            
-            if (process == "writer")
-            {
-                var writer = _writers.Values.LastOrDefault();
-                if (writer != null)
-                {
-                    writer.Dispose();
-                    _writers.Clear();
-                }
-            }
-            else if (process == "reader")
-            {
-                var reader = _readers.Values.LastOrDefault();
-                if (reader != null)
-                {
-                    reader.Dispose();
-                    _readers.Clear();
-                }
-            }
-        }
-
-        [Then(@"the writer should be disconnected")]
-        public void ThenWriterShouldBeDisconnected()
-        {
-            // Debug;
-            
-            // Check that there are no active writers
-            Assert.Empty(_writers);
-        }
-
-        [Then(@"the '(.*)' process cleanup should succeed")]
-        public void ThenProcessCleanupShouldSucceed(string process)
-        {
-            // Debug;
-            
-            // Cleanup is considered successful if no exceptions were thrown
-            // and resources are properly released
-            if (process == "reader")
-            {
-                // Reader should still exist but writer should be gone
-                Assert.NotEmpty(_readers);
-            }
-        }
     }
 }

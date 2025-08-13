@@ -79,8 +79,8 @@ public:
     virtual bool is_running() const = 0;
 };
 
-// Handler function that returns response data as span
-using RequestHandler = std::function<std::span<const uint8_t>(const Frame&)>;
+// Handler function that returns response data
+using RequestHandler = std::function<std::vector<uint8_t>(const Frame&)>;
 
 // Server that processes immutable requests and returns new response data
 class IImmutableDuplexServer : public IDuplexServer {

@@ -125,6 +125,7 @@ public class ZeroBufferServe
         {
             var result = await _stepExecutor.ExecuteAsync(request);
             
+            
             _logger.LogInformation("Step executed successfully");
             
             // Collect all logs generated during this step

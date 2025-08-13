@@ -15,19 +15,17 @@ from .logging.dual_logger import DualLoggerProvider
 
 async def main() -> None:
     """Main entry point for the serve application"""
-    # Set up logging to stderr so it doesn't interfere with JSON-RPC on stdout
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        stream=sys.stderr
-    )
+    # Disable the root logger to prevent duplicate logging
+    # DualLoggerProvider will handle all logging to stderr
+    logging.getLogger().handlers = []
+    logging.getLogger().setLevel(logging.CRITICAL)
     
     # Create dependencies
     logger_provider = DualLoggerProvider()
     test_context = TestContext()
     
-    # Create a logger for the step registry
-    main_logger = logging.getLogger("zerobuffer_serve")
+    # Create a logger for the step registry using the DualLoggerProvider
+    main_logger = logger_provider.get_logger("StepRegistry")
     step_registry = StepRegistry(main_logger)
     
     # Import and register all step definitions
@@ -45,7 +43,7 @@ async def main() -> None:
     
     # Instantiate and register step definition classes
     # Create a logger for step definitions
-    step_logger = logger_provider.get_logger("zerobuffer.serve")
+    step_logger = logger_provider.get_logger("StepDefinitions")
     
     step_registry.register_instance(BasicCommunicationSteps(test_context, step_logger))
     step_registry.register_instance(BenchmarksSteps(test_context, step_logger))

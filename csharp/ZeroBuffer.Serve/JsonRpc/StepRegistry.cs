@@ -103,7 +103,7 @@ public class StepRegistry
     {
         try
         {
-            _logger.LogDebug("Executing step: {StepType} {StepText}", stepType, stepText);
+            //_logger.LogDebug("Executing step: {StepType} {StepText}", stepType, stepText);
             
             
             // Find matching step
@@ -112,20 +112,28 @@ public class StepRegistry
 
 			(matchingStep, match) = FindMatchingStep(stepType, stepText);
 
-            if (matchingStep == null || match == null)
-            {
-                var error = $"No matching step definition found for: [{stepType}] {stepText}";
-                _logger.LogWarning(error);
-                return new StepResponse(
-                    Success: false,
-                    Error: error,
-                    Context: null,
-                    Logs: null
-                );
-            }
-            
+            if (matchingStep != null && match != null)
+                return await ExecuteStepMethodAsync(matchingStep, match, context);
+
+            string error = $"No matching step definition found for: [{stepType}] {stepText}";
+            string givens = string.Join(", ", _steps[StepType.Given].Select(x=>x.Pattern));
+            string whens = string.Join(", ", _steps[StepType.When].Select(x => x.Pattern));
+            string thens = string.Join(", ", _steps[StepType.Then].Select(x => x.Pattern));
+
+            string detailes = $"Available steps:\n" +
+                $"Given: {givens}\n" +
+                $"When: {whens}\n" +
+                $"Then: {thens}";
+
+            _logger.LogWarning($"{error}\n{detailes}");
+            return new StepResponse(
+                Success: false,
+                Error: error,
+                Context: null,
+                Logs: null
+            );
+
             // Execute the step with context
-            return await ExecuteStepMethodAsync(matchingStep, match, context);
         }
         catch (Exception ex)
         {

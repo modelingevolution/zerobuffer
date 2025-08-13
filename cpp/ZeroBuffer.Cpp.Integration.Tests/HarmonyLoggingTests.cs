@@ -1,12 +1,15 @@
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
 using StreamJsonRpc;
+using ModelingEvolution.Harmony.Shared;
 
 namespace ZeroBuffer.Cpp.Integration.Tests
 {
@@ -21,11 +24,7 @@ namespace ZeroBuffer.Cpp.Integration.Tests
         private JsonRpc? _jsonRpc;
         private HeaderDelimitedMessageHandler? _messageHandler;
         
-        // Strongly typed request class
-        private class StepRequest
-        {
-            public string Step { get; set; } = "";
-        }
+        // Note: We use StepRequest and StepResponse from ModelingEvolution.Harmony.Shared
 
         public HarmonyLoggingTests(ITestOutputHelper output)
         {
@@ -135,27 +134,33 @@ namespace ZeroBuffer.Cpp.Integration.Tests
             // Arrange
             var stepText = "all processes are ready";
             _output.WriteLine($"Executing step: {stepText}");
+            var request = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: stepText,
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
             
             // Act
-            var response = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new { step = stepText });
+            var response = await _jsonRpc!.InvokeAsync<StepResponse>("executeStep", request);
             
             // Assert
             _output.WriteLine($"Response: {response}");
             
             // Check success
-            Assert.True((bool)response.Success, "Step should execute successfully");
-           
+            Assert.True(response.Success, "Step should execute successfully");
             
-            // Verify we have the expected log
-            
+            // Verify we have logs
+            Assert.NotNull(response.Logs);
             _output.WriteLine($"Found {response.Logs.Count} log messages:");
-            foreach (var msg in response.Logs)
+            foreach (var log in response.Logs)
             {
-                _output.WriteLine($"  - {msg}");
+                _output.WriteLine($"  [{log.Level}] {log.Message}");
             }
 
             // Should contain the debug log from the step
-            response.Logs.Should().Contain(msg => msg.Message.Contains("All processes ready"), 
+            response.Logs.Should().Contain(log => log.Message.Contains("All processes ready"), 
                 "Step should log 'All processes ready'");
         }
 
@@ -167,13 +172,27 @@ namespace ZeroBuffer.Cpp.Integration.Tests
             // Execute multiple steps and verify logs are properly cleared between calls
             
             // First step
-            var response1 = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new { step = "the test environment is initialized" });
+            var request1 = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: "the test environment is initialized",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
+            var response1 = await _jsonRpc!.InvokeAsync<StepResponse>("executeStep", request1);
             Assert.NotNull(response1.Logs);
             var count1 = response1.Logs.Count;
             _output.WriteLine($"First step produced {count1} logs");
             
             // Second step
-            var response2 = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new { step = "all processes are ready" });
+            var request2 = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: "all processes are ready",
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
+            var response2 = await _jsonRpc!.InvokeAsync<StepResponse>("executeStep", request2);
             Assert.NotNull(response2.Logs);
             var count2 = response2.Logs.Count;
             _output.WriteLine($"Second step produced {count2} logs");
@@ -195,7 +214,14 @@ namespace ZeroBuffer.Cpp.Integration.Tests
             _output.WriteLine($"Executing invalid step: {stepText}");
             
             // Act
-            var response = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new { step = stepText });
+            var request = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: stepText,
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
+            var response = await _jsonRpc!.InvokeAsync<StepResponse>("executeStep", request);
             
             // Assert
             _output.WriteLine($"Response: {response}");
@@ -217,7 +243,7 @@ namespace ZeroBuffer.Cpp.Integration.Tests
                 _output.WriteLine($"Found {response.Logs.Count} log messages during error:");
                 foreach (var log in response.Logs)
                 {
-                    _output.WriteLine($"  - {log.Message}");
+                    _output.WriteLine($"  [{log.Level}] {log.Message}");
                 }
             }
         }
@@ -227,25 +253,38 @@ namespace ZeroBuffer.Cpp.Integration.Tests
         {
             // Arrange
             var stepText = "all processes are ready";
+            var request = new StepRequest(
+                Process: "reader",
+                StepType: StepType.Given,
+                Step: stepText,
+                Parameters: ImmutableDictionary<string, string>.Empty,
+                Context: ImmutableDictionary<string, string>.Empty
+            );
             
             // Act
-            var response = await _jsonRpc!.InvokeAsync<ExecutionResult>("executeStep", new { step = stepText });
+            var response = await _jsonRpc!.InvokeAsync<StepResponse>("executeStep", request);
             
             // Assert
             Assert.NotNull(response.Logs);
             Assert.NotEmpty(response.Logs);
             
-            // Check that logs have proper severity levels
+            // Check that logs have proper severity levels (using LogLevel enum)
             foreach (var log in response.Logs)
             {
-                log.Level.Should().BeOneOf("TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "FATAL",
-                    "Log level should be a valid severity");
+                // LogLevel is an enum from Microsoft.Extensions.Logging
+                log.Level.Should().BeOneOf(
+                    LogLevel.Trace,
+                    LogLevel.Debug,
+                    LogLevel.Information,
+                    LogLevel.Warning,
+                    LogLevel.Error,
+                    LogLevel.Critical);
                 
                 _output.WriteLine($"[{log.Level}] {log.Message}");
             }
             
-            // Should have at least one DEBUG level log from our step
-            var hasDebugLog = response.Logs.Any(log => log.Level == "DEBUG");
+            // Should have at least one Debug level log from our step
+            var hasDebugLog = response.Logs.Any(log => log.Level == LogLevel.Debug);
             hasDebugLog.Should().BeTrue("Should have at least one DEBUG level log");
         }
     }

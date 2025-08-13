@@ -18,14 +18,16 @@ namespace serve {
 using json = nlohmann::json;
 
 /**
- * Log entry structure matching C# LogEntry
+ * Log entry structure matching C# LogResponse from Harmony.Shared
  */
 struct LogEntry {
-    std::string level;
+    std::string timestamp;  // ISO 8601 format timestamp
+    int level;              // Microsoft.Extensions.Logging.LogLevel enum value
     std::string message;
     
     json to_json() const {
         return {
+            {"Timestamp", timestamp},
             {"Level", level},
             {"Message", message}
         };

@@ -171,6 +171,13 @@ void TestContext::reset() {
     lastFrame_.reset();
     bufferNaming_.clearCache();  // Clear buffer name cache for new test
     
+    // Clear initialization context
+    role_.clear();
+    platform_.clear();
+    scenario_.clear();
+    hostPid_ = 0;
+    featureId_ = 0;
+    
     ZEROBUFFER_LOG_DEBUG("TestContext") << "Context reset";
 }
 
@@ -182,6 +189,74 @@ size_t TestContext::getReaderCount() const {
 size_t TestContext::getWriterCount() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return writers_.size();
+}
+
+void TestContext::setInitializationContext(const std::string& role, 
+                                          const std::string& platform,
+                                          const std::string& scenario,
+                                          int hostPid,
+                                          int featureId) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    role_ = role;
+    platform_ = platform;
+    scenario_ = scenario;
+    hostPid_ = hostPid;
+    featureId_ = featureId;
+}
+
+std::string TestContext::getRole() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return role_;
+}
+
+std::string TestContext::getPlatform() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return platform_;
+}
+
+std::string TestContext::getScenario() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return scenario_;
+}
+
+int TestContext::getHostPid() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return hostPid_;
+}
+
+int TestContext::getFeatureId() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return featureId_;
+}
+
+std::string TestContext::getTestRunId() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return std::to_string(hostPid_) + "_" + std::to_string(featureId_);
+}
+
+void TestContext::setParameter(const std::string& key, const json& value) {
+    setProperty("param:" + key, value);
+}
+
+json TestContext::getParameter(const std::string& key) const {
+    return getProperty("param:" + key);
+}
+
+bool TestContext::hasParameter(const std::string& key) const {
+    return hasProperty("param:" + key);
+}
+
+void TestContext::clearParameters() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    // Remove all properties that start with "param:"
+    auto it = properties_.begin();
+    while (it != properties_.end()) {
+        if (it->first.substr(0, 6) == "param:") {
+            it = properties_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 } // namespace steps

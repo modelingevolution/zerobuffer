@@ -61,6 +61,25 @@ public:
     json getProperty(const std::string& key) const;
     bool hasProperty(const std::string& key) const;
     
+    // Step parameter access (stored with "param:" prefix)
+    void setParameter(const std::string& key, const json& value);
+    json getParameter(const std::string& key) const;
+    bool hasParameter(const std::string& key) const;
+    void clearParameters();  // Clear all parameters before next step
+    
+    // Initialization context (from Harmony InitializeRequest)
+    void setInitializationContext(const std::string& role, 
+                                   const std::string& platform,
+                                   const std::string& scenario,
+                                   int hostPid,
+                                   int featureId);
+    std::string getRole() const;
+    std::string getPlatform() const;
+    std::string getScenario() const;
+    int getHostPid() const;
+    int getFeatureId() const;
+    std::string getTestRunId() const; // Returns "hostPid_featureId"
+    
     // Exception handling for expected failures
     void setLastException(std::exception_ptr ex);
     std::exception_ptr getLastException() const;
@@ -96,6 +115,13 @@ private:
     // Test state
     std::unordered_map<std::string, json> properties_;
     std::string currentBuffer_;
+    
+    // Initialization context from Harmony
+    std::string role_;
+    std::string platform_;
+    std::string scenario_;
+    int hostPid_ = 0;
+    int featureId_ = 0;
     
     // Exception handling
     std::exception_ptr lastException_;

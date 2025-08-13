@@ -1,0 +1,221 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Determine tag
+      id: determine_tag
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        # Get the previous tag
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        CURRENT_TAG="${{ steps.determine_tag.outputs.tag }}"
+        
+        # Create release notes
+        echo "# Release Notes for $CURRENT_TAG" > release_notes.md
+        echo "" >> release_notes.md
+        
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "## Changes since $PREVIOUS_TAG" >> release_notes.md
+          echo "" >> release_notes.md
+          
+          # Get commit messages
+          git log --pretty=format:"- %s (%an)" $PREVIOUS_TAG..$CURRENT_TAG >> release_notes.md
+        else
+          echo "## Initial Release" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "This is the first release of ZeroBuffer." >> release_notes.md
+        fi
+        
+        echo "" >> release_notes.md
+        echo "## Components" >> release_notes.md
+        echo "- C++ library" >> release_notes.md
+        echo "- C# library" >> release_notes.md
+        echo "- Python library" >> release_notes.md
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.determine_tag.outputs.tag }}
+        release_name: Release ${{ steps.determine_tag.outputs.tag }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+
+  publish-nuget:
+    needs: create-release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        TAG="${GITHUB_REF#refs/tags/}"
+        VERSION="${TAG#v}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Build and Pack
+      working-directory: ./csharp
+      run: |
+        dotnet build --configuration Release
+        dotnet pack --configuration Release --no-build /p:PackageVersion=${{ steps.get_version.outputs.version }} --output ./nupkg
+    
+    - name: Push to NuGet
+      working-directory: ./csharp
+      run: |
+        dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      continue-on-error: true
+
+  publish-pypi:
+    needs: create-release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        TAG="${GITHUB_REF#refs/tags/}"
+        VERSION="${TAG#v}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Update version
+      working-directory: ./python
+      run: |
+        echo "__version__ = '${{ steps.get_version.outputs.version }}'" > zerobuffer/_version.py
+    
+    - name: Build package
+      working-directory: ./python
+      run: python -m build
+    
+    - name: Publish to PyPI
+      working-directory: ./python
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        twine upload dist/* --skip-existing
+      continue-on-error: true
+
+  build-cpp-artifacts:
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: zerobuffer-linux
+            archive_ext: tar.gz
+          - os: windows-latest
+            artifact_name: zerobuffer-windows
+            archive_ext: zip
+          - os: macos-latest
+            artifact_name: zerobuffer-macos
+            archive_ext: tar.gz
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
+    
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install cmake
+    
+    - name: Configure CMake
+      working-directory: ./cpp
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
+    
+    - name: Build
+      working-directory: ./cpp
+      run: cmake --build build --config Release
+    
+    - name: Package (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        mkdir -p package/zerobuffer
+        cp -r cpp/build/lib* package/zerobuffer/ 2>/dev/null || true
+        cp -r cpp/build/*.so* package/zerobuffer/ 2>/dev/null || true
+        cp -r cpp/build/*.a package/zerobuffer/ 2>/dev/null || true
+        cp -r cpp/build/*.dylib package/zerobuffer/ 2>/dev/null || true
+        cp -r cpp/include package/zerobuffer/
+        tar czf ${{ matrix.artifact_name }}.${{ matrix.archive_ext }} -C package zerobuffer
+    
+    - name: Package (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path package/zerobuffer
+        Copy-Item -Recurse cpp/build/Release/* package/zerobuffer/ -ErrorAction SilentlyContinue
+        Copy-Item -Recurse cpp/include package/zerobuffer/
+        Compress-Archive -Path package/zerobuffer -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.archive_ext }}"
+    
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.artifact_name }}.${{ matrix.archive_ext }}
+        asset_name: ${{ matrix.artifact_name }}.${{ matrix.archive_ext }}
+        asset_content_type: application/octet-stream

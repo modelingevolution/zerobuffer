@@ -61,7 +61,11 @@ public class JsonRpcProcessConnection : IProcessConnection, IDisposable
         // Handle error output
         _process.ErrorDataReceived += (sender, e) =>
         {
-            if (!string.IsNullOrEmpty(e.Data))
+            if (!string.IsNullOrEmpty(e.Data) 
+                && !e.Data.Contains("[info]", StringComparison.InvariantCultureIgnoreCase)
+                && !e.Data.Contains("[Information]", StringComparison.InvariantCultureIgnoreCase)
+                && !e.Data.Contains("[trace]", StringComparison.InvariantCultureIgnoreCase) 
+                && !e.Data.Contains("[debug]", StringComparison.InvariantCultureIgnoreCase))
             {
                 _logger.LogWarning("Process {ProcessName} stderr: {Message}", processName, e.Data);
             }

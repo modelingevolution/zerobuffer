@@ -265,7 +265,13 @@
       "Bash(./test_stdout.sh:*)",
       "Bash(ZEROBUFFER_LOG_LEVEL=DEBUG ./test_stdout.sh)",
       "Bash(./find_hanging_test.sh)",
-      "Bash(dotnet sln:*)"
+      "Bash(dotnet sln:*)",
+      "Bash(./build/tests/generated/zerobuffer_generated_tests --gtest_list_tests)",
+      "Bash(./test_cpp_servo_logs.sh:*)",
+      "Bash(./test_cpp_logs_simple.sh:*)",
+      "Bash(./zerobuffer_generated_tests:*)",
+      "Bash(./test_duplex_cross_platform.sh:*)",
+      "WebFetch(domain:docs.github.com)"
     ],
     "deny": []
   }

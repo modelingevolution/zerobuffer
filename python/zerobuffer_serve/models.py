@@ -1,15 +1,12 @@
 """
-Data models for JSON-RPC requests and responses
+Data models for JSON-RPC requests and responses matching Harmony.Shared contracts.
 
-These models match the C# implementation to ensure cross-platform compatibility.
+These models provide exact compatibility with the C# Harmony.Shared library for 
+enterprise-grade cross-platform servo communication.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
-
-
-# Health check is now parameterless according to Harmony contract
-# HealthRequest removed - health check should be parameterless
+from typing import List, Dict, Optional
 
 
 @dataclass
@@ -30,32 +27,15 @@ class InitializeRequest:
 
 @dataclass
 class StepRequest:
-    """Step execution request - matches Harmony contract"""
-    # Required fields from Harmony contract
+    """Step execution request - matches Harmony.Shared.StepRequest exactly"""
     process: str = ""
-    stepType: str = ""
+    stepType: str = ""  # Expects "Given", "When", or "Then"
     step: str = ""
-    parameters: Optional[Dict[str, str]] = None  # Changed to str,str as per contract
-    context: Optional[Dict[str, str]] = None  # Added context field
+    parameters: Optional[Dict[str, str]] = None
+    context: Optional[Dict[str, str]] = None
     isBroadcast: bool = False
-    
-    # Legacy fields for backward compatibility (not in contract)
-    originalStep: Optional[str] = None
-    table: Optional['TableData'] = None
 
 
-@dataclass
-class TableData:
-    """Table data for steps with tabular input"""
-    headers: List[str] = field(default_factory=list)
-    rows: List[Dict[str, str]] = field(default_factory=list)
-
-
-@dataclass
-class LogEntry:
-    """Log entry for step execution"""
-    level: str = "INFO"
-    message: str = ""
 
 @dataclass
 class LogResponse:
@@ -67,24 +47,21 @@ class LogResponse:
 
 @dataclass
 class StepResponse:
-    """Step execution response - matches Harmony contract"""
+    """Step execution response - matches Harmony.Shared.StepResponse exactly"""
     success: bool = True
     error: Optional[str] = None
-    context: Optional[Dict[str, str]] = None  # Changed from data to context
-    logs: Optional[List[LogResponse]] = None  # Changed to LogResponse type
-    
-    # Legacy field for backward compatibility
-    data: Optional[Dict[str, Any]] = None
+    context: Optional[Dict[str, str]] = None
+    logs: Optional[List[LogResponse]] = None
 
 
 @dataclass
 class StepInfo:
-    """Step definition information for discovery"""
-    type: str = ""  # "given", "when", "then"
-    pattern: str = ""  # Regex pattern
+    """Step definition information - matches Harmony.Shared.StepInfo"""
+    type: str = ""  # "Given", "When", or "Then" (capitalized)
+    pattern: str = ""  # Regex pattern for step matching
 
 
 @dataclass
 class DiscoverResponse:
-    """Step discovery response"""
+    """Step discovery response - matches Harmony.Shared.DiscoverResponse"""
     steps: List[StepInfo] = field(default_factory=list)

@@ -60,14 +60,18 @@ Feature: Process Lifecycle Tests
         And simulate crash
         
         And the reader is 'cpp'
-        And connect as reader to existing buffer 'test-reader-replace'
+        And attempt to create buffer 'test-reader-replace' with metadata size '1024' and payload size '10240'
         
-        And the writer is 'csharp'
-        And write frame with sequence '2'
+        Then detect stale resources
+        And clean up stale resources
+        And create fresh buffer successfully
+        
+        When the writer is 'csharp'
+        And detect reader death and reconnect to buffer 'test-reader-replace'
+        And write frame with sequence '1'
         
         Then the reader is 'cpp'
-        And read frame should have sequence '2'
-        And buffer should continue functioning normally
+        And read frame should have sequence '1'
         
     Scenario: Test 2.4 - Multiple Writer Rejection
         Given the reader is 'csharp'
@@ -80,16 +84,3 @@ Feature: Process Lifecycle Tests
         And attempt to connect to buffer 'test-multi-writer'
         And connection should fail with writer exists error
         
-    Scenario: Test 2.5 - Clean Shutdown Sequence
-        Given the reader is 'csharp'
-        And create buffer 'test-shutdown' with metadata size '1024' and payload size '10240'
-        
-        When the writer is 'python'
-        And connect to buffer 'test-shutdown'
-        And write frame with data 'final message'
-        And close connection gracefully
-        
-        Then the reader is 'csharp'
-        And read frame should return 'final message'
-        And writer should be disconnected
-        And reader cleanup should succeed

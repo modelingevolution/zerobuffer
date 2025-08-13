@@ -1,6 +1,7 @@
 #include "step_registry.h"
 #include "test_context.h"
 #include "basic_communication_steps.h"
+#include "duplex_channel_steps.h"
 // Add more step headers here as they are implemented
 // #include "edge_cases_steps.h"
 // #include "error_handling_steps.h"
@@ -219,6 +220,10 @@ void StepRegistry::registerAllSteps() {
     registerBasicCommunicationSteps();
     ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Registered BasicCommunication steps";
     
+    // DuplexChannel steps
+    registerDuplexChannelSteps(*this);
+    ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Registered DuplexChannel steps";
+    
     // Future step definitions - uncomment as they are implemented:
     // registerEdgeCasesSteps();
     // registerErrorHandlingSteps();
@@ -231,7 +236,6 @@ void StepRegistry::registerAllSteps() {
     // registerAdvancedErrorHandlingSteps();
     // registerStressTestsSteps();
     // registerProtocolComplianceSteps();
-    // registerDuplexChannelSteps();
     // registerBenchmarksSteps();
     
     ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Step registration complete. Total steps: " << definitions_.size();

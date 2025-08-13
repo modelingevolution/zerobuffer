@@ -27,7 +27,7 @@ else:
         pytest_then = None
         pytest_parsers = None
 
-from .models import StepInfo, StepResponse, TableData, LogEntry, LogResponse
+from .models import StepInfo, StepResponse, LogResponse
 from datetime import datetime
 
 
@@ -198,7 +198,7 @@ class StepRegistry:
         step_type: str,
         step_text: str,
         parameters: Optional[Dict[str, Any]] = None,
-        table: Optional[TableData] = None
+        context: Optional[Dict[str, str]] = None
     ) -> StepResponse:
         """Execute a step by matching it to a definition"""
         try:
@@ -226,8 +226,8 @@ class StepRegistry:
                     logs=[]
                 )
                 
-            # Execute the step
-            return await self._execute_step_method(matching_step, match, parameters, table)
+            # Execute the step with context
+            return await self._execute_step_method(matching_step, match, parameters, context)
             
         except Exception as e:
             self._logger.error(f"Error executing step: {e}", exc_info=True)
@@ -271,12 +271,12 @@ class StepRegistry:
         step_info: StepDefinitionInfo,
         match: Match,
         parameters: Optional[Dict[str, Any]],
-        table: Optional[TableData]
+        context: Optional[Dict[str, str]]
     ) -> StepResponse:
         """Execute a step method with parameters"""
         try:
             # Extract parameters from regex groups
-            method_params = self._extract_parameters(step_info.method, match, parameters, table)
+            method_params = self._extract_parameters(step_info.method, match, parameters, context)
             
             # Execute the method
             if asyncio.iscoroutinefunction(step_info.method):
@@ -287,11 +287,11 @@ class StepRegistry:
             # Log success
             self._logger.info(f"Step executed: {step_info.method.__name__}")
             
-            # Return success with proper contract format
+            # Return success with updated context
             return StepResponse(
                 success=True,
                 error=None,
-                context={},  # Empty context for now
+                context=context or {},  # Return the context (potentially modified by step)
                 logs=[LogResponse(
                     timestamp=datetime.utcnow().isoformat() + 'Z',
                     level=2,  # Information level
@@ -304,7 +304,7 @@ class StepRegistry:
             return StepResponse(
                 success=False,
                 error=str(e),
-                context={},  # Empty context for error case
+                context=context or {},  # Return original context on error
                 logs=[LogResponse(
                     timestamp=datetime.utcnow().isoformat() + 'Z',
                     level=4,  # Error level
@@ -317,7 +317,7 @@ class StepRegistry:
         method: Callable,
         match: Match,
         extra_params: Optional[Dict[str, Any]],
-        table: Optional[TableData]
+        context: Optional[Dict[str, str]]
     ) -> List[Any]:
         """Extract parameters for method call"""
         sig = inspect.signature(method)
@@ -336,9 +336,9 @@ class StepRegistry:
                 value = match.group(i + 1)
                 # Convert type if needed
                 result.append(self._convert_parameter(value, sig.parameters[param].annotation))
-            elif param == 'table' and table:
-                # Special handling for table parameter
-                result.append(table)
+            elif param == 'context' and context:
+                # Special handling for context parameter
+                result.append(context)
             elif param == 'parameters' and extra_params:
                 # Special handling for parameters dict
                 result.append(extra_params)

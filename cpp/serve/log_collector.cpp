@@ -5,6 +5,8 @@
 #include <boost/log/utility/formatting_ostream.hpp>
 #include <boost/log/attributes/named_scope.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <chrono>
+#include <iomanip>
 #include <sstream>
 
 namespace zerobuffer {
@@ -19,29 +21,41 @@ void LogCollectorBackend::consume(logging::record_view const& rec) {
         return;
     }
     
-    // Extract severity level using Boost's trivial severity
+    // Generate ISO 8601 timestamp
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()) % 1000;
+    
+    std::stringstream timestamp_ss;
+    timestamp_ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%S");
+    timestamp_ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+    timestamp_ss << 'Z';  // UTC timezone indicator
+    std::string timestamp = timestamp_ss.str();
+    
+    // Extract severity level and map to Microsoft.Extensions.Logging.LogLevel enum values
     auto severity = rec[logging::trivial::severity];
-    std::string level = "INFO";
+    int level = 2;  // Default to Information
     
     if (severity) {
         switch (*severity) {
             case logging::trivial::trace:
-                level = "TRACE";
+                level = 0;  // Trace
                 break;
             case logging::trivial::debug:
-                level = "DEBUG";
+                level = 1;  // Debug
                 break;
             case logging::trivial::info:
-                level = "INFO";
+                level = 2;  // Information
                 break;
             case logging::trivial::warning:
-                level = "WARNING";
+                level = 3;  // Warning
                 break;
             case logging::trivial::error:
-                level = "ERROR";
+                level = 4;  // Error
                 break;
             case logging::trivial::fatal:
-                level = "FATAL";
+                level = 5;  // Critical
                 break;
         }
     }
@@ -59,9 +73,9 @@ void LogCollectorBackend::consume(logging::record_view const& rec) {
         message = "[" + *component_attr + "] " + message;
     }
     
-    // Add to collection
+    // Add to collection with timestamp and integer level
     std::lock_guard<std::mutex> lock(mutex_);
-    logs_.push_back({level, message});
+    logs_.push_back({timestamp, level, message});
 }
 
 std::vector<LogEntry> LogCollectorBackend::get_and_clear_logs() {

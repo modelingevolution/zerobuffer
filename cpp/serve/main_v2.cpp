@@ -168,11 +168,12 @@ void writeJsonResponse(const json& response) {
 /**
  * Execute step with timeout and log collection
  */
-json executeStepWithTimeout(const std::string& stepText) {
+json executeStepWithTimeout(const std::string& stepText, const json& context = json::object()) {
     json result = {
         {"success", false},
         {"data", json::object()},
-        {"logs", json::array()}
+        {"logs", json::array()},
+        {"Context", json::object()}  // Add Context field for Harmony compatibility
     };
     
     // Clear any previous logs and start collecting
@@ -210,6 +211,10 @@ json executeStepWithTimeout(const std::string& stepText) {
     ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Collected " << logs.size() << " log entries for step: " << stepText;
     result["logs"] = logs;
     
+    // TODO: Currently just pass through the Context unchanged
+    // In the future, steps should be able to modify Context
+    result["Context"] = context;
+    
     return result;
 }
 
@@ -237,6 +242,8 @@ json handleRequest(const json& request) {
             json params = request.value("params", json());
             std::string stepText;
             std::string stepType;
+            json stepParameters;  // Store Parameters from StepRequest
+            json stepContext;     // Store Context from StepRequest
             
             // Log the actual params structure for debugging
             ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "Received params: " << params.dump();
@@ -266,6 +273,20 @@ json handleRequest(const json& request) {
                     stepText = getJsonStringCaseInsensitive(stepRequest, "step");
                 }
                 
+                // Extract Parameters dictionary if present
+                if (stepRequest.contains("Parameters")) {
+                    stepParameters = stepRequest["Parameters"];
+                } else if (stepRequest.contains("parameters")) {
+                    stepParameters = stepRequest["parameters"];
+                }
+                
+                // Extract Context dictionary if present
+                if (stepRequest.contains("Context")) {
+                    stepContext = stepRequest["Context"];
+                } else if (stepRequest.contains("context")) {
+                    stepContext = stepRequest["context"];
+                }
+                
                 // Handle case-insensitive stepType
                 if (!stepType.empty()) {
                     std::transform(stepType.begin(), stepType.end(), stepType.begin(), ::tolower);
@@ -282,6 +303,20 @@ json handleRequest(const json& request) {
                 stepText = getJsonStringCaseInsensitive(params, "Step");
                 if (stepText.empty()) {
                     stepText = getJsonStringCaseInsensitive(params, "step");
+                }
+                
+                // Extract Parameters dictionary if present
+                if (params.contains("Parameters")) {
+                    stepParameters = params["Parameters"];
+                } else if (params.contains("parameters")) {
+                    stepParameters = params["parameters"];
+                }
+                
+                // Extract Context dictionary if present  
+                if (params.contains("Context")) {
+                    stepContext = params["Context"];
+                } else if (params.contains("context")) {
+                    stepContext = params["context"];
                 }
                 
                 // Handle case-insensitive stepType
@@ -307,8 +342,25 @@ json handleRequest(const json& request) {
             
             ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Executing step: " << stepText;
             
-            // Execute the step with timeout
-            auto stepResult = executeStepWithTimeout(stepText);
+            // Store Parameters in TestContext if provided
+            if (!stepParameters.is_null() && stepParameters.is_object()) {
+                ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "Storing step parameters: " << stepParameters.dump();
+                for (auto& [key, value] : stepParameters.items()) {
+                    g_testContext.setProperty("param:" + key, value);
+                }
+            }
+            
+            // Process Context if provided
+            // TODO: Currently we just pass through the Context unchanged
+            // TODO: In the future, allow steps to modify Context and return updated values
+            if (!stepContext.is_null() && stepContext.is_object()) {
+                ZEROBUFFER_LOG_DEBUG("zerobuffer-serve") << "Received context with " << stepContext.size() << " items";
+                // TODO: Store context in TestContext for steps to access
+                // For now, we'll just pass it through unchanged in the response
+            }
+            
+            // Execute the step with timeout, passing Context through
+            auto stepResult = executeStepWithTimeout(stepText, stepContext);
             ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Step result logs count: " << stepResult["logs"].size();
             
             // Check if this is a direct call (integration test) or wrapped call (Harmony)
@@ -339,7 +391,32 @@ json handleRequest(const json& request) {
                 params = params[0];
             }
             
-            // Get testName case-insensitively
+            // Extract initialization context fields (case-insensitive)
+            std::string role = getJsonStringCaseInsensitive(params, "role");
+            std::string platform = getJsonStringCaseInsensitive(params, "platform");
+            std::string scenario = getJsonStringCaseInsensitive(params, "scenario");
+            int hostPid = params.value("hostPid", 0);
+            if (hostPid == 0) {
+                hostPid = params.value("HostPid", 0);  // Try PascalCase
+            }
+            int featureId = params.value("featureId", 0);
+            if (featureId == 0) {
+                featureId = params.value("FeatureId", 0);  // Try PascalCase
+            }
+            
+            // Store initialization context in TestContext
+            if (!role.empty() || !platform.empty() || !scenario.empty() || hostPid != 0 || featureId != 0) {
+                g_testContext.setInitializationContext(role, platform, scenario, hostPid, featureId);
+                ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Initialization context stored:"
+                    << " role=" << role
+                    << " platform=" << platform
+                    << " scenario=" << scenario
+                    << " hostPid=" << hostPid
+                    << " featureId=" << featureId
+                    << " testRunId=" << g_testContext.getTestRunId();
+            }
+            
+            // Legacy support: Get testName case-insensitively
             std::string testName = getJsonStringCaseInsensitive(params, "testName");
             if (!testName.empty()) {
                 ZEROBUFFER_LOG_INFO("zerobuffer-serve") << "Running test: " << testName;
