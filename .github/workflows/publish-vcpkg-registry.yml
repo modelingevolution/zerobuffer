@@ -129,10 +129,14 @@ jobs:
     - name: Push to registry repository
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         cd registry-repo
         git add .
         git -c user.name="GitHub Actions" -c user.email="actions@github.com" commit -m "Update zerobuffer to version $VERSION"
+        
+        # Configure git to use token for authentication
+        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
         
         # Clone or create the registry repository
         git clone https://github.com/modelingevolution/zerobuffer-vcpkg-registry.git ../existing-registry || {
