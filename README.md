@@ -1,5 +1,10 @@
 # ZeroBuffer
 
+[![NuGet](https://img.shields.io/nuget/v/ZeroBuffer.svg)](https://www.nuget.org/packages/ZeroBuffer/)
+[![PyPI](https://img.shields.io/pypi/v/zerobuffer-ipc.svg)](https://pypi.org/project/zerobuffer-ipc/)
+[![vcpkg](https://img.shields.io/badge/vcpkg-zerobuffer-blue)](https://github.com/modelingevolution/zerobuffer-vcpkg-registry)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A high-performance, zero-copy inter-process communication library with implementations in C++, C#, and Python. This ring-buffer implementation is designed for low-latency data transfer between processes, particularly for video streaming applications.
 
 **Supported platforms**: Linux, Windows, macOS (Python/C#), with platform-specific optimizations.
@@ -241,22 +246,102 @@ For secure IPC, consider encrypted alternatives. ZeroBuffer optimizes for lowest
 ## Installation
 
 ### C++ with vcpkg
-```bash
-# Install from vcpkg registry (when available)
-vcpkg install zerobuffer
 
-# Or using local port
-vcpkg install zerobuffer --overlay-ports=/path/to/zerobuffer/vcpkg-port
+Configure the custom registry in your `vcpkg-configuration.json`:
+```json
+{
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/modelingevolution/zerobuffer-vcpkg-registry",
+      "baseline": "YOUR_BASELINE_HERE",
+      "packages": ["zerobuffer"]
+    }
+  ]
+}
+```
+
+Then install:
+```bash
+vcpkg install zerobuffer
+```
+
+Or use CMake with vcpkg toolchain:
+```cmake
+find_package(zerobuffer CONFIG REQUIRED)
+target_link_libraries(your_target PRIVATE zerobuffer::zerobuffer)
 ```
 
 ### C# with NuGet
+
+[![NuGet](https://img.shields.io/nuget/v/ZeroBuffer.svg)](https://www.nuget.org/packages/ZeroBuffer/)
+
 ```bash
+# Package Manager Console
+Install-Package ZeroBuffer
+
+# .NET CLI
 dotnet add package ZeroBuffer
+
+# PackageReference in .csproj
+<PackageReference Include="ZeroBuffer" Version="1.0.*" />
 ```
 
 ### Python with pip
+
+[![PyPI](https://img.shields.io/pypi/v/zerobuffer-ipc.svg)](https://pypi.org/project/zerobuffer-ipc/)
+
 ```bash
+# Install from PyPI
 pip install zerobuffer-ipc
+
+# Or install with specific version
+pip install zerobuffer-ipc==1.0.0
+```
+
+## Quick Start
+
+### C++ Example
+```cpp
+#include <zerobuffer/writer.h>
+#include <zerobuffer/reader.h>
+
+// Writer
+zerobuffer::Writer writer("my-buffer", 1024*1024, 64*1024);
+writer.connect();
+writer.write(data, size);
+
+// Reader
+zerobuffer::Reader reader("my-buffer", 1024*1024, 64*1024);
+auto frame = reader.read();
+```
+
+### C# Example
+```csharp
+using ZeroBuffer;
+
+// Writer
+using var writer = new Writer("my-buffer", 1024*1024, 64*1024);
+writer.Connect();
+writer.Write(data);
+
+// Reader
+using var reader = new Reader("my-buffer", 1024*1024, 64*1024);
+var frame = reader.Read();
+```
+
+### Python Example
+```python
+import zerobuffer
+
+# Writer
+writer = zerobuffer.Writer("my-buffer", 1024*1024, 64*1024)
+writer.connect()
+writer.write(data)
+
+# Reader
+reader = zerobuffer.Reader("my-buffer", 1024*1024, 64*1024)
+frame = reader.read()
 ```
 
 ## Documentation
