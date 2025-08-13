@@ -271,7 +271,8 @@
       "Bash(./test_cpp_logs_simple.sh:*)",
       "Bash(./zerobuffer_generated_tests:*)",
       "Bash(./test_duplex_cross_platform.sh:*)",
-      "WebFetch(domain:docs.github.com)"
+      "WebFetch(domain:docs.github.com)",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }
