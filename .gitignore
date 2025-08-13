@@ -45,8 +45,8 @@ Testing/
 
 # C# build artifacts
 /csharp/.vs/
-/csharp/**/bin/
-/csharp/**/obj/
+**/bin/
+**/obj/
 /csharp/**/*.user
 /csharp/**/*.suo
 /csharp/**/*.cache
