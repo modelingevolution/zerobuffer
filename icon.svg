@@ -1,0 +1,42 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect x="0" y="0" width="128" height="128" fill="#1e1e1e" rx="16"/>
+  
+  <!-- Gradient Definitions -->
+  <defs>
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ff88;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00cc66;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main Design -->
+  <g transform="translate(64, 64)">
+    <!-- Outer Zero -->
+    <circle cx="0" cy="0" r="32" fill="none" stroke="url(#mainGradient)" stroke-width="6"/>
+    
+    <!-- Inner Zero -->
+    <circle cx="0" cy="0" r="20" fill="none" stroke="url(#mainGradient)" stroke-width="6"/>
+    
+    <!-- Buffer Brackets -->
+    <!-- Left bracket -->
+    <path d="M -45,-25 L -38,-25 L -38,-18 M -38,18 L -38,25 L -45,25" 
+          stroke="url(#accentGradient)" stroke-width="3" fill="none" stroke-linecap="round"/>
+    
+    <!-- Right bracket -->
+    <path d="M 45,-25 L 38,-25 L 38,-18 M 38,18 L 38,25 L 45,25" 
+          stroke="url(#accentGradient)" stroke-width="3" fill="none" stroke-linecap="round"/>
+    
+    <!-- Center dot representing zero-copy -->
+    <circle cx="0" cy="0" r="4" fill="url(#accentGradient)"/>
+    
+    <!-- Small memory blocks -->
+    <rect x="-30" y="-3" width="12" height="6" fill="url(#accentGradient)" opacity="0.6" rx="1"/>
+    <rect x="18" y="-3" width="12" height="6" fill="url(#accentGradient)" opacity="0.6" rx="1"/>
+  </g>
+</svg>
