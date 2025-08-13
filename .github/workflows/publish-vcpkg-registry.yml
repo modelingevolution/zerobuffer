@@ -128,15 +128,17 @@ jobs:
 
     - name: Push to registry repository
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Use VCPKG_REGISTRY_PAT if available, otherwise fall back to GITHUB_TOKEN
+        # Note: GITHUB_TOKEN won't work for cross-repo access. You need to create a PAT
+        # with 'repo' scope and add it as a secret named VCPKG_REGISTRY_PAT
+        GH_TOKEN: ${{ secrets.VCPKG_REGISTRY_PAT || secrets.GITHUB_TOKEN }}
       run: |
         cd registry-repo
         git add .
         git -c user.name="GitHub Actions" -c user.email="actions@github.com" commit -m "Update zerobuffer to version $VERSION"
         
         # Configure git to use token for authentication
-        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+        git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
         
         # Clone or create the registry repository
         git clone https://github.com/modelingevolution/zerobuffer-vcpkg-registry.git ../existing-registry || {
