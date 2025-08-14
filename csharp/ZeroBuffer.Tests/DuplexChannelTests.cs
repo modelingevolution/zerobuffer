@@ -51,7 +51,7 @@ namespace ZeroBuffer.Tests
             // Send test message
             var testData = Encoding.UTF8.GetBytes("Hello, Duplex Channel!");
             var sequenceNumber = client.SendRequest(testData);
-            var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
+            using var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
             
             Assert.True(response.IsValid);
             Assert.Equal(sequenceNumber, response.Sequence);
@@ -81,13 +81,16 @@ namespace ZeroBuffer.Tests
             
             var testData = new byte[] { 1, 2, 3, 4, 5 };
             var sequenceNumber = client.SendRequest(testData);
-            var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
+            using var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
             
             Assert.True(response.IsValid);
             Assert.Equal(sequenceNumber, response.Sequence);
             Assert.Equal(new byte[] { 5, 4, 3, 2, 1 }, response.ToArray());
         }
         
+        // v1.0.0: MutableServer is not supported, will be implemented in v2.0.0
+        // This test is commented out until v2.0.0
+        /*
         [Fact]
         public void MutableServer_InPlaceTransformTest()
         {
@@ -120,6 +123,7 @@ namespace ZeroBuffer.Tests
             Assert.Equal(sequenceNumber, response.Sequence);
             Assert.Equal(new byte[] { 0xFF, 0xFE, 0x01, 0x00 }, response.ToArray());
         }
+        */
         
         
         [Fact]
@@ -141,7 +145,7 @@ namespace ZeroBuffer.Tests
             for (int i = 0; i < 10; i++)
             {
                 var seq = client.SendRequest(new byte[1024]);
-                client.ReceiveResponse(TimeSpan.FromSeconds(1));
+                client.ReceiveResponse(TimeSpan.FromSeconds(1)).Dispose();
             }
             
             // Measure latency
@@ -152,7 +156,7 @@ namespace ZeroBuffer.Tests
             {
                 var sw = Stopwatch.StartNew();
                 var sequenceNumber = client.SendRequest(testData);
-                var response = client.ReceiveResponse(TimeSpan.FromSeconds(1));
+                using var response = client.ReceiveResponse(TimeSpan.FromSeconds(1));
                 sw.Stop();
                 
                 Assert.True(response.IsValid);
@@ -187,7 +191,7 @@ namespace ZeroBuffer.Tests
             
             // Verify connection works
             var seq1 = client.SendRequest(new byte[] { 1, 2, 3 });
-            var response = client.ReceiveResponse(TimeSpan.FromSeconds(1));
+            using var response = client.ReceiveResponse(TimeSpan.FromSeconds(1));
             Assert.True(response.IsValid);
             Assert.Equal(seq1, response.Sequence);
             

@@ -13,13 +13,14 @@ namespace ZeroBuffer.DuplexChannel
         /// <returns>Immutable duplex server</returns>
         IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config);
         
-        /// <summary>
-        /// Create a mutable server (mutates request data in-place)
-        /// </summary>
-        /// <param name="channelName">Name of the duplex channel</param>
-        /// <param name="config">Buffer configuration</param>
-        /// <returns>Mutable duplex server</returns>
-        IMutableDuplexServer CreateMutableServer(string channelName, BufferConfig config);
+        // MutableDuplexServer will be implemented in v2.0.0
+        // /// <summary>
+        // /// Create a mutable server (mutates request data in-place)
+        // /// </summary>
+        // /// <param name="channelName">Name of the duplex channel</param>
+        // /// <param name="config">Buffer configuration</param>
+        // /// <returns>Mutable duplex server</returns>
+        // IMutableDuplexServer CreateMutableServer(string channelName, BufferConfig config);
         
         /// <summary>
         /// Connect to existing duplex channel (client-side)

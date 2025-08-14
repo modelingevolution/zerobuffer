@@ -53,41 +53,68 @@ import struct
 BLOCK_ALIGNMENT = 64
 
 @dataclass
+class ProtocolVersion:
+    """Protocol version structure"""
+    major: int  # uint8
+    minor: int  # uint8
+    patch: int  # uint8
+    reserved: int = 0  # uint8, must be 0
+
+@dataclass
 class OIEB:
     """Operation Info Exchange Block - must match C++ layout exactly"""
-    operation_size: int
-    metadata_size: int
-    metadata_free_bytes: int
-    metadata_written_bytes: int
-    payload_size: int
-    payload_free_bytes: int
-    payload_write_pos: int
-    payload_read_pos: int
-    payload_written_count: int
-    payload_read_count: int
-    writer_pid: int
-    reader_pid: int
-    _reserved: tuple[int, int, int, int] = (0, 0, 0, 0)
+    oieb_size: int  # uint32 - always 128 for v1
+    version: ProtocolVersion  # 4 bytes
+    metadata_size: int  # uint64
+    metadata_free_bytes: int  # uint64
+    metadata_written_bytes: int  # uint64
+    payload_size: int  # uint64
+    payload_free_bytes: int  # uint64
+    payload_write_pos: int  # uint64
+    payload_read_pos: int  # uint64
+    payload_written_count: int  # uint64
+    payload_read_count: int  # uint64
+    writer_pid: int  # uint64
+    reader_pid: int  # uint64
+    _reserved: tuple[int, int, int, int] = (0, 0, 0, 0)  # 4 x uint64
     
-    FORMAT = '<16Q'  # 16 unsigned 64-bit integers, little-endian
-    SIZE = struct.calcsize(FORMAT)
+    # Format: uint32 + 4*uint8 + 15*uint64 = 128 bytes
+    FORMAT = '<I4B15Q'  # Little-endian: 1 uint32, 4 uint8, 15 uint64
+    SIZE = 128  # Total size in bytes
     
     def pack(self) -> bytes:
         """Pack OIEB into bytes"""
         return struct.pack(self.FORMAT, 
-            self.operation_size, self.metadata_size, 
-            self.metadata_free_bytes, self.metadata_written_bytes,
-            self.payload_size, self.payload_free_bytes,
-            self.payload_write_pos, self.payload_read_pos,
-            self.payload_written_count, self.payload_read_count,
-            self.writer_pid, self.reader_pid,
-            *self._reserved)
+            self.oieb_size,
+            self.version.major, self.version.minor, 
+            self.version.patch, self.version.reserved,
+            self.metadata_size, self.metadata_free_bytes, 
+            self.metadata_written_bytes, self.payload_size, 
+            self.payload_free_bytes, self.payload_write_pos, 
+            self.payload_read_pos, self.payload_written_count, 
+            self.payload_read_count, self.writer_pid, 
+            self.reader_pid, *self._reserved)
     
     @classmethod
     def unpack(cls, data: bytes) -> 'OIEB':
         """Unpack OIEB from bytes"""
         values = struct.unpack(cls.FORMAT, data)
-        return cls(*values[:-4], _reserved=values[-4:])
+        return cls(
+            oieb_size=values[0],
+            version=ProtocolVersion(*values[1:5]),
+            metadata_size=values[5],
+            metadata_free_bytes=values[6],
+            metadata_written_bytes=values[7],
+            payload_size=values[8],
+            payload_free_bytes=values[9],
+            payload_write_pos=values[10],
+            payload_read_pos=values[11],
+            payload_written_count=values[12],
+            payload_read_count=values[13],
+            writer_pid=values[14],
+            reader_pid=values[15],
+            _reserved=values[16:20]
+        )
 ```
 
 #### 2. Frame Class (types.py)
@@ -188,7 +215,8 @@ class Reader:
         
         # Initialize OIEB
         oieb = OIEB(
-            operation_size=oieb_size,
+            oieb_size=128,
+            version=ProtocolVersion(1, 0, 0, 0),
             metadata_size=metadata_size,
             metadata_free_bytes=metadata_size,
             metadata_written_bytes=0,
@@ -296,7 +324,7 @@ class Writer:
         oieb = OIEB.unpack(self._buffer[:OIEB.SIZE])
         
         # Create memory views
-        oieb_size = oieb.operation_size
+        oieb_size = oieb.oieb_size
         metadata_size = oieb.metadata_size
         self._oieb_view = self._buffer[:oieb_size]
         self._metadata_view = self._buffer[oieb_size:oieb_size + metadata_size]

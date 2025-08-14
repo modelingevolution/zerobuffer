@@ -111,7 +111,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Accept process parameter but ignore it
             var reader = _readers[_currentBuffer];
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+            using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
             
             Assert.True(frame.IsValid, "Frame should be valid");
             Assert.Equal((ulong)int.Parse(expectedSequence), frame.Sequence);
@@ -165,7 +165,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Accept process parameter but ignore it
             var reader = _readers[_currentBuffer];
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+            using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
             
             Assert.True(frame.IsValid, "Frame should be valid");
             Assert.Equal(ulong.Parse(expectedSequence), frame.Sequence);
@@ -247,7 +247,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Accept process parameter but ignore it
             var reader = _readers[_currentBuffer];
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+            using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
             
             Assert.True(frame.IsValid, "Frame should be valid");
             
@@ -330,8 +330,8 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Accept process parameter but ignore it
             var reader = _readers[_currentBuffer];
             var expectedSize = int.Parse(size);
-            
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+
+            using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
             
             Assert.True(frame.IsValid, "Frame should be valid");
             Assert.Equal(expectedSize, frame.Span.Length);
@@ -377,7 +377,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             
             for (int i = 0; i < frameCount; i++)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
                 
                 Assert.True(frame.IsValid, $"Frame {i + 1} should be valid");
                 Assert.Equal(expectedSizes[i], frame.Span.Length);
@@ -458,8 +458,8 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Accept process parameter but ignore it
             var reader = _readers[_currentBuffer];
-            
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+
+            using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
             
             Assert.True(frame.IsValid, "Frame should be valid");
             

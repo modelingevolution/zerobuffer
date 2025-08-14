@@ -16,7 +16,7 @@ ImmutableDuplexServer::~ImmutableDuplexServer() {
     stop();
 }
 
-void ImmutableDuplexServer::start(RequestHandler handler, bool is_async) {
+void ImmutableDuplexServer::start(const ImmutableHandler& handler) {
     if (is_running_.exchange(true)) {
         throw std::runtime_error("Server is already running");
     }
@@ -87,7 +87,7 @@ std::unique_ptr<Writer> ImmutableDuplexServer::connect_to_response_buffer(const 
     throw std::runtime_error("Timeout waiting for response buffer " + buffer_name);
 }
 
-void ImmutableDuplexServer::process_requests(RequestHandler handler, const std::string& response_buffer_name) {
+void ImmutableDuplexServer::process_requests(const ImmutableHandler& handler, const std::string& response_buffer_name) {
     ZEROBUFFER_LOG_INFO("ImmutableDuplexServer") << "Processing thread started for channel " << channel_name_;
     
     // Connect to response buffer when it becomes available
@@ -122,34 +122,14 @@ void ImmutableDuplexServer::process_requests(RequestHandler handler, const std::
             }
             ZEROBUFFER_LOG_DEBUG("ImmutableDuplexServer") << "Received request seq=" << request.sequence() << " size=" << request.size();
             
-            // Process request and get response data
-            std::vector<uint8_t> response_data;
+            // Let handler process request and write response directly
             try {
-                response_data = handler(request);
+                handler(std::move(request), *response_writer_);
             }
             catch (const std::exception& ex) {
-                // Log error and send empty response
+                // Log error but continue processing
                 ZEROBUFFER_LOG_ERROR(channel_name_) << "Error in request handler: " << ex.what();
-                response_data.clear();
             }
-            
-            // Allocate buffer for sequence number + response data
-            const size_t total_size = sizeof(uint64_t) + response_data.size();
-            uint64_t frame_sequence;
-            void* buffer = response_writer_->get_frame_buffer(total_size, frame_sequence);
-            
-            // Write sequence number
-            const uint64_t sequence = request.sequence();
-            std::memcpy(buffer, &sequence, sizeof(sequence));
-            
-            // Copy response data
-            if (!response_data.empty()) {
-                std::memcpy(static_cast<uint8_t*>(buffer) + sizeof(uint64_t), 
-                           response_data.data(), response_data.size());
-            }
-            
-            // Commit the frame
-            response_writer_->commit_frame();
         }
         catch (const std::exception& ex) {
             // Log unexpected errors unless we're shutting down

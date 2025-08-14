@@ -21,14 +21,8 @@ namespace ZeroBuffer.Tests
                 Assert.Contains("not yet implemented", ex.Message);
             }
             
-            // Test MutableDuplexServer
-            using (var mutableServer = factory.CreateMutableServer("test-channel-2", config))
-            {
-                var ex = Assert.Throws<NotSupportedException>(() => 
-                    mutableServer.Start(_ => { }, ProcessingMode.ThreadPool));
-                Assert.Contains("ThreadPool", ex.Message);
-                Assert.Contains("not yet implemented", ex.Message);
-            }
+            // v1.0.0: MutableDuplexServer is not supported
+            // Will be implemented in v2.0.0
         }
         
         [Fact]
@@ -46,14 +40,8 @@ namespace ZeroBuffer.Tests
                 immutableServer.Stop();
             }
             
-            // Test MutableDuplexServer with explicit SingleThread mode
-            using (var mutableServer = factory.CreateMutableServer("test-channel-4", config))
-            {
-                // Should not throw
-                mutableServer.Start(_ => { }, ProcessingMode.SingleThread);
-                Assert.True(mutableServer.IsRunning);
-                mutableServer.Stop();
-            }
+            // v1.0.0: MutableDuplexServer is not supported
+            // Will be implemented in v2.0.0
         }
         
         [Fact]
@@ -71,14 +59,24 @@ namespace ZeroBuffer.Tests
                 immutableServer.Stop();
             }
             
-            // Test MutableDuplexServer with default mode
-            using (var mutableServer = factory.CreateMutableServer("test-channel-6", config))
-            {
-                // Should not throw - uses default SingleThread mode
-                mutableServer.Start(_ => { });
-                Assert.True(mutableServer.IsRunning);
-                mutableServer.Stop();
-            }
+            // v1.0.0: MutableDuplexServer is not supported
+            // Will be implemented in v2.0.0
+        }
+        
+        [Fact]
+        public void MutableServer_NotSupportedInV1()
+        {
+            var factory = new DuplexChannelFactory();
+            var config = new BufferConfig(4096, 10 * 1024 * 1024);
+            
+            // v1.0.0: CreateMutableServer should not exist in the API
+            // This test documents that MutableDuplexServer is planned for v2.0.0
+            
+            // Verify the factory only creates immutable servers
+            var server = factory.CreateImmutableServer("test-channel-v1", config);
+            Assert.NotNull(server);
+            Assert.IsType<ImmutableDuplexServer>(server);
+            server.Dispose();
         }
     }
 }

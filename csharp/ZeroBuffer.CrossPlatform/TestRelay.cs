@@ -109,7 +109,7 @@ namespace ZeroBuffer.CrossPlatform
                             try
                             {
                                 // Read frame from input
-                                var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(options.TimeoutMs));
+                                using var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(options.TimeoutMs));
 
                                 if (!frame.IsValid)
                                 {

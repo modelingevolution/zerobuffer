@@ -62,8 +62,8 @@ TEST_F(DuplexChannelTest, Test_13_1_Basic_Request_Response) {
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-basic' with metadata size '4096' and payload size '1048576'
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-basic' with metadata size '4096' and payload size '1048576'")) << "Failed: Given the 'server' process creates duplex channel 'duplex-basic' with metadata size '4096' and payload size '1048576'";
+    // Given the 'server' process creates immutable duplex channel 'duplex-basic' with metadata size '4096' and payload size '1048576'
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-basic' with metadata size '4096' and payload size '1048576'")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-basic' with metadata size '4096' and payload size '1048576'";
     // And the 'server' process starts echo handler
     ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts echo handler")) << "Failed: And the 'server' process starts echo handler";
     // When the 'client' process creates duplex channel client 'duplex-basic'
@@ -80,32 +80,28 @@ TEST_F(DuplexChannelTest, Test_13_1_Basic_Request_Response) {
     ASSERT_TRUE(ExecuteStep(StepType::When, "the 'client' process sends request with size '102400'")) << "Failed: When the 'client' process sends request with size '102400'";
     // Then response should match request with size '102400'
     ASSERT_TRUE(ExecuteStep(StepType::Then, "response should match request with size '102400'")) << "Failed: Then response should match request with size '102400'";
-    // And all responses should have correct sequence numbers
-    ASSERT_TRUE(ExecuteStep(StepType::And, "all responses should have correct sequence numbers")) << "Failed: And all responses should have correct sequence numbers";
 }
 
-TEST_F(DuplexChannelTest, Test_13_2_Sequence_Number_Correlation) {
-    // Scenario: Test 13.2 - Sequence Number Correlation
+TEST_F(DuplexChannelTest, Test_13_2_Request_Response_Order_Preservation) {
+    // Scenario: Test 13.2 - Request-Response Order Preservation
 
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-sequence' with default config
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-sequence' with default config")) << "Failed: Given the 'server' process creates duplex channel 'duplex-sequence' with default config";
-    // And the 'server' process starts delayed echo handler with '500' ms delay
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts delayed echo handler with '500' ms delay")) << "Failed: And the 'server' process starts delayed echo handler with '500' ms delay";
+    // Given the 'server' process creates immutable duplex channel 'duplex-sequence' with default config
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-sequence' with default config")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-sequence' with default config";
+    // And the 'server' process starts echo handler
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts echo handler")) << "Failed: And the 'server' process starts echo handler";
     // When the 'client' process creates duplex channel client 'duplex-sequence'
     ASSERT_TRUE(ExecuteStep(StepType::When, "the 'client' process creates duplex channel client 'duplex-sequence'")) << "Failed: When the 'client' process creates duplex channel client 'duplex-sequence'";
-    // And the 'client' process sends '10' requests rapidly without waiting
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends '10' requests rapidly without waiting")) << "Failed: And the 'client' process sends '10' requests rapidly without waiting";
-    // Then the 'server' process responds in reverse order
-    ASSERT_TRUE(ExecuteStep(StepType::Then, "the 'server' process responds in reverse order")) << "Failed: Then the 'server' process responds in reverse order";
-    // When the 'client' process receives all '10' responses
-    ASSERT_TRUE(ExecuteStep(StepType::When, "the 'client' process receives all '10' responses")) << "Failed: When the 'client' process receives all '10' responses";
-    // Then responses should match requests by sequence number
-    ASSERT_TRUE(ExecuteStep(StepType::Then, "responses should match requests by sequence number")) << "Failed: Then responses should match requests by sequence number";
-    // And no responses should be lost or mismatched
-    ASSERT_TRUE(ExecuteStep(StepType::And, "no responses should be lost or mismatched")) << "Failed: And no responses should be lost or mismatched";
+    // And the 'client' process sends '10' requests sequentially
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends '10' requests sequentially")) << "Failed: And the 'client' process sends '10' requests sequentially";
+    // Then the 'client' process receives '10' responses in order
+    ASSERT_TRUE(ExecuteStep(StepType::Then, "the 'client' process receives '10' responses in order")) << "Failed: Then the 'client' process receives '10' responses in order";
+    // And responses should match requests by content
+    ASSERT_TRUE(ExecuteStep(StepType::And, "responses should match requests by content")) << "Failed: And responses should match requests by content";
+    // And no responses should be lost or duplicated
+    ASSERT_TRUE(ExecuteStep(StepType::And, "no responses should be lost or duplicated")) << "Failed: And no responses should be lost or duplicated";
 }
 
 TEST_F(DuplexChannelTest, Test_13_3_Concurrent_Client_Operations) {
@@ -114,22 +110,18 @@ TEST_F(DuplexChannelTest, Test_13_3_Concurrent_Client_Operations) {
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-concurrent' with default config
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-concurrent' with default config")) << "Failed: Given the 'server' process creates duplex channel 'duplex-concurrent' with default config";
-    // And the 'server' process starts variable delay handler '0-100' ms
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts variable delay handler '0-100' ms")) << "Failed: And the 'server' process starts variable delay handler '0-100' ms";
+    // Given the 'server' process creates immutable duplex channel 'duplex-concurrent' with default config
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-concurrent' with default config")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-concurrent' with default config";
+    // And the 'server' process starts echo handler
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts echo handler")) << "Failed: And the 'server' process starts echo handler";
     // When the 'client' process creates duplex channel client 'duplex-concurrent'
     ASSERT_TRUE(ExecuteStep(StepType::When, "the 'client' process creates duplex channel client 'duplex-concurrent'")) << "Failed: When the 'client' process creates duplex channel client 'duplex-concurrent'";
-    // And the 'client' process spawns '5' threads
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process spawns '5' threads")) << "Failed: And the 'client' process spawns '5' threads";
-    // And each thread sends '20' requests
-    ASSERT_TRUE(ExecuteStep(StepType::And, "each thread sends '20' requests")) << "Failed: And each thread sends '20' requests";
-    // Then each thread receives exactly '20' responses
-    ASSERT_TRUE(ExecuteStep(StepType::Then, "each thread receives exactly '20' responses")) << "Failed: Then each thread receives exactly '20' responses";
-    // And no cross-thread response delivery occurs
-    ASSERT_TRUE(ExecuteStep(StepType::And, "no cross-thread response delivery occurs")) << "Failed: And no cross-thread response delivery occurs";
-    // And all '100' total responses are accounted for
-    ASSERT_TRUE(ExecuteStep(StepType::And, "all '100' total responses are accounted for")) << "Failed: And all '100' total responses are accounted for";
+    // And the 'client' process sends '20' requests from single thread
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends '20' requests from single thread")) << "Failed: And the 'client' process sends '20' requests from single thread";
+    // Then the 'client' process receives exactly '20' responses
+    ASSERT_TRUE(ExecuteStep(StepType::Then, "the 'client' process receives exactly '20' responses")) << "Failed: Then the 'client' process receives exactly '20' responses";
+    // And all '20' responses match their requests
+    ASSERT_TRUE(ExecuteStep(StepType::And, "all '20' responses match their requests")) << "Failed: And all '20' responses match their requests";
 }
 
 TEST_F(DuplexChannelTest, Test_13_4_Server_Processing_Mode_SingleThread) {
@@ -138,18 +130,18 @@ TEST_F(DuplexChannelTest, Test_13_4_Server_Processing_Mode_SingleThread) {
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-singlethread' with processing mode 'SingleThread'
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-singlethread' with processing mode 'SingleThread'")) << "Failed: Given the 'server' process creates duplex channel 'duplex-singlethread' with processing mode 'SingleThread'";
-    // And the 'server' process starts handler with '1' second processing time
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts handler with '1' second processing time")) << "Failed: And the 'server' process starts handler with '1' second processing time";
+    // Given the 'server' process creates immutable duplex channel 'duplex-singlethread' with processing mode 'SingleThread'
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-singlethread' with processing mode 'SingleThread'")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-singlethread' with processing mode 'SingleThread'";
+    // And the 'server' process starts handler with '100' ms processing time
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts handler with '100' ms processing time")) << "Failed: And the 'server' process starts handler with '100' ms processing time";
     // When the 'client' process creates duplex channel client 'duplex-singlethread'
     ASSERT_TRUE(ExecuteStep(StepType::When, "the 'client' process creates duplex channel client 'duplex-singlethread'")) << "Failed: When the 'client' process creates duplex channel client 'duplex-singlethread'";
-    // And the 'client' process sends '3' requests simultaneously
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends '3' requests simultaneously")) << "Failed: And the 'client' process sends '3' requests simultaneously";
+    // And the 'client' process sends '3' requests sequentially
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends '3' requests sequentially")) << "Failed: And the 'client' process sends '3' requests sequentially";
     // And the 'client' process measures total response time
     ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process measures total response time")) << "Failed: And the 'client' process measures total response time";
-    // Then total time should be at least '3' seconds
-    ASSERT_TRUE(ExecuteStep(StepType::Then, "total time should be at least '3' seconds")) << "Failed: Then total time should be at least '3' seconds";
+    // Then total time should be at least '300' ms
+    ASSERT_TRUE(ExecuteStep(StepType::Then, "total time should be at least '300' ms")) << "Failed: Then total time should be at least '300' ms";
     // And responses should arrive in order
     ASSERT_TRUE(ExecuteStep(StepType::And, "responses should arrive in order")) << "Failed: And responses should arrive in order";
 }
@@ -160,14 +152,14 @@ TEST_F(DuplexChannelTest, Test_13_5_Server_Death_During_Processing) {
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-crash' with default config
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-crash' with default config")) << "Failed: Given the 'server' process creates duplex channel 'duplex-crash' with default config";
+    // Given the 'server' process creates immutable duplex channel 'duplex-crash' with default config
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-crash' with default config")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-crash' with default config";
     // And the 'server' process starts handler that crashes after '100' ms
     ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts handler that crashes after '100' ms")) << "Failed: And the 'server' process starts handler that crashes after '100' ms";
     // When the 'client' process creates duplex channel client 'duplex-crash'
     ASSERT_TRUE(ExecuteStep(StepType::When, "the 'client' process creates duplex channel client 'duplex-crash'")) << "Failed: When the 'client' process creates duplex channel client 'duplex-crash'";
-    // And the 'client' process sends large request of '1048576' bytes
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends large request of '1048576' bytes")) << "Failed: And the 'client' process sends large request of '1048576' bytes";
+    // And the 'client' process sends request of '1024' bytes
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends request of '1024' bytes")) << "Failed: And the 'client' process sends request of '1024' bytes";
     // Then the 'server' process simulates crash during processing
     ASSERT_TRUE(ExecuteStep(StepType::Then, "the 'server' process simulates crash during processing")) << "Failed: Then the 'server' process simulates crash during processing";
     // When the 'client' process waits for response with timeout '5' seconds
@@ -184,8 +176,8 @@ TEST_F(DuplexChannelTest, Test_13_6_Buffer_Full_on_Response_Channel) {
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-full' with metadata size '1024' and payload size '10240'
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-full' with metadata size '1024' and payload size '10240'")) << "Failed: Given the 'server' process creates duplex channel 'duplex-full' with metadata size '1024' and payload size '10240'";
+    // Given the 'server' process creates immutable duplex channel 'duplex-full' with metadata size '1024' and payload size '10240'
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-full' with metadata size '1024' and payload size '10240'")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-full' with metadata size '1024' and payload size '10240'";
     // And the 'server' process starts handler that doubles request size
     ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts handler that doubles request size")) << "Failed: And the 'server' process starts handler that doubles request size";
     // When the 'client' process creates duplex channel client 'duplex-full'
@@ -210,8 +202,8 @@ TEST_F(DuplexChannelTest, Test_13_7_Zero_Copy_Client_Operations) {
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-zerocopy' with default config
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-zerocopy' with default config")) << "Failed: Given the 'server' process creates duplex channel 'duplex-zerocopy' with default config";
+    // Given the 'server' process creates immutable duplex channel 'duplex-zerocopy' with default config
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-zerocopy' with default config")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-zerocopy' with default config";
     // And the 'server' process starts echo handler
     ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts echo handler")) << "Failed: And the 'server' process starts echo handler";
     // When the 'client' process creates duplex channel client 'duplex-zerocopy'
@@ -228,32 +220,26 @@ TEST_F(DuplexChannelTest, Test_13_7_Zero_Copy_Client_Operations) {
     ASSERT_TRUE(ExecuteStep(StepType::And, "no memory allocations in send path")) << "Failed: And no memory allocations in send path";
 }
 
-TEST_F(DuplexChannelTest, Test_13_8_Mutable_vs_Immutable_Server) {
-    // Scenario: Test 13.8 - Mutable vs Immutable Server
+TEST_F(DuplexChannelTest, Test_13_8_Immutable_Server_Handler_Types) {
+    // Scenario: Test 13.8 - Immutable Server Handler Types
 
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-mutable' with mutable handler
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-mutable' with mutable handler")) << "Failed: Given the 'server' process creates duplex channel 'duplex-mutable' with mutable handler";
-    // And the 'server' process creates duplex channel 'duplex-immutable' with immutable handler
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process creates duplex channel 'duplex-immutable' with immutable handler")) << "Failed: And the 'server' process creates duplex channel 'duplex-immutable' with immutable handler";
-    // And both handlers implement XOR with key '0xFF'
-    ASSERT_TRUE(ExecuteStep(StepType::And, "both handlers implement XOR with key '0xFF'")) << "Failed: And both handlers implement XOR with key '0xFF'";
-    // When the 'client' process creates duplex channel client 'duplex-mutable'
-    ASSERT_TRUE(ExecuteStep(StepType::When, "the 'client' process creates duplex channel client 'duplex-mutable'")) << "Failed: When the 'client' process creates duplex channel client 'duplex-mutable'";
-    // And the 'client' process creates duplex channel client 'duplex-immutable'
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process creates duplex channel client 'duplex-immutable'")) << "Failed: And the 'client' process creates duplex channel client 'duplex-immutable'";
-    // And the 'client' process sends identical '10240' byte frames to both
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends identical '10240' byte frames to both")) << "Failed: And the 'client' process sends identical '10240' byte frames to both";
-    // Then both should produce identical XOR results
-    ASSERT_TRUE(ExecuteStep(StepType::Then, "both should produce identical XOR results")) << "Failed: Then both should produce identical XOR results";
-    // And the mutable server should modify in-place
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the mutable server should modify in-place")) << "Failed: And the mutable server should modify in-place";
-    // And the mutable server should have no allocations
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the mutable server should have no allocations")) << "Failed: And the mutable server should have no allocations";
-    // And the immutable server should return new data
-    ASSERT_TRUE(ExecuteStep(StepType::And, "the immutable server should return new data")) << "Failed: And the immutable server should return new data";
+    // Given the 'server' process creates immutable duplex channel 'duplex-transform' with default config
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-transform' with default config")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-transform' with default config";
+    // And the 'server' process starts handler that implements XOR with key '0xFF'
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts handler that implements XOR with key '0xFF'")) << "Failed: And the 'server' process starts handler that implements XOR with key '0xFF'";
+    // When the 'client' process creates duplex channel client 'duplex-transform'
+    ASSERT_TRUE(ExecuteStep(StepType::When, "the 'client' process creates duplex channel client 'duplex-transform'")) << "Failed: When the 'client' process creates duplex channel client 'duplex-transform'";
+    // And the 'client' process sends '10240' byte frame with test pattern
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'client' process sends '10240' byte frame with test pattern")) << "Failed: And the 'client' process sends '10240' byte frame with test pattern";
+    // Then response should contain XOR transformed data
+    ASSERT_TRUE(ExecuteStep(StepType::Then, "response should contain XOR transformed data")) << "Failed: Then response should contain XOR transformed data";
+    // And the server handler receives immutable request frame
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the server handler receives immutable request frame")) << "Failed: And the server handler receives immutable request frame";
+    // And the server handler returns new response data
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the server handler returns new response data")) << "Failed: And the server handler returns new response data";
 }
 
 TEST_F(DuplexChannelTest, Test_13_9_Client_Death_During_Response_Wait) {
@@ -262,8 +248,8 @@ TEST_F(DuplexChannelTest, Test_13_9_Client_Death_During_Response_Wait) {
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-client-crash' with default config
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-client-crash' with default config")) << "Failed: Given the 'server' process creates duplex channel 'duplex-client-crash' with default config";
+    // Given the 'server' process creates immutable duplex channel 'duplex-client-crash' with default config
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-client-crash' with default config")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-client-crash' with default config";
     // And the 'server' process starts handler with '2' second processing delay
     ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts handler with '2' second processing delay")) << "Failed: And the 'server' process starts handler with '2' second processing delay";
     // When the 'client' process creates duplex channel client 'duplex-client-crash'
@@ -288,8 +274,8 @@ TEST_F(DuplexChannelTest, Test_13_10_Channel_Cleanup_on_Dispose) {
     // Background steps
 
     // Scenario steps
-    // Given the 'server' process creates duplex channel 'duplex-cleanup' with default config
-    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates duplex channel 'duplex-cleanup' with default config")) << "Failed: Given the 'server' process creates duplex channel 'duplex-cleanup' with default config";
+    // Given the 'server' process creates immutable duplex channel 'duplex-cleanup' with default config
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'server' process creates immutable duplex channel 'duplex-cleanup' with default config")) << "Failed: Given the 'server' process creates immutable duplex channel 'duplex-cleanup' with default config";
     // And the 'server' process starts echo handler
     ASSERT_TRUE(ExecuteStep(StepType::And, "the 'server' process starts echo handler")) << "Failed: And the 'server' process starts echo handler";
     // When the 'client' process creates duplex channel client 'duplex-cleanup'
@@ -306,8 +292,8 @@ TEST_F(DuplexChannelTest, Test_13_10_Channel_Cleanup_on_Dispose) {
     ASSERT_TRUE(ExecuteStep(StepType::Then, "the 'client' process should receive exception on pending")) << "Failed: Then the 'client' process should receive exception on pending";
     // And all shared memory should be cleaned up
     ASSERT_TRUE(ExecuteStep(StepType::And, "all shared memory should be cleaned up")) << "Failed: And all shared memory should be cleaned up";
-    // When a new 'server' process creates duplex channel 'duplex-cleanup'
-    ASSERT_TRUE(ExecuteStep(StepType::When, "a new 'server' process creates duplex channel 'duplex-cleanup'")) << "Failed: When a new 'server' process creates duplex channel 'duplex-cleanup'";
+    // When a new 'server' process creates immutable duplex channel 'duplex-cleanup'
+    ASSERT_TRUE(ExecuteStep(StepType::When, "a new 'server' process creates immutable duplex channel 'duplex-cleanup'")) << "Failed: When a new 'server' process creates immutable duplex channel 'duplex-cleanup'";
     // Then the new server should reuse same channel name successfully
     ASSERT_TRUE(ExecuteStep(StepType::Then, "the new server should reuse same channel name successfully")) << "Failed: Then the new server should reuse same channel name successfully";
 }

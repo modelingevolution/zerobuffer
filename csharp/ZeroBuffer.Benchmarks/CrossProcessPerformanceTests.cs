@@ -137,7 +137,7 @@ namespace ZeroBuffer.Benchmarks
                     await timer.WaitForNextTickAsync();
                     
                     // Try to read response
-                    var response = readerFromRelay.ReadFrame(TimeSpan.FromMilliseconds(10));
+                    using var response = readerFromRelay.ReadFrame(TimeSpan.FromMilliseconds(10));
                     if (!response.IsValid)
                     {
                         // During warmup, relay might not be ready yet
@@ -160,27 +160,29 @@ namespace ZeroBuffer.Benchmarks
                     var sendTimestamp = Stopwatch.GetTimestamp();
                     WriteTimestampedFrame(writerToRelay, frameData, i, sendTimestamp);
                     framesSent++;
-                    
+
                     // Try to read response immediately
-                    var response = readerFromRelay.ReadFrame(TimeSpan.FromMilliseconds(50));
-                    if (response.IsValid)
+                    using (var response = readerFromRelay.ReadFrame(TimeSpan.FromMilliseconds(50)))
                     {
-                        var receiveTimestamp = Stopwatch.GetTimestamp();
-                        
-                        // Extract timestamp from response
-                        if (response.Size >= HEADER_SIZE)
+                        if (response.IsValid)
                         {
-                            var responseData = response.ToArray();
-                            var originalTimestamp = BitConverter.ToInt64(responseData, 0);
-                            
-                            // Calculate round-trip latency
-                            var latencyTicks = receiveTimestamp - originalTimestamp;
-                            var latencyUs = (latencyTicks * 1_000_000.0) / Stopwatch.Frequency;
-                            latencies.Add(latencyUs);
-                            framesReceived++;
+                            var receiveTimestamp = Stopwatch.GetTimestamp();
+
+                            // Extract timestamp from response
+                            if (response.Size >= HEADER_SIZE)
+                            {
+                                var responseData = response.ToArray();
+                                var originalTimestamp = BitConverter.ToInt64(responseData, 0);
+
+                                // Calculate round-trip latency
+                                var latencyTicks = receiveTimestamp - originalTimestamp;
+                                var latencyUs = (latencyTicks * 1_000_000.0) / Stopwatch.Frequency;
+                                latencies.Add(latencyUs);
+                                framesReceived++;
+                            }
                         }
                     }
-                    
+
                     await timer.WaitForNextTickAsync();
                 }
                 
@@ -188,7 +190,7 @@ namespace ZeroBuffer.Benchmarks
                 await Task.Delay(100);
                 while (true)
                 {
-                    var response = readerFromRelay.ReadFrame(TimeSpan.Zero);
+                    using var response = readerFromRelay.ReadFrame(TimeSpan.Zero);
                     if (!response.IsValid)
                         break;
                         

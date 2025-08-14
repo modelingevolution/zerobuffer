@@ -11,9 +11,9 @@ class Writer::Impl {
 public:
     explicit Impl(const std::string& name) 
         : name_(name), sequence_number_(1), frames_written_(0), bytes_written_(0), 
-          metadata_written_(false), pending_metadata_size_(0), pending_frame_size_(0),
-          pending_frame_sequence_(0), pending_frame_total_size_(0), pending_write_pos_(0),
-          write_timeout_(5000) {  // Default timeout is 5 seconds
+          metadata_written_(false), write_timeout_(5000),  // Default timeout is 5 seconds
+          pending_metadata_size_(0), pending_frame_size_(0),
+          pending_frame_sequence_(0), pending_frame_total_size_(0), pending_write_pos_(0) {
         
         ZEROBUFFER_LOG_DEBUG("Writer") << "Connecting to buffer: " << name;
         
@@ -22,8 +22,14 @@ public:
         
         // Verify OIEB
         OIEB* oieb = get_oieb();
-        if (oieb->operation_size != sizeof(OIEB)) {
-            throw ZeroBufferException("Invalid OIEB size - version mismatch?");
+        if (oieb->oieb_size != 128) {
+            throw ZeroBufferException("Invalid OIEB size - expected 128 for v1.x.x");
+        }
+        
+        // Check protocol version compatibility
+        ProtocolVersion current_version(1, 0, 0);
+        if (!oieb->version.is_compatible_with(current_version)) {
+            throw ZeroBufferException("Incompatible protocol version");
         }
         
         // Check if reader exists
@@ -164,8 +170,6 @@ public:
         auto start = std::chrono::steady_clock::now();
         
         while (true) {
-            OIEB* oieb = get_oieb();
-            
             // Check if reader is still alive
             if (!is_reader_connected()) {
                 throw ReaderDeadException();
@@ -267,8 +271,6 @@ public:
         size_t total_size = sizeof(FrameHeader) + size;
         
         while (true) {
-            OIEB* oieb = get_oieb();
-            
             // Check if reader is still alive
             if (!is_reader_connected()) {
                 throw ReaderDeadException();

@@ -25,6 +25,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Harmony", "Harmony", "{02EA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Root", "Root", "{2F28146D-C571-460B-AA4F-CD7E4CEDCCC4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelingEvolution.Harmony.Shared", "..\modules\harmony\ModelingEvolution.Harmony.Shared\ModelingEvolution.Harmony.Shared.csproj", "{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,6 +69,10 @@ Global
 		{9E216934-18C1-EEB0-07BA-E93867D8B755}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E216934-18C1-EEB0-07BA-E93867D8B755}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E216934-18C1-EEB0-07BA-E93867D8B755}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -75,6 +81,7 @@ Global
 		{3C50FE48-9121-06FA-8200-89FA4EC6987A} = {2F28146D-C571-460B-AA4F-CD7E4CEDCCC4}
 		{080078B9-820B-C5DA-20E4-5DB1BC52873B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{9E216934-18C1-EEB0-07BA-E93867D8B755} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{ACA797F2-A2D9-E214-0751-AF9F5D9FB1D7} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B955FED6-4B2F-46DB-8FA4-E95189A86539}

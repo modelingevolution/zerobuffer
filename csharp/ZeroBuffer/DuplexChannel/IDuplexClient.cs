@@ -33,11 +33,11 @@ namespace ZeroBuffer.DuplexChannel
         
         /// <summary>
         /// Receive a response. This method blocks until a response is available or timeout.
-        /// The response includes the sequence number for correlation.
+        /// In v1.0.0, responses don't include sequence prefix - correlation is handled internally.
         /// </summary>
         /// <param name="timeout">Timeout for receive operation</param>
-        /// <returns>Response with sequence number, or invalid response if timeout</returns>
-        DuplexResponse ReceiveResponse(TimeSpan timeout);
+        /// <returns>Response frame, or invalid frame if timeout</returns>
+        Frame ReceiveResponse(TimeSpan timeout);
         
         /// <summary>
         /// Check if server is connected to the request buffer

@@ -110,7 +110,7 @@ namespace ZeroBuffer.Tests
                         var data = new byte[] { (byte)i };
                         writer.WriteFrame(data);
                         
-                        var frame = reader.ReadFrame();
+                        using var frame = reader.ReadFrame();
                         Assert.Equal((byte)i, frame.Span[0]);
                     }
                 }
@@ -204,8 +204,8 @@ namespace ZeroBuffer.Tests
                 // Write some data
                 var data1 = new byte[] { 0xAA, 0xAA, 0xAA };
                 writer1.WriteFrame(data1);
-                
-                var frame = reader1.ReadFrame();
+
+                using var frame = reader1.ReadFrame();
                 Assert.Equal(3, frame.Size);
                 Assert.Equal(0xAA, frame.Span[0]);
                 
@@ -223,8 +223,8 @@ namespace ZeroBuffer.Tests
                 // Write different data
                 var data2 = new byte[] { 0xBB, 0xBB, 0xBB, 0xBB };
                 writer2.WriteFrame(data2);
-                
-                var frame = reader2.ReadFrame();
+
+                using var frame = reader2.ReadFrame();
                 Assert.Equal(4, frame.Size);
                 Assert.Equal(0xBB, frame.Span[0]);
                 Assert.Equal(1UL, frame.Sequence); // Should start from 1 again
@@ -252,7 +252,7 @@ namespace ZeroBuffer.Tests
             using (var writer = new Writer(bufferName))
             {
                 writer.WriteFrame(new byte[] { 0x11 });
-                var frame = reader.ReadFrame();
+                using var frame = reader.ReadFrame();
                 Assert.Equal(0x11, frame.Span[0]);
             }
             
@@ -266,7 +266,7 @@ namespace ZeroBuffer.Tests
                 using var writer = new Writer(bufferName);
                 
                 writer.WriteFrame(new byte[] { 0x22, 0x22 });
-                var frame = reader.ReadFrame();
+                using var frame = reader.ReadFrame();
                 
                 Assert.Equal(2, frame.Size);
                 Assert.Equal(0x22, frame.Span[0]);
@@ -280,7 +280,7 @@ namespace ZeroBuffer.Tests
             using (var writer = new Writer(bufferName))
             {
                 writer.WriteFrame(new byte[] { 0x33, 0x33, 0x33 });
-                var frame = reader.ReadFrame();
+                using var frame = reader.ReadFrame();
                 Assert.Equal(3, frame.Size);
                 Assert.Equal(0x33, frame.Span[0]);
             }
@@ -306,8 +306,8 @@ namespace ZeroBuffer.Tests
                 {
                     frameData[0] = (byte)i;
                     writer.WriteFrame(frameData);
-                    
-                    var frame = reader.ReadFrame();
+
+                    using var frame = reader.ReadFrame();
                     Assert.Equal(512, frame.Size);
                     Assert.Equal((byte)i, frame.Span[0]);
                 }
@@ -324,7 +324,7 @@ namespace ZeroBuffer.Tests
             using (var writer = new Writer(bufferName))
             {
                 writer.WriteFrame(new byte[] { 0xFF });
-                var frame = reader.ReadFrame();
+                using var frame = reader.ReadFrame();
                 Assert.Equal(0xFF, frame.Span[0]);
             }
             
@@ -366,7 +366,7 @@ namespace ZeroBuffer.Tests
                         
                         // Do some work
                         writer.WriteFrame(BitConverter.GetBytes(taskId));
-                        var frame = reader.ReadFrame();
+                        using var frame = reader.ReadFrame();
                         
                         return true; // Success
                     }

@@ -193,7 +193,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Read the frames
             for (int i = 0; i < 3; i++)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(1));
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(1));
                 Assert.True(frame.IsValid, $"Frame {i} should be valid");
                 
                 // Convert ReadOnlySpan<byte> to byte array

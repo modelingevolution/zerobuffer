@@ -56,7 +56,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             {
                 throw new InvalidOperationException($"No reader found for process '{process}'");
             }
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+            using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
             
             Assert.True(frame.IsValid, "Frame should be valid");
             
@@ -65,35 +65,11 @@ namespace ZeroBuffer.Tests.StepDefinitions
             Assert.Equal(expectedData, frameString);
         }
 
-        [When(@"the '(.*)' process writes frame with sequence '(.*)'")]
-        public void WhenProcessWritesFrameWithSequence(string process, string sequence)
-        {
-            // Accept process parameter but ignore it
-            var writer = _writers.Values.LastOrDefault();
-            if (writer == null)
-            {
-                throw new InvalidOperationException($"No writer found for process '{process}'");
-            }
-            var dataBytes = System.Text.Encoding.UTF8.GetBytes($"Frame {sequence}");
-            writer.WriteFrame(dataBytes);
-        }
+        // Removed duplicate - using BasicCommunicationSteps version instead
+        // [When(@"the '(.*)' process writes frame with sequence '(.*)'")]
 
-        [Then(@"the '(.*)' process should read frame with sequence '(.*)'")]
-        public void ThenProcessShouldReadFrameWithSequence(string process, string sequence)
-        {
-            // Accept process parameter but ignore it
-            var reader = _readers.Values.LastOrDefault();
-            if (reader == null)
-            {
-                throw new InvalidOperationException($"No reader found for process '{process}'");
-            }
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
-            
-            Assert.True(frame.IsValid, "Frame should be valid");
-            
-            // Check sequence number
-            Assert.Equal(ulong.Parse(sequence), frame.Sequence);
-        }
+        // Removed duplicate - using BasicCommunicationSteps version instead
+        // [Then(@"the '(.*)' process should read frame with sequence '(.*)'")]
 
         [When(@"the '(.*)' process is killed")]
         public void WhenProcessIsKilled(string process)
@@ -225,7 +201,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             }
 
             // Try to read - should timeout or get invalid frame after writer death
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(2));
+            using var frame = reader.ReadFrame(TimeSpan.FromSeconds(2));
             
             // After writer death, we should either get an invalid frame or timeout
             Assert.False(frame.IsValid, "Expected invalid frame or timeout after writer death");
@@ -309,8 +285,8 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 // Test write and read
                 var testData = System.Text.Encoding.UTF8.GetBytes("test_recovery");
                 writer.WriteFrame(testData);
-                
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(2));
+
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(2));
                 Assert.True(frame.IsValid, "Frame should be valid after recovery");
             }
         }

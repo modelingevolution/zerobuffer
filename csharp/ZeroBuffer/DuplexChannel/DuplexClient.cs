@@ -76,16 +76,13 @@ namespace ZeroBuffer.DuplexChannel
             _requestWriter.CommitFrame();
         }
         
-        public DuplexResponse ReceiveResponse(TimeSpan timeout)
+        public Frame ReceiveResponse(TimeSpan timeout)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(DuplexClient));
                 
-            // Read a response frame
-            var frame = _responseReader.ReadFrame(timeout);
-            
-            // Wrap it in DuplexResponse which handles sequence extraction
-            return new DuplexResponse(frame);
+            // Read a response frame directly (v1.0.0 - no sequence prefix)
+            return _responseReader.ReadFrame(timeout);
         }
         
         public void Dispose()

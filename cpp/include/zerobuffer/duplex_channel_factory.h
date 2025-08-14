@@ -14,12 +14,9 @@ public:
         const std::string& channel_name,
         const BufferConfig& config) override;
     
-    std::unique_ptr<IMutableDuplexServer> create_mutable_server(
-        const std::string& channel_name,
-        const BufferConfig& config) override;
-    
     std::unique_ptr<IDuplexClient> create_client(
-        const std::string& channel_name) override;
+        const std::string& channel_name,
+        const BufferConfig& response_config = BufferConfig(4096, 256*1024*1024)) override;
 };
 
 } // namespace zerobuffer

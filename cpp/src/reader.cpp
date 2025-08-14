@@ -47,7 +47,8 @@ public:
         
         // Initialize OIEB
         OIEB* oieb = get_oieb();
-        oieb->operation_size = oieb_size;
+        oieb->oieb_size = 128;  // Always 128 for v1.x.x
+        oieb->version = ProtocolVersion(1, 0, 0);  // Version 1.0.0
         oieb->metadata_size = metadata_size;
         oieb->metadata_free_bytes = metadata_size;
         oieb->metadata_written_bytes = 0;
@@ -313,23 +314,30 @@ public:
                 }
             }
             
-            // Create frame reference
+            // Create frame reference with RAII - zero allocations
             const void* frame_data = read_ptr + sizeof(FrameHeader);
-            Frame frame(frame_data, header.payload_size, header.sequence_number);
             
-            // Update OIEB immediately (like C# does)
+            // Create release info with raw pointer to this impl and static callback
+            Frame::ReleaseInfo release_info{
+                this, 
+                total_frame_size,
+                [](void* impl, uint64_t size) {
+                    static_cast<Reader::Impl*>(impl)->signal_frame_consumed(size);
+                }
+            };
+            
+            // Create frame with release info
+            Frame frame(frame_data, header.payload_size, header.sequence_number, release_info);
+            
+            // Update OIEB immediately for read position tracking
             oieb->payload_read_pos += total_frame_size;
             if (oieb->payload_read_pos >= oieb->payload_size) {
                 oieb->payload_read_pos -= oieb->payload_size;
             }
             oieb->payload_read_count++;
-            oieb->payload_free_bytes += total_frame_size;
             
-            // Release memory barrier
-            std::atomic_thread_fence(std::memory_order_release);
-            
-            // Signal writer that space is available
-            sem_read_->signal();
+            // Note: We do NOT update payload_free_bytes or signal semaphore here!
+            // This will be done when the Frame is destroyed (RAII)
             
             // Update tracking
             current_frame_size_ = total_frame_size;
@@ -341,9 +349,26 @@ public:
         }
     }
     
+    void signal_frame_consumed(uint64_t frame_size) {
+        // Called by Frame destructor via custom deleter
+        ZEROBUFFER_LOG_DEBUG("Reader") << "Frame consumed, releasing " << frame_size << " bytes";
+        
+        // Update OIEB - this is what was missing!
+        OIEB* oieb = get_oieb();
+        
+        // Add back the frame size to free bytes
+        oieb->payload_free_bytes += frame_size;
+        
+        // Release memory barrier to ensure OIEB updates are visible
+        std::atomic_thread_fence(std::memory_order_release);
+        
+        // Signal writer that space is available
+        sem_read_->signal();
+    }
+    
     void release_frame(const Frame& frame) {
-        // No-op: All updates are now done in read_frame() to match C# behavior
-        // This method is kept for API compatibility
+        // No-op: Frame destructor handles release via RAII
+        // This method is kept for backward compatibility
         (void)frame;
     }
     
@@ -388,6 +413,7 @@ private:
     uint64_t bytes_read_;
     
     friend class Reader;  // Allow Reader to access private members
+    friend struct Frame::ReleaseInfo;  // Allow ReleaseInfo to call signal_frame_consumed
 };
 
 Reader::Reader(const std::string& name, const BufferConfig& config)

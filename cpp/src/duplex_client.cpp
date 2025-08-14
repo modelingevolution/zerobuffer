@@ -5,9 +5,9 @@
 
 namespace zerobuffer {
 
-DuplexClient::DuplexClient(const std::string& channel_name)
+DuplexClient::DuplexClient(const std::string& channel_name, const BufferConfig& response_config)
     : channel_name_(channel_name)
-    , config_(4096, 256 * 1024 * 1024) // 256MB buffer
+    , response_config_(response_config)
 {
     // Channel naming convention:
     // Request: {channel_name}_request (client writes, server reads)
@@ -24,7 +24,7 @@ DuplexClient::DuplexClient(const std::string& channel_name)
         request_writer_ = std::make_unique<Writer>(request_buffer_name);
         
         // Create response buffer as reader (we own this)
-        response_reader_ = std::make_unique<Reader>(response_buffer_name, config_);
+        response_reader_ = std::make_unique<Reader>(response_buffer_name, response_config_);
     }
     catch (...) {
         // Clean up if construction fails
@@ -36,7 +36,7 @@ DuplexClient::DuplexClient(const std::string& channel_name)
 
 DuplexClient::~DuplexClient() = default;
 
-uint64_t DuplexClient::send_request(const void* data, size_t size) {
+uint64_t DuplexClient::write(const void* data, size_t size) {
     if (!request_writer_) {
         throw std::runtime_error("DuplexClient has been disposed");
     }
@@ -56,36 +56,33 @@ uint64_t DuplexClient::send_request(const void* data, size_t size) {
     return sequence_number;
 }
 
-std::pair<uint64_t, std::span<uint8_t>> DuplexClient::acquire_request_buffer(size_t size) {
+std::span<uint8_t> DuplexClient::acquire_buffer(size_t size) {
     if (!request_writer_) {
         throw std::runtime_error("DuplexClient has been disposed");
     }
     
-    // Get frame buffer and sequence number
-    uint64_t sequence_number;
-    void* buffer = request_writer_->get_frame_buffer(size, sequence_number);
+    // Get frame buffer and store sequence number for commit
+    void* buffer = request_writer_->get_frame_buffer(size, pending_sequence_);
     
-    return {sequence_number, std::span<uint8_t>(static_cast<uint8_t*>(buffer), size)};
+    return std::span<uint8_t>(static_cast<uint8_t*>(buffer), size);
 }
 
-void DuplexClient::commit_request() {
+uint64_t DuplexClient::commit() {
     if (!request_writer_) {
         throw std::runtime_error("DuplexClient has been disposed");
     }
     
     request_writer_->commit_frame();
+    return pending_sequence_;
 }
 
-DuplexResponse DuplexClient::receive_response(std::chrono::milliseconds timeout) {
+Frame DuplexClient::read(std::chrono::milliseconds timeout) {
     if (!response_reader_) {
         throw std::runtime_error("DuplexClient has been disposed");
     }
     
-    // Read response frame with timeout
-    Frame frame = response_reader_->read_frame(timeout);
-    
-    // Wrap it in DuplexResponse
-    return DuplexResponse{std::move(frame)};
+    // Read and return frame directly
+    return response_reader_->read_frame(timeout);
 }
 
 bool DuplexClient::is_server_connected() const {

@@ -26,18 +26,9 @@ add_executable(zerobuffer_generated_tests
     ${GENERATED_TEST_SOURCES}
 )
 
-# Add step definition sources directly
-set(STEP_DEFINITION_SOURCES
-    ${CMAKE_SOURCE_DIR}/step_definitions/step_registry.cpp
-    ${CMAKE_SOURCE_DIR}/step_definitions/test_context.cpp
-    ${CMAKE_SOURCE_DIR}/step_definitions/basic_communication_steps.cpp
-    ${CMAKE_SOURCE_DIR}/step_definitions/buffer_naming_service.cpp
-    ${CMAKE_SOURCE_DIR}/step_definitions/test_data_patterns.cpp
-    ${CMAKE_SOURCE_DIR}/step_definitions/duplex_channel_steps.cpp
-    # Add more step definition files as they are implemented:
-    # ${CMAKE_SOURCE_DIR}/step_definitions/edge_cases_steps.cpp
-    # ${CMAKE_SOURCE_DIR}/step_definitions/error_handling_steps.cpp
-    # etc.
+# Add all step definition sources using glob
+file(GLOB STEP_DEFINITION_SOURCES
+    ${CMAKE_SOURCE_DIR}/step_definitions/*.cpp
 )
 
 # Add step definitions to the test executable

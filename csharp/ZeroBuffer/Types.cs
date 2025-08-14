@@ -13,13 +13,39 @@ namespace ZeroBuffer
     }
 
     /// <summary>
+    /// Protocol version structure (4 bytes)
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1, Size = 4)]
+    public struct ProtocolVersion
+    {
+        public byte Major;     // Major version (breaking changes)
+        public byte Minor;     // Minor version (new features, backward compatible)
+        public byte Patch;     // Patch version (bug fixes)
+        public byte Reserved;  // Reserved (must be 0)
+        
+        public ProtocolVersion(byte major, byte minor = 0, byte patch = 0)
+        {
+            Major = major;
+            Minor = minor;
+            Patch = patch;
+            Reserved = 0;
+        }
+        
+        public bool IsCompatibleWith(ProtocolVersion other)
+        {
+            return Major == other.Major;  // Same major version required
+        }
+    }
+    
+    /// <summary>
     /// Operation Info Exchange Block structure
     /// Must match the C++ OIEB structure exactly for cross-language compatibility
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 8, Size = 128)]
     public struct OIEB
     {
-        public ulong OperationSize;        // Total OIEB size
+        public uint OiebSize;               // Total OIEB size (always 128 for v1.x.x)
+        public ProtocolVersion Version;     // Protocol version (currently 1.0.0)
         
         public ulong MetadataSize;         // Total metadata block size
         public ulong MetadataFreeBytes;    // Free bytes in metadata block
@@ -98,6 +124,7 @@ namespace ZeroBuffer
     {
         private readonly byte* _dataPtr;
         private readonly int _length;
+        private readonly Action? _onDispose;
         
         public ulong Sequence { get; }
         
@@ -106,11 +133,17 @@ namespace ZeroBuffer
         public int Size => _length;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Frame(byte* dataPtr, int length, ulong sequence)
+        internal Frame(byte* dataPtr, int length, ulong sequence) : this(dataPtr, length, sequence, null)
+        {
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal Frame(byte* dataPtr, int length, ulong sequence, Action? onDispose)
         {
             _dataPtr = dataPtr;
             _length = length;
             Sequence = sequence;
+            _onDispose = onDispose;
         }
         
         /// <summary>
@@ -143,7 +176,17 @@ namespace ZeroBuffer
         /// </summary>
         internal byte* GetDataPointer() => _dataPtr;
         
+        /// <summary>
+        /// Dispose method for ref struct disposable pattern (C# 8.0+)
+        /// This enables 'using' statements without implementing IDisposable
+        /// </summary>
+        public void Dispose()
+        {
+            // Call the disposal callback (e.g., signal semaphore)
+            _onDispose?.Invoke();
+        }
+        
         // Invalid frame sentinel
-        public static Frame Invalid => new Frame(null, 0, 0);
+        public static Frame Invalid => new Frame(null, 0, 0, null);
     }
 }

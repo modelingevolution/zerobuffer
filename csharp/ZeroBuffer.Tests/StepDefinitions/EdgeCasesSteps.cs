@@ -164,7 +164,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 if (reader != null)
                 {
                     // Read a frame to free space
-                    var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(100));
+                    using var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(100));
                     if (frame.IsValid)
                     {
                         // Space is automatically signaled when frame is disposed
@@ -234,7 +234,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Read all pending frames
             while (readCount < maxFrames)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(100));
+                using var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(100));
                 if (frame.IsValid)
                 {
                     readCount++;
@@ -341,7 +341,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             var reader = _readers.Values.LastOrDefault();
             if (reader != null)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(100));
+                using var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(100));
                 Assert.True(frame.IsValid, "Frame should be valid");
             }
         }
@@ -380,14 +380,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             _readers[bufferName] = reader;
         }
         
-        // Helper method to connect writer - duplicated logic for independence
-        [When(@"the '(.*)' process connects to buffer '(.*)'")]
-        public void WhenProcessConnectsToBuffer(string process, string bufferName)
-        {
-            var actualBufferName = _bufferNaming.GetBufferName(bufferName);
-            var writer = new ZeroBuffer.Writer(actualBufferName);
-            _writers[bufferName] = writer;
-        }
+        // Removed duplicate - using BasicCommunicationSteps.WhenProcessConnectsToBuffer instead
 
         [Given(@"the '(.*)' process creates buffer '(.*)' with minimum viable size '(.*)'")]
         public void GivenProcessCreatesBufferWithMinimumViableSize(string process, string bufferName, string size)

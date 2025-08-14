@@ -220,7 +220,7 @@ void StepRegistry::registerAllSteps() {
     registerBasicCommunicationSteps();
     ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Registered BasicCommunication steps";
     
-    // DuplexChannel steps
+    // Duplex Channel steps
     registerDuplexChannelSteps(*this);
     ZEROBUFFER_LOG_DEBUG("StepRegistry") << "Registered DuplexChannel steps";
     

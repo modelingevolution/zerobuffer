@@ -64,8 +64,20 @@ namespace ZeroBuffer
                 // Read OIEB to get layout - use ref for initial read-only access
                 ref readonly var oiebRef = ref _sharedMemory.ReadRef<OIEB>(0);
                 
-                // Calculate offsets
-                _metadataOffset = (long)oiebRef.OperationSize;
+                // Verify OIEB size and version compatibility
+                if (oiebRef.OiebSize != 128)
+                {
+                    throw new InvalidOperationException("Invalid OIEB size - expected 128 for v1.x.x");
+                }
+                
+                var currentVersion = new ProtocolVersion(1, 0, 0);
+                if (!oiebRef.Version.IsCompatibleWith(currentVersion))
+                {
+                    throw new InvalidOperationException("Incompatible protocol version");
+                }
+                
+                // Calculate offsets (OIEB is always 128 bytes)
+                _metadataOffset = 128;  // sizeof(OIEB)
                 _payloadOffset = _metadataOffset + (long)oiebRef.MetadataSize;
 
                 // Check if another writer is already connected

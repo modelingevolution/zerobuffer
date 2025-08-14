@@ -82,10 +82,10 @@ public class TestGenerator
         Console.WriteLine($"\n✅ Successfully generated {generatedFiles.Count} test files in {outputDir.FullName}");
         
         // Print usage instructions
-        Console.WriteLine("\nTo build and run the generated tests:");
-        Console.WriteLine("  1. Add 'add_subdirectory(path/to/generated)' to your CMakeLists.txt");
-        Console.WriteLine("  2. Build: cmake .. && make");
-        Console.WriteLine("  3. Run: ./zerobuffer_generated_tests");
+        Console.WriteLine("\nTo run the generated tests:");
+        Console.WriteLine("  Use: ./test.sh              # Run unit tests (default)");
+        Console.WriteLine("  Use: ./test.sh 1.1          # Run specific test by number");
+        Console.WriteLine("  Use: ./test.sh all          # Run all tests including benchmarks");
     }
     
     private static string GetOutputFileName(string featureFileName)
@@ -148,15 +148,9 @@ public class TestGenerator
         sb.AppendLine("    ${GENERATED_TEST_SOURCES}");
         sb.AppendLine(")");
         sb.AppendLine();
-        sb.AppendLine("# Add step definition sources directly");
-        sb.AppendLine("set(STEP_DEFINITION_SOURCES");
-        sb.AppendLine("    ${CMAKE_SOURCE_DIR}/step_definitions/step_registry.cpp");
-        sb.AppendLine("    ${CMAKE_SOURCE_DIR}/step_definitions/test_context.cpp");
-        sb.AppendLine("    ${CMAKE_SOURCE_DIR}/step_definitions/basic_communication_steps.cpp");
-        sb.AppendLine("    # Add more step definition files as they are implemented:");
-        sb.AppendLine("    # ${CMAKE_SOURCE_DIR}/step_definitions/edge_cases_steps.cpp");
-        sb.AppendLine("    # ${CMAKE_SOURCE_DIR}/step_definitions/error_handling_steps.cpp");
-        sb.AppendLine("    # etc.");
+        sb.AppendLine("# Add all step definition sources using glob");
+        sb.AppendLine("file(GLOB STEP_DEFINITION_SOURCES");
+        sb.AppendLine("    ${CMAKE_SOURCE_DIR}/step_definitions/*.cpp");
         sb.AppendLine(")");
         sb.AppendLine();
         sb.AppendLine("# Add step definitions to the test executable");

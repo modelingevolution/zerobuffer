@@ -33,18 +33,12 @@ namespace ZeroBuffer.DuplexChannel
             return new ImmutableDuplexServer(channelName, config, logger);
         }
         
-        /// <inheritdoc/>
-        public IMutableDuplexServer CreateMutableServer(string channelName, BufferConfig config)
-        {
-            if (string.IsNullOrEmpty(channelName))
-                throw new ArgumentException("Channel name cannot be null or empty", nameof(channelName));
-                
-            if (config == null)
-                throw new ArgumentNullException(nameof(config));
-                
-            var logger = _loggerFactory.CreateLogger<MutableDuplexServer>();
-            return new MutableDuplexServer(channelName, config, logger);
-        }
+        // MutableDuplexServer will be implemented in v2.0.0
+        // /// <inheritdoc/>
+        // public IMutableDuplexServer CreateMutableServer(string channelName, BufferConfig config)
+        // {
+        //     throw new NotImplementedException("MutableDuplexServer will be available in v2.0.0");
+        // }
         
         /// <inheritdoc/>
         public IDuplexClient CreateClient(string channelName)

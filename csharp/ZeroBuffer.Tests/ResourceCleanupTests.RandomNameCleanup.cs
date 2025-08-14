@@ -27,7 +27,7 @@ namespace ZeroBuffer.Tests
                 using (var writer = new Writer(name))
                 {
                     writer.WriteFrame(new byte[] { 0x42 });
-                    var frame = reader.ReadFrame();
+                    using var frame = reader.ReadFrame();
                     Assert.Equal(1, frame.Size);
                 }
                 // Resources might or might not exist immediately after dispose
@@ -66,7 +66,7 @@ namespace ZeroBuffer.Tests
             using (var writer = new Writer(abandonedName))
             {
                 writer.WriteFrame(new byte[] { 0x11 });
-                reader.ReadFrame();
+                reader.ReadFrame().Dispose();
             }
             
             // Create an active buffer (keep reader alive)

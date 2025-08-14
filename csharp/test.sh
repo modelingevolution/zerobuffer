@@ -144,6 +144,12 @@ while [[ $# -gt 0 ]]; do
             dotnet test ZeroBuffer.Tests/ZeroBuffer.Tests.csproj --filter "FullyQualifiedName~Test3_3" -v $VERBOSITY $NO_BUILD
             exit $?
             ;;
+        13.1|13_1)
+            # Run specific test 13.1
+            echo -e "${YELLOW}Running Test 13.1 - Basic Request-Response${NC}"
+            dotnet test ZeroBuffer.Tests/ZeroBuffer.Tests.csproj --filter "FullyQualifiedName~Test13_1" -v $VERBOSITY $NO_BUILD
+            exit $?
+            ;;
         *)
             # If not a flag, treat as test name filter
             SPECIFIC_TEST="$1"

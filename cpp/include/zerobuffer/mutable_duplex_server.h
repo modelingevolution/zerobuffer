@@ -15,14 +15,14 @@ public:
     ~MutableDuplexServer() override;
     
     // IMutableDuplexServer implementation
-    void start(std::function<void(Frame&)> handler, bool is_async = false) override;
+    void start(MutableHandler handler) override;
     
     // IDuplexServer implementation
     void stop() override;
     bool is_running() const override;
     
 private:
-    void process_requests(std::function<void(Frame&)> handler, const std::string& response_buffer_name);
+    void process_requests(MutableHandler handler, const std::string& response_buffer_name);
     std::unique_ptr<Writer> connect_to_response_buffer(const std::string& buffer_name);
     
     std::string channel_name_;

@@ -24,8 +24,8 @@ add_library(zerobuffer STATIC
     src/writer.cpp
     src/duplex_client.cpp
     src/immutable_duplex_server.cpp
-    src/mutable_duplex_server.cpp
     src/duplex_channel_factory.cpp
+    # src/mutable_duplex_server.cpp - will be added in v2.0.0.0
     ${PLATFORM_SOURCES}
 )
 

@@ -45,7 +45,7 @@ namespace ZeroBuffer.Tests
             ulong sequenceNumber = client.SendRequest(testData);
             
             // Receive response
-            var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
+            using var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
             
             // Verify sequence number matches
             Assert.True(response.IsValid);
@@ -74,9 +74,9 @@ namespace ZeroBuffer.Tests
             ulong sequenceNumber = client.AcquireRequestBuffer(bytes.Length, out Span<byte> buffer);
             bytes.CopyTo(buffer);
             client.CommitRequest();
-            
+
             // Receive response
-            var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
+            using var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
             
             Assert.True(response.IsValid);
             Assert.Equal(sequenceNumber, response.Sequence);
@@ -123,7 +123,7 @@ namespace ZeroBuffer.Tests
                 var responses = new (ulong sequence, byte value)[10];
                 for (int i = 0; i < 10; i++)
                 {
-                    var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
+                    using var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
                     if (response.IsValid)
                     {
                         var data = response.ToArray();
@@ -178,9 +178,9 @@ namespace ZeroBuffer.Tests
             
             // Send request
             ulong sentSequence = client.SendRequest(new byte[] { 1 });
-            
+
             // Receive response
-            var response = client.ReceiveResponse(TimeSpan.FromSeconds(1));
+            using var response = client.ReceiveResponse(TimeSpan.FromSeconds(1));
             
             // Verify server saw the same sequence we sent
             Assert.Equal(sentSequence, capturedSequence);

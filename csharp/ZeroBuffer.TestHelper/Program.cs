@@ -73,7 +73,7 @@ namespace ZeroBuffer.TestHelper
             // Read frames continuously
             while (true)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
                 if (!frame.IsValid)
                     break;
                     
@@ -105,7 +105,7 @@ namespace ZeroBuffer.TestHelper
             // Read frames continuously with hash validation
             while (true)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
                 if (!frame.IsValid)
                     break;
                     
@@ -159,7 +159,7 @@ namespace ZeroBuffer.TestHelper
             // Warmup
             for (int i = 0; i < 10; i++)
             {
-                var warmupFrame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+                using var warmupFrame = reader.ReadFrame(TimeSpan.FromSeconds(5));
                 if (!warmupFrame.IsValid) break;
             }
             
@@ -170,7 +170,7 @@ namespace ZeroBuffer.TestHelper
             for (int i = 0; i < frameCount; i++)
             {
                 var sw = Stopwatch.StartNew();
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
                 sw.Stop();
                 
                 if (!frame.IsValid) break;
@@ -223,7 +223,7 @@ namespace ZeroBuffer.TestHelper
             
             while (framesRead < totalFrames)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(10));
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(10));
                 if (!frame.IsValid) break;
                 framesRead++;
             }
@@ -332,7 +332,7 @@ namespace ZeroBuffer.TestHelper
                 {
                     try
                     {
-                        var frame = reader.ReadFrame(TimeSpan.FromSeconds(1));
+                        using var frame = reader.ReadFrame(TimeSpan.FromSeconds(1));
                         if (!frame.IsValid)
                             continue;
                         

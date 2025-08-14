@@ -108,8 +108,8 @@ namespace ZeroBuffer.Tests.Features
     this.FeatureBackground();
 #line hidden
 #line 7
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-basic\' with metadata size \'40" +
-                        "96\' and payload size \'1048576\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-basic\' with metadat" +
+                        "a size \'4096\' and payload size \'1048576\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 8
         testRunner.And("the \'server\' process starts echo handler", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
@@ -135,21 +135,18 @@ namespace ZeroBuffer.Tests.Features
 #line 19
         testRunner.Then("response should match request with size \'102400\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 21
-        testRunner.And("all responses should have correct sequence numbers", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
             }
             this.ScenarioCleanup();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Test 13.2 - Sequence Number Correlation")]
+        [Xunit.SkippableFactAttribute(DisplayName="Test 13.2 - Request-Response Order Preservation")]
         [Xunit.TraitAttribute("FeatureTitle", "Duplex Channel Tests")]
-        [Xunit.TraitAttribute("Description", "Test 13.2 - Sequence Number Correlation")]
-        public void Test13_2_SequenceNumberCorrelation()
+        [Xunit.TraitAttribute("Description", "Test 13.2 - Request-Response Order Preservation")]
+        public void Test13_2_Request_ResponseOrderPreservation()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.2 - Sequence Number Correlation", null, tagsOfScenario, argumentsOfScenario, featureTags);
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.2 - Request-Response Order Preservation", null, tagsOfScenario, argumentsOfScenario, featureTags);
 #line 23
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
@@ -163,30 +160,27 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 24
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-sequence\' with default config" +
-                        "", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
 #line 25
-        testRunner.And("the \'server\' process starts delayed echo handler with \'500\' ms delay", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-sequence\' with defa" +
+                        "ult config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 27
-        testRunner.When("the \'client\' process creates duplex channel client \'duplex-sequence\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 26
+        testRunner.And("the \'server\' process starts echo handler", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 28
-        testRunner.And("the \'client\' process sends \'10\' requests rapidly without waiting", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("the \'client\' process creates duplex channel client \'duplex-sequence\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 30
-        testRunner.Then("the \'server\' process responds in reverse order", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 29
+        testRunner.And("the \'client\' process sends \'10\' requests sequentially", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 31
+        testRunner.Then("the \'client\' process receives \'10\' responses in order", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 32
-        testRunner.When("the \'client\' process receives all \'10\' responses", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.And("responses should match requests by content", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 34
-        testRunner.Then("responses should match requests by sequence number", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 35
-        testRunner.And("no responses should be lost or mismatched", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 33
+        testRunner.And("no responses should be lost or duplicated", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -200,7 +194,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.3 - Concurrent Client Operations", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 37
+#line 35
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -213,30 +207,24 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 38
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-concurrent\' with default conf" +
-                        "ig", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 36
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-concurrent\' with de" +
+                        "fault config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 37
+        testRunner.And("the \'server\' process starts echo handler", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 39
-        testRunner.And("the \'server\' process starts variable delay handler \'0-100\' ms", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 41
         testRunner.When("the \'client\' process creates duplex channel client \'duplex-concurrent\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
+#line 40
+        testRunner.And("the \'client\' process sends \'20\' requests from single thread", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
 #line 42
-        testRunner.And("the \'client\' process spawns \'5\' threads", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.Then("the \'client\' process receives exactly \'20\' responses", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 43
-        testRunner.And("each thread sends \'20\' requests", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 45
-        testRunner.Then("each thread receives exactly \'20\' responses", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 46
-        testRunner.And("no cross-thread response delivery occurs", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 47
-        testRunner.And("all \'100\' total responses are accounted for", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("all \'20\' responses match their requests", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -250,7 +238,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.4 - Server Processing Mode SingleThread", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 49
+#line 46
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -263,26 +251,26 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
+#line 47
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-singlethread\' with " +
+                        "processing mode \'SingleThread\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 48
+        testRunner.And("the \'server\' process starts handler with \'100\' ms processing time", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
 #line 50
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-singlethread\' with processing" +
-                        " mode \'SingleThread\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
-#line hidden
-#line 51
-        testRunner.And("the \'server\' process starts handler with \'1\' second processing time", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 53
         testRunner.When("the \'client\' process creates duplex channel client \'duplex-singlethread\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 54
-        testRunner.And("the \'client\' process sends \'3\' requests simultaneously", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 51
+        testRunner.And("the \'client\' process sends \'3\' requests sequentially", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 55
+#line 52
         testRunner.And("the \'client\' process measures total response time", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 57
-        testRunner.Then("total time should be at least \'3\' seconds", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line 54
+        testRunner.Then("total time should be at least \'300\' ms", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 58
+#line 55
         testRunner.And("responses should arrive in order", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -297,7 +285,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.5 - Server Death During Processing", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 60
+#line 57
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -310,28 +298,29 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 61
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-crash\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 58
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-crash\' with default" +
+                        " config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 62
+#line 59
         testRunner.And("the \'server\' process starts handler that crashes after \'100\' ms", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 64
+#line 61
         testRunner.When("the \'client\' process creates duplex channel client \'duplex-crash\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 65
-        testRunner.And("the \'client\' process sends large request of \'1048576\' bytes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line 62
+        testRunner.And("the \'client\' process sends request of \'1024\' bytes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 67
+#line 64
         testRunner.Then("the \'server\' process simulates crash during processing", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 69
+#line 66
         testRunner.When("the \'client\' process waits for response with timeout \'5\' seconds", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 71
+#line 68
         testRunner.Then("the \'client\' process should detect server death", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 72
+#line 69
         testRunner.And("an appropriate exception should be thrown", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -346,7 +335,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.6 - Buffer Full on Response Channel", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 74
+#line 71
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -359,32 +348,32 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 75
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-full\' with metadata size \'102" +
-                        "4\' and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 72
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-full\' with metadata" +
+                        " size \'1024\' and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 76
+#line 73
         testRunner.And("the \'server\' process starts handler that doubles request size", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 78
+#line 75
         testRunner.When("the \'client\' process creates duplex channel client \'duplex-full\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 79
+#line 76
         testRunner.And("the \'client\' process sends request with size \'4096\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 80
+#line 77
         testRunner.And("the \'client\' process does not read responses", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 82
+#line 79
         testRunner.Then("the \'server\' process attempts to send response of \'8192\' bytes", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 83
+#line 80
         testRunner.And("the \'server\' process should block on response write", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 85
+#line 82
         testRunner.When("the \'client\' process reads one response", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 87
+#line 84
         testRunner.Then("the \'server\' process should unblock and complete write", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }
@@ -399,7 +388,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.7 - Zero-Copy Client Operations", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 89
+#line 86
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -412,44 +401,44 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 90
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-zerocopy\' with default config" +
-                        "", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 87
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-zerocopy\' with defa" +
+                        "ult config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 91
+#line 88
         testRunner.And("the \'server\' process starts echo handler", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 93
+#line 90
         testRunner.When("the \'client\' process creates duplex channel client \'duplex-zerocopy\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 94
+#line 91
         testRunner.And("the \'client\' process acquires zero-copy request buffer of size \'4096\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 95
+#line 92
         testRunner.And("the \'client\' process fills buffer with test pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 96
+#line 93
         testRunner.And("the \'client\' process commits request", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 98
+#line 95
         testRunner.Then("response should contain same test pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 99
+#line 96
         testRunner.And("no memory allocations in send path", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Test 13.8 - Mutable vs Immutable Server")]
+        [Xunit.SkippableFactAttribute(DisplayName="Test 13.8 - Immutable Server Handler Types")]
         [Xunit.TraitAttribute("FeatureTitle", "Duplex Channel Tests")]
-        [Xunit.TraitAttribute("Description", "Test 13.8 - Mutable vs Immutable Server")]
-        public void Test13_8_MutableVsImmutableServer()
+        [Xunit.TraitAttribute("Description", "Test 13.8 - Immutable Server Handler Types")]
+        public void Test13_8_ImmutableServerHandlerTypes()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.8 - Mutable vs Immutable Server", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 101
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.8 - Immutable Server Handler Types", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 98
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -462,37 +451,27 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 102
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-mutable\' with mutable handler" +
-                        "", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 100
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-transform\' with def" +
+                        "ault config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 101
+        testRunner.And("the \'server\' process starts handler that implements XOR with key \'0xFF\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 103
-        testRunner.And("the \'server\' process creates duplex channel \'duplex-immutable\' with immutable han" +
-                        "dler", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.When("the \'client\' process creates duplex channel client \'duplex-transform\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 104
-        testRunner.And("both handlers implement XOR with key \'0xFF\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the \'client\' process sends \'10240\' byte frame with test pattern", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 106
-        testRunner.When("the \'client\' process creates duplex channel client \'duplex-mutable\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.Then("response should contain XOR transformed data", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 107
-        testRunner.And("the \'client\' process creates duplex channel client \'duplex-immutable\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the server handler receives immutable request frame", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
 #line 108
-        testRunner.And("the \'client\' process sends identical \'10240\' byte frames to both", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 110
-        testRunner.Then("both should produce identical XOR results", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
-#line hidden
-#line 111
-        testRunner.And("the mutable server should modify in-place", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 112
-        testRunner.And("the mutable server should have no allocations", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
-#line hidden
-#line 113
-        testRunner.And("the immutable server should return new data", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+        testRunner.And("the server handler returns new response data", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
             this.ScenarioCleanup();
@@ -506,7 +485,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.9 - Client Death During Response Wait", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 115
+#line 110
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -519,32 +498,32 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 116
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-client-crash\' with default co" +
-                        "nfig", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 111
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-client-crash\' with " +
+                        "default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 117
+#line 112
         testRunner.And("the \'server\' process starts handler with \'2\' second processing delay", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 119
+#line 114
         testRunner.When("the \'client\' process creates duplex channel client \'duplex-client-crash\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 120
+#line 115
         testRunner.And("the \'client\' process sends request", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 121
+#line 116
         testRunner.And("the \'client\' process simulates crash after \'1\' second", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 123
+#line 118
         testRunner.Then("the \'server\' process completes processing after \'2\' seconds", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 124
+#line 119
         testRunner.And("the \'server\' process attempts to send response", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 125
+#line 120
         testRunner.And("the \'server\' process detects client death when writing", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 126
+#line 121
         testRunner.And("the \'server\' process continues processing other requests", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
             }
@@ -559,7 +538,7 @@ namespace ZeroBuffer.Tests.Features
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 13.10 - Channel Cleanup on Dispose", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 128
+#line 123
     this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -572,37 +551,38 @@ namespace ZeroBuffer.Tests.Features
 #line 4
     this.FeatureBackground();
 #line hidden
-#line 129
-        testRunner.Given("the \'server\' process creates duplex channel \'duplex-cleanup\' with default config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line 124
+        testRunner.Given("the \'server\' process creates immutable duplex channel \'duplex-cleanup\' with defau" +
+                        "lt config", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 130
+#line 125
         testRunner.And("the \'server\' process starts echo handler", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 132
+#line 127
         testRunner.When("the \'client\' process creates duplex channel client \'duplex-cleanup\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 133
+#line 128
         testRunner.And("the \'client\' process sends \'5\' requests", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 134
+#line 129
         testRunner.And("the \'client\' process receives \'3\' responses", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 136
+#line 131
         testRunner.Then("the \'server\' process disposes server while \'2\' responses pending", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 138
+#line 133
         testRunner.When("the \'client\' process attempts to receive pending responses", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 140
+#line 135
         testRunner.Then("the \'client\' process should receive exception on pending", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 141
+#line 136
         testRunner.And("all shared memory should be cleaned up", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 143
-        testRunner.When("a new \'server\' process creates duplex channel \'duplex-cleanup\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line 138
+        testRunner.When("a new \'server\' process creates immutable duplex channel \'duplex-cleanup\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 145
+#line 140
         testRunner.Then("the new server should reuse same channel name successfully", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }

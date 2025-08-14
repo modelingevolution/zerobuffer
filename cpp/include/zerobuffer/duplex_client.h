@@ -9,21 +9,25 @@ namespace zerobuffer {
 
 class DuplexClient : public IDuplexClient {
 public:
-    explicit DuplexClient(const std::string& channel_name);
+    explicit DuplexClient(const std::string& channel_name, 
+                         const BufferConfig& response_config = BufferConfig(4096, 256*1024*1024));
     ~DuplexClient() override;
     
     // IDuplexClient implementation
-    uint64_t send_request(const void* data, size_t size) override;
-    std::pair<uint64_t, std::span<uint8_t>> acquire_request_buffer(size_t size) override;
-    void commit_request() override;
-    DuplexResponse receive_response(std::chrono::milliseconds timeout) override;
+    uint64_t write(const void* data, size_t size) override;
+    std::span<uint8_t> acquire_buffer(size_t size) override;
+    uint64_t commit() override;
+    Frame read(std::chrono::milliseconds timeout) override;
     bool is_server_connected() const override;
     
 private:
     std::string channel_name_;
     std::unique_ptr<Writer> request_writer_;
     std::unique_ptr<Reader> response_reader_;
-    BufferConfig config_;
+    BufferConfig response_config_;
+    
+    // For zero-copy write tracking
+    uint64_t pending_sequence_ = 0;
 };
 
 } // namespace zerobuffer

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TechTalk.SpecFlow;
 using ZeroBuffer.Tests.Services;
+using ZeroBuffer.Tests.StepDefinitions;
 
 
 namespace ZeroBuffer.Tests
@@ -47,8 +48,8 @@ namespace ZeroBuffer.Tests
             _objectContainer.RegisterInstanceAs<IBufferNamingService>(bufferNamingService);
             
             // Register a factory for creating loggers
-            //_objectContainer.RegisterFactoryAs<ILogger<BasicCommunicationSteps>>((container) => loggerFactory.CreateLogger<BasicCommunicationSteps>());
-            //_objectContainer.RegisterFactoryAs<ILogger<EdgeCasesSteps>>((container) => loggerFactory.CreateLogger<EdgeCasesSteps>());
+            _objectContainer.RegisterFactoryAs<ILogger<BasicCommunicationSteps>>((container) => loggerFactory.CreateLogger<BasicCommunicationSteps>());
+            _objectContainer.RegisterFactoryAs<ILogger<DuplexChannelSteps>>((container) => loggerFactory.CreateLogger<DuplexChannelSteps>());
             
             // Register step definition classes that need to be injected
             // SpecFlow will handle creation of step definition classes, but we need to ensure

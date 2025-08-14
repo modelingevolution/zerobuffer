@@ -19,8 +19,17 @@ ZeroBuffer is a high-performance, zero-copy inter-process communication library 
 The library uses a plain POD (Plain Old Data) structure called OIEB (Operation Info Exchange Block) for cross-language compatibility:
 
 ```cpp
+struct ProtocolVersion {
+    uint8_t major;     // Major version (breaking changes)
+    uint8_t minor;     // Minor version (new features, backward compatible)
+    uint8_t patch;     // Patch version (bug fixes)
+    uint8_t reserved;  // Reserved (must be 0)
+};
+
 struct OIEB {
-    uint64_t operation_size;      // Total OIEB size
+    uint32_t oieb_size;           // Total OIEB size (always 128 for v1)
+    ProtocolVersion version;      // Protocol version (currently 1.0.0.0)
+    
     uint64_t metadata_size;       // Total metadata block size
     uint64_t metadata_free_bytes; // Free bytes in metadata block
     uint64_t metadata_written_bytes; // Written bytes in metadata block
@@ -32,11 +41,15 @@ struct OIEB {
     uint64_t payload_read_count;   // Number of frames read
     uint64_t writer_pid;          // Writer process ID (0 if none)
     uint64_t reader_pid;          // Reader process ID (0 if none)
-    uint64_t reserved[4];         // Padding to ensure 64-byte alignment
+    uint64_t reserved[4];         // Reserved for future use
 };
 ```
 
+Note: The first 8 bytes contain oieb_size (4B) and version (4B), maintaining 128-byte total size.
+
 ## Key Commands
+
+**IMPORTANT**: NEVER invoke `make` directly in this project! Always use the provided build scripts.
 
 ```bash
 # Building
@@ -51,6 +64,9 @@ struct OIEB {
 ./test.sh               # Run all tests (unit + benchmarks)
 ./test.sh unit          # Run unit tests only
 ./test.sh benchmark     # Run benchmarks only
+./test.sh 1.1           # Run specific test by number (e.g., test 1.1)
+./test.sh "1.*"         # Run all tests in category 1 (wildcard support)
+./test.sh "13.*"        # Run all duplex channel tests (category 13)
 
 # Cleaning
 ./clean.sh              # Clean all build artifacts and shared memory resources
@@ -74,6 +90,51 @@ ctest --output-on-failure
 ```
 
 ## Development Guidelines
+
+### Performance-Critical Library Guidelines
+
+**CRITICAL**: ZeroBuffer is a performance-critical library. Performance takes precedence over some traditional best practices.
+
+#### Performance Requirements
+1. **Zero-copy operations**: No unnecessary memory allocations or copies in hot paths
+2. **No virtual function calls in data paths**: Virtual functions only in interfaces, never in read/write operations
+3. **Inline critical methods**: Hot path methods should be inline (defined in headers or class body)
+4. **Direct member access**: Use `friend class` for zero-overhead access instead of getters/setters in performance paths
+5. **Minimize function call overhead**: Avoid unnecessary indirection or wrapper functions
+6. **Use POD types**: Plain Old Data structures for shared memory compatibility
+7. **Cache-friendly layouts**: Align data structures to cache lines where beneficial
+
+#### C++ Best Practices for Performance-Critical Code
+1. **Const-correctness WITHOUT overhead**: Use `const` appropriately but avoid getter/setter overhead
+2. **RAII for resource management**: Automatic cleanup without runtime cost
+3. **Move semantics**: Prevent unnecessary copies
+4. **`noexcept` specifications**: Help compiler optimize better
+5. **`constexpr` where possible**: Enable compile-time optimization
+6. **Friend class access**: Acceptable for performance-critical member access
+7. **Pimpl idiom**: Good for ABI stability but keep performance-critical members accessible
+
+#### What to Avoid
+- **DON'T add getters/setters for performance-critical members**: Use friend class instead
+- **DON'T use virtual functions in hot paths**: Keep data operations non-virtual
+- **DON'T introduce heap allocations in hot paths**: Use stack or pre-allocated memory
+- **DON'T over-abstract**: Simple, direct code is often faster
+- **DON'T sacrifice performance for "perfect" encapsulation**: Performance is the priority
+
+### Naming Conventions
+
+#### Class Member Variables
+- **Private/Protected fields**: Start with underscore and use snake_case
+  - Example: `_buffer_size`, `_metadata_start`, `_is_running`
+  - This clearly distinguishes member variables from local variables
+  - **Note**: Do not refactor existing code just for naming. Apply when touching the code for other reasons.
+
+#### Other Naming Rules
+- **Classes/Structs**: PascalCase (e.g., `SharedMemory`, `DuplexClient`)
+- **Functions/Methods**: snake_case (e.g., `read_frame()`, `get_metadata()`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `BLOCK_ALIGNMENT`, `MAX_BUFFER_SIZE`)
+- **Namespaces**: lowercase (e.g., `zerobuffer`, `platform`)
+- **Template parameters**: PascalCase (e.g., `template<typename T>`)
+- **Enums**: PascalCase for type, UPPER_SNAKE_CASE for values
 
 ### Logging Best Practices
 - **ALWAYS use proper logging** instead of `std::cout` or `std::cerr` for debugging

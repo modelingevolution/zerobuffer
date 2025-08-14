@@ -16,7 +16,8 @@ namespace steps {
 namespace {
     // Storage for servers, clients, and test data
     std::map<std::string, std::unique_ptr<IImmutableDuplexServer>> immutable_servers;
-    std::map<std::string, std::unique_ptr<IMutableDuplexServer>> mutable_servers;
+    // MutableDuplexServer will be implemented in v2.0.0
+    // std::map<std::string, std::unique_ptr<IMutableDuplexServer>> mutable_servers;
     std::map<std::string, std::unique_ptr<IDuplexClient>> clients;
     std::map<uint64_t, std::vector<uint8_t>> sent_requests;
     std::map<uint64_t, std::vector<uint8_t>> received_responses;
@@ -33,15 +34,16 @@ namespace {
                 server->stop();
             }
         }
-        for (auto& [name, server] : mutable_servers) {
-            if (server) {
-                server->stop();
-            }
-        }
+        // MutableDuplexServer will be implemented in v2.0.0
+        // for (auto& [name, server] : mutable_servers) {
+        //     if (server) {
+        //         server->stop();
+        //     }
+        // }
         
         // Clear all storage
         immutable_servers.clear();
-        mutable_servers.clear();
+        // mutable_servers.clear();
         clients.clear();
         sent_requests.clear();
         received_responses.clear();
@@ -50,9 +52,9 @@ namespace {
 }
 
 void registerDuplexChannelSteps(StepRegistry& registry) {
-    // Given the 'process' creates duplex channel 'name' with metadata size 'X' and payload size 'Y'
+    // Given the 'process' creates immutable duplex channel 'name' with metadata size 'X' and payload size 'Y'
     registry.registerStep(
-        "the '([^']+)' process creates duplex channel '([^']+)' with metadata size '([^']+)' and payload size '([^']+)'",
+        "the '([^']+)' process creates immutable duplex channel '([^']+)' with metadata size '([^']+)' and payload size '([^']+)'",
         [](TestContext& context, const std::vector<std::string>& params) {
             std::string process = params[0];
             std::string channel_name = params[1];
@@ -90,9 +92,9 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
         }
     );
     
-    // Given the 'process' creates duplex channel 'name' with default config
+    // Given the 'process' creates immutable duplex channel 'name' with default config
     registry.registerStep(
-        "the '([^']+)' process creates duplex channel '([^']+)' with default config",
+        "the '([^']+)' process creates immutable duplex channel '([^']+)' with default config",
         [](TestContext& context, const std::vector<std::string>& params) {
             std::string process = params[0];
             std::string channel_name = params[1];
@@ -147,14 +149,11 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
             }
             
             try {
-                server->start([](const Frame& request) -> std::vector<uint8_t> {
+                server->start([](Frame request, Writer& response_writer) {
                     ZEROBUFFER_LOG_DEBUG("DuplexChannelSteps") 
                         << "Echo handler received " << request.size() << " bytes";
-                    // Echo back the data
-                    return std::vector<uint8_t>(
-                        static_cast<const uint8_t*>(request.data()),
-                        static_cast<const uint8_t*>(request.data()) + request.size()
-                    );
+                    // Echo back the data (v1.0.0 - write directly to response writer)
+                    response_writer.write_frame(request.data(), request.size());
                 });
                 
                 // Give server time to initialize
@@ -189,12 +188,10 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
             }
             
             try {
-                server->start([delay_ms](const Frame& request) -> std::vector<uint8_t> {
+                server->start([delay_ms](Frame request, Writer& response_writer) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-                    return std::vector<uint8_t>(
-                        static_cast<const uint8_t*>(request.data()),
-                        static_cast<const uint8_t*>(request.data()) + request.size()
-                    );
+                    // Echo back after delay (v1.0.0 - write directly to response writer)
+                    response_writer.write_frame(request.data(), request.size());
                 });
                 
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -260,13 +257,33 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
             }
             
             try {
-                // Create test data with pattern
+                // Create test data with timestamp at the beginning
                 std::vector<uint8_t> data(size);
-                for (size_t i = 0; i < size; ++i) {
-                    data[i] = static_cast<uint8_t>(i % 256);
+                
+                // Add timestamp at the beginning (if size permits)
+                auto now = std::chrono::system_clock::now();
+                auto time_since_epoch = now.time_since_epoch();
+                auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(time_since_epoch).count();
+                
+                if (size >= sizeof(uint64_t)) {
+                    // Store timestamp in first 8 bytes
+                    memcpy(data.data(), &microseconds, sizeof(uint64_t));
+                    
+                    // Fill rest with pattern
+                    for (size_t i = sizeof(uint64_t); i < size; ++i) {
+                        data[i] = static_cast<uint8_t>(i % 256);
+                    }
+                    
+                    ZEROBUFFER_LOG_INFO("DuplexChannelSteps") 
+                        << "Client sending request at timestamp: " << microseconds << " microseconds since epoch";
+                } else {
+                    // Too small for timestamp, just use pattern
+                    for (size_t i = 0; i < size; ++i) {
+                        data[i] = static_cast<uint8_t>(i % 256);
+                    }
                 }
                 
-                uint64_t sequence = client->send_request(data.data(), data.size());
+                uint64_t sequence = client->write(data.data(), data.size());
                 sent_requests[sequence] = data;
                 
                 ZEROBUFFER_LOG_DEBUG("DuplexChannelSteps") 
@@ -304,7 +321,7 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
                 for (int i = 0; i < count; ++i) {
                     std::string msg = "Request " + std::to_string(i);
                     std::vector<uint8_t> data(msg.begin(), msg.end());
-                    uint64_t sequence = client->send_request(data.data(), data.size());
+                    uint64_t sequence = client->write(data.data(), data.size());
                     sent_requests[sequence] = data;
                 }
             } catch (const std::exception& e) {
@@ -336,7 +353,7 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
             }
             
             try {
-                auto response = client->receive_response(std::chrono::seconds(5));
+                auto response = client->read(std::chrono::seconds(5));
                 
                 if (!response.is_valid()) {
                     ZEROBUFFER_LOG_ERROR("DuplexChannelSteps") << "Response is not valid";
@@ -344,7 +361,7 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
                 }
                 
                 // Check size
-                size_t actual_size = response.data().size();
+                size_t actual_size = response.size();
                 if (actual_size != expected_size) {
                     ZEROBUFFER_LOG_ERROR("DuplexChannelSteps") 
                         << "Response size mismatch: expected " << expected_size 
@@ -356,7 +373,8 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
                 auto it = sent_requests.find(response.sequence());
                 if (it != sent_requests.end()) {
                     const auto& original_data = it->second;
-                    std::vector<uint8_t> response_data(response.data().begin(), response.data().end());
+                    const uint8_t* resp_ptr = static_cast<const uint8_t*>(response.data());
+                    std::vector<uint8_t> response_data(resp_ptr, resp_ptr + response.size());
                     
                     if (original_data != response_data) {
                         ZEROBUFFER_LOG_ERROR("DuplexChannelSteps") 
@@ -372,6 +390,22 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
                                 << ", Response first byte: " << (int)response_data[0];
                         }
                         throw std::runtime_error("Response data doesn't match request");
+                    }
+                    
+                    // Extract and print timestamp if present
+                    if (response.size() >= sizeof(uint64_t)) {
+                        uint64_t sent_timestamp;
+                        memcpy(&sent_timestamp, response_data.data(), sizeof(uint64_t));
+                        
+                        auto now = std::chrono::system_clock::now();
+                        auto current_time = std::chrono::duration_cast<std::chrono::microseconds>(
+                            now.time_since_epoch()).count();
+                        uint64_t round_trip_time = current_time - sent_timestamp;
+                        
+                        ZEROBUFFER_LOG_INFO("DuplexChannelSteps") 
+                            << "Client received response with timestamp: " << sent_timestamp 
+                            << " microseconds since epoch (round-trip time: " 
+                            << round_trip_time << " microseconds)";
                     }
                     
                     received_responses[response.sequence()] = response_data;
@@ -434,10 +468,11 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
             try {
                 responses.clear();
                 for (int i = 0; i < expected_count; ++i) {
-                    auto response = client->receive_response(std::chrono::seconds(10));
+                    auto response = client->read(std::chrono::seconds(10));
                     if (response.is_valid()) {
-                        std::vector<uint8_t> data(response.data().begin(), response.data().end());
-                        responses.push_back({response.sequence(), data});
+                        const uint8_t* resp_ptr = static_cast<const uint8_t*>(response.data());
+                        std::vector<uint8_t> data(resp_ptr, resp_ptr + response.size());
+                        responses.push_back(std::make_pair(response.sequence(), data));
                         received_responses[response.sequence()] = data;
                     }
                 }

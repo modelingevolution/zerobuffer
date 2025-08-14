@@ -59,7 +59,7 @@ namespace ZeroBuffer.Tests
                 // Read all frames to free up space
                 for (int i = 0; i < 8; i++)
                 {
-                    var frame = reader.ReadFrame();
+                    using var frame = reader.ReadFrame();
                     Assert.Equal(frameSize, frame.Size);
                 }
 
@@ -72,7 +72,7 @@ namespace ZeroBuffer.Tests
                 writer.WriteFrame(data); // This should wrap
 
                 // Read the wrapped frame
-                var wrappedFrame = reader.ReadFrame();
+                using var wrappedFrame = reader.ReadFrame();
                 Assert.Equal(frameSize, wrappedFrame.Size);
 
                 var finalFreeSpace = GetFreeSpace(reader);
@@ -109,7 +109,7 @@ namespace ZeroBuffer.Tests
                     // Read all frames
                     for (int i = 0; i < 3; i++)
                     {
-                        var frame = reader.ReadFrame();
+                        using var frame = reader.ReadFrame();
                         Assert.Equal(120, frame.Size);
                     }
 
@@ -148,7 +148,7 @@ namespace ZeroBuffer.Tests
                 // Read only 2 frames
                 for (int i = 0; i < 2; i++)
                 {
-                    reader.ReadFrame();
+                    reader.ReadFrame().Dispose();
                 }
 
                 var afterPartialReadSpace = GetFreeSpace(reader);
@@ -158,7 +158,7 @@ namespace ZeroBuffer.Tests
                 // Read remaining 3 frames
                 for (int i = 0; i < 3; i++)
                 {
-                    reader.ReadFrame();
+                    reader.ReadFrame().Dispose();
                 }
 
                 var finalFreeSpace = GetFreeSpace(reader);
@@ -186,7 +186,7 @@ namespace ZeroBuffer.Tests
                 for (int i = 0; i < 9; i++)
                 {
                     writer.WriteFrame(data);
-                    reader.ReadFrame(); // Read immediately to keep free space available
+                    reader.ReadFrame().Dispose(); // Read immediately to keep free space available
                 }
 
                 var beforeWrapSpace = GetFreeSpace(reader);

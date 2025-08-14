@@ -117,7 +117,7 @@ namespace ZeroBuffer.Tests
             // Read all frames
             for (int i = 0; i < frameCount; i++)
             {
-                var frame = reader.ReadFrame();
+                using var frame = reader.ReadFrame();
                 Assert.True(frame.IsValid);
                 Assert.Equal((ulong)(i + 1), frame.Sequence);
                 
@@ -162,9 +162,9 @@ namespace ZeroBuffer.Tests
             
             Assert.True(gotBufferFull);
             Assert.True(framesWritten < 10); // Should not fit all frames
-            
+
             // Read one frame to make space
-            var frame = reader.ReadFrame();
+            using var frame = reader.ReadFrame();
             Assert.True(frame.IsValid);
             
             // Should be able to write again
@@ -195,11 +195,13 @@ namespace ZeroBuffer.Tests
             
             // Wait for writer to connect and write some frames
             await Task.Delay(500);
-            
+
             // Read a frame to verify writer is working
-            var frame = reader.ReadFrame(TimeSpan.FromSeconds(2));
-            Assert.True(frame.IsValid);
-            
+            using (var frame = reader.ReadFrame(TimeSpan.FromSeconds(2)))
+            {
+                Assert.True(frame.IsValid);
+            }
+
             // Kill writer process
             writerProcess.Kill();
             await writerProcess.WaitForExitAsync();
@@ -207,7 +209,7 @@ namespace ZeroBuffer.Tests
             // Try to read - should detect writer death
             await Assert.ThrowsAsync<WriterDeadException>(async () =>
             {
-                await Task.Run(() => reader.ReadFrame(TimeSpan.FromSeconds(2)));
+                await Task.Run(() => reader.ReadFrame(TimeSpan.FromSeconds(2)).Dispose());
             });
             
             _output.WriteLine("✓ Successfully detected writer crash");
@@ -342,7 +344,7 @@ namespace ZeroBuffer.Tests
                 frameData[0] = (byte)i;
                 writer.WriteFrame(frameData);
                 
-                var frame = reader.ReadFrame();
+                using var frame = reader.ReadFrame();
                 Assert.True(frame.IsValid);
                 Assert.Equal((ulong)(i + 1), frame.Sequence);
                 Assert.Equal(i, frame.Span[0]);
@@ -370,8 +372,8 @@ namespace ZeroBuffer.Tests
                 Span<byte> data = stackalloc byte[sizeof(int)];
                 BitConverter.TryWriteBytes(data, i);
                 writer.WriteFrame(data);
-                
-                var frame = reader.ReadFrame();
+
+                using var frame = reader.ReadFrame();
                 Assert.True(frame.IsValid);
                 
                 var value = BitConverter.ToInt32(frame.Span);
@@ -423,7 +425,7 @@ namespace ZeroBuffer.Tests
             var receivedFrames = new HashSet<int>();
             for (int i = 0; i < frameCount; i++)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
                 Assert.True(frame.IsValid, $"Frame {i} is not valid");
                 
                 var span = frame.Span;

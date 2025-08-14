@@ -34,16 +34,25 @@ done
 # Test type - default to unit tests if no argument provided
 TEST_TYPE=${1:-unit}
 
-# Check for test number format (e.g., 1.1, 1.2)
-if [[ "$TEST_TYPE" =~ ^[0-9]+\.[0-9]+$ ]]; then
-    # Running a specific test by number
+# Check for test number format (e.g., 1.1, 1.2) or wildcard format (e.g., 1.*, 13.*)
+if [[ "$TEST_TYPE" =~ ^[0-9]+\.[0-9*]+$ ]]; then
+    # Running a specific test by number or pattern
     echo -e "${GREEN}=========================================${NC}"
-    echo -e "${GREEN}Running Test $TEST_TYPE${NC}"
+    echo -e "${GREEN}Running Test(s) $TEST_TYPE${NC}"
     echo -e "${GREEN}=========================================${NC}"
     
-    # Convert test number to Google Test filter
+    # Convert test number/pattern to Google Test filter
     # 1.1 -> Test_1_1_*
-    TEST_FILTER="*Test_${TEST_TYPE//./_}_*"
+    # 1.* -> Test_1_*
+    # 13.* -> Test_13_*
+    if [[ "$TEST_TYPE" == *"*"* ]]; then
+        # Wildcard pattern - remove the asterisk and convert dots
+        TEST_PATTERN="${TEST_TYPE%\*}"  # Remove trailing asterisk
+        TEST_FILTER="*Test_${TEST_PATTERN//./_}*"
+    else
+        # Specific test number
+        TEST_FILTER="*Test_${TEST_TYPE//./_}_*"
+    fi
     
     # Check if generated tests exist
     if [ ! -f "build/tests/generated/zerobuffer_generated_tests" ]; then
@@ -53,8 +62,21 @@ if [[ "$TEST_TYPE" =~ ^[0-9]+\.[0-9]+$ ]]; then
     
     if [ -f "build/tests/generated/zerobuffer_generated_tests" ]; then
         echo -e "${YELLOW}Running test with filter: $TEST_FILTER${NC}"
-        ./build/tests/generated/zerobuffer_generated_tests --gtest_filter="$TEST_FILTER"
-        exit $?
+        # Run test and capture exit code
+        ./build/tests/generated/zerobuffer_generated_tests --gtest_filter="$TEST_FILTER" --gtest_color=yes
+        TEST_RESULT=$?
+        
+        # Show test result summary
+        if [ $TEST_RESULT -eq 0 ]; then
+            echo -e "${GREEN}=========================================${NC}"
+            echo -e "${GREEN}✓ Test(s) $TEST_TYPE PASSED${NC}"
+            echo -e "${GREEN}=========================================${NC}"
+        else
+            echo -e "${RED}=========================================${NC}"
+            echo -e "${RED}✗ Test(s) $TEST_TYPE FAILED${NC}"
+            echo -e "${RED}=========================================${NC}"
+        fi
+        exit $TEST_RESULT
     else
         echo -e "${RED}Error: Generated tests not found!${NC}"
         echo -e "${YELLOW}Run the generator first:${NC}"
@@ -95,8 +117,17 @@ if [ "$TEST_TYPE" == "unit" ] || [ "$TEST_TYPE" == "all" ]; then
     # Run generated tests
     if [ -f "tests/generated/zerobuffer_generated_tests" ]; then
         echo -e "${YELLOW}Running generated tests...${NC}"
+        echo ""  # Add blank line for better visibility
         ./tests/generated/zerobuffer_generated_tests --gtest_color=yes
-        echo -e "${GREEN}✓ Generated tests completed${NC}"
+        TEST_RESULT=$?
+        echo ""  # Add blank line after test output
+        
+        if [ $TEST_RESULT -eq 0 ]; then
+            echo -e "${GREEN}✓ Generated tests completed successfully${NC}"
+        else
+            echo -e "${RED}✗ Some generated tests failed${NC}"
+            exit $TEST_RESULT
+        fi
     else
         echo -e "${RED}Error: Generated tests not found!${NC}"
         echo -e "${YELLOW}Run the generator first:${NC}"

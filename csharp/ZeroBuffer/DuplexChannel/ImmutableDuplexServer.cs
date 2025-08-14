@@ -146,8 +146,8 @@ namespace ZeroBuffer.DuplexChannel
             {
                 try
                 {
-                    // Read request with timeout
-                    var request = _requestReader.ReadFrame(TimeSpan.FromSeconds(1));
+                    // Read request with timeout - using ensures Dispose is called
+                    using var request = _requestReader.ReadFrame(TimeSpan.FromSeconds(1));
                     if (!request.IsValid)
                         continue;
                     
@@ -164,21 +164,9 @@ namespace ZeroBuffer.DuplexChannel
                         responseData = ReadOnlySpan<byte>.Empty;
                     }
                     
-                    // Allocate buffer for sequence number + response data
-                    var totalSize = 8 + responseData.Length;
-                    var buffer = _responseWriter.GetFrameBuffer(totalSize, out _);
-                    
-                    // Write sequence number
-                    BitConverter.TryWriteBytes(buffer.Slice(0, 8), (long)request.Sequence);
-                    
-                    // Copy response data
-                    if (responseData.Length > 0)
-                    {
-                        responseData.CopyTo(buffer.Slice(8));
-                    }
-                    
-                    // Commit the frame
-                    _responseWriter.CommitFrame();
+                    // Write response directly without sequence prefix (v1.0.0 protocol)
+                    // The sequence is managed internally by Reader/Writer
+                    _responseWriter.WriteFrame(responseData);
                 }
                 catch (ReaderDeadException)
                 {

@@ -72,7 +72,8 @@ namespace ZeroBuffer
                     // Initialize OIEB
                     var oieb = new OIEB
                     {
-                        OperationSize = (ulong)oiebSize,
+                        OiebSize = 128,  // Always 128 for v1.x.x
+                        Version = new ProtocolVersion(1, 0, 0),  // Version 1.0.0
                         MetadataSize = (ulong)metadataSize,
                         MetadataFreeBytes = (ulong)metadataSize,
                         MetadataWrittenBytes = 0,
@@ -257,7 +258,8 @@ namespace ZeroBuffer
         }
 
         /// <summary>
-        /// Read a frame from the buffer
+        /// Read a frame from the buffer with RAII semantics.
+        /// The returned Frame should be used with 'using' to ensure proper disposal.
         /// </summary>
         public Frame ReadFrame(TimeSpan? timeout = null)
         {
@@ -328,8 +330,7 @@ namespace ZeroBuffer
                     unsafe
                     {
                         byte* framePtr = _sharedMemory.GetPointer(dataPos);
-                        var frame = new Frame(framePtr, (int)header.PayloadSize, header.SequenceNumber);
-
+                        
                         // Update read position
                         long nextPos = dataPos + (long)header.PayloadSize - _payloadOffset;
                         ulong newReadPos = (ulong)(nextPos % (long)oieb.PayloadSize);
@@ -349,22 +350,28 @@ namespace ZeroBuffer
                         _sharedMemory.Write(0, oieb);
                         _sharedMemory.Flush();
 
-                        // Signal space available
-                        _readSemaphore.Release();
+                        // Create Frame with disposal callback to signal semaphore
+                        // This implements RAII - semaphore is only signaled when Frame is disposed
+                        var frame = new Frame(
+                            framePtr, 
+                            (int)header.PayloadSize, 
+                            header.SequenceNumber,
+                            () => {
+                                _logger.LogTrace("Frame disposed, signaling semaphore for seq={Sequence}", header.SequenceNumber);
+                                _readSemaphore.Release();
+                            });
 
                         return frame;
                     }
                 }
 
                 // Wait for data
-                if (_writeSemaphore.Wait(waitTime)) continue;
-
-                // Timeout - check if writer died
-                if (oieb.WriterPid != 0 && !ProcessExists(oieb.WriterPid))
-                    throw new WriterDeadException();
-                
-                    
-                return Frame.Invalid;
+                _logger.LogTrace("No data available, waiting on write semaphore");
+                if (!_writeSemaphore.Wait(waitTime))
+                {
+                    _logger.LogDebug("Timeout waiting for frame");
+                    return Frame.Invalid;
+                }
             }
         }
 

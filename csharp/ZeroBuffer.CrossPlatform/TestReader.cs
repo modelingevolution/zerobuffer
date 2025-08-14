@@ -89,7 +89,7 @@ namespace ZeroBuffer.CrossPlatform
                         try
                         {
                             // Read frame with timeout
-                            var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(options.TimeoutMs));
+                            using var frame = reader.ReadFrame(TimeSpan.FromMilliseconds(options.TimeoutMs));
 
                             if (!frame.IsValid)
                             {

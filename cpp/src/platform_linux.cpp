@@ -67,7 +67,7 @@ uint64_t get_process_start_time(uint64_t pid) {
 }
 
 uint64_t get_current_process_start_time() {
-    return get_process_start_time(getpid());
+    return get_process_start_time(static_cast<uint64_t>(getpid()));
 }
 
 std::string get_temp_directory() {
@@ -95,7 +95,7 @@ public:
         }
         
         if (create) {
-            if (ftruncate(fd_, size) == -1) {
+            if (ftruncate(fd_, static_cast<off_t>(size)) == -1) {
                 close(fd_);
                 shm_unlink(name.c_str());
                 throw ZeroBufferException("Failed to resize shared memory: " + std::string(strerror(errno)));
@@ -107,7 +107,7 @@ public:
                 close(fd_);
                 throw ZeroBufferException("Failed to stat shared memory: " + std::string(strerror(errno)));
             }
-            size_ = st.st_size;
+            size_ = static_cast<size_t>(st.st_size);
         }
         
         data_ = mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);

@@ -47,6 +47,15 @@ fi
 
 # Create build directory
 mkdir -p ${BUILD_DIR}
+
+# Generate tests from feature files if harmony-cpp-gen is available
+if command -v harmony-cpp-gen &> /dev/null; then
+    echo -e "${YELLOW}Generating tests from feature files...${NC}"
+    harmony-cpp-gen --input ../ZeroBuffer.Harmony.Tests/Features --output tests/generated
+else
+    echo -e "${YELLOW}Warning: harmony-cpp-gen not found, using existing generated tests${NC}"
+fi
+
 cd ${BUILD_DIR}
 
 # Configure

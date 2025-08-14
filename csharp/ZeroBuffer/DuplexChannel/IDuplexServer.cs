@@ -38,16 +38,6 @@ namespace ZeroBuffer.DuplexChannel
         void Start(RequestHandler handler, ProcessingMode mode = ProcessingMode.SingleThread);
     }
     
-    /// <summary>
-    /// Server that mutates request data in-place (zero-copy)
-    /// </summary>
-    public interface IMutableDuplexServer : IDuplexServer
-    {
-        /// <summary>
-        /// Start processing with mutable handler
-        /// </summary>
-        /// <param name="handler">Action that modifies frame data in-place</param>
-        /// <param name="mode">Processing mode (SingleThread or ThreadPool)</param>
-        void Start(Action<Frame> handler, ProcessingMode mode = ProcessingMode.SingleThread);
-    }
+    // MutableDuplexServer will be implemented in v2.0.0
+    // It will support in-place modification with shared payload buffers
 }

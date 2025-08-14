@@ -33,6 +33,24 @@ cmake_minimum_required(VERSION 3.20)
 #         zerobuffer
 # )
 
+# Frame RAII tests
+add_executable(test_frame_raii
+    test_frame_raii.cpp
+)
+
+target_link_libraries(test_frame_raii
+    PRIVATE
+        zerobuffer
+        GTest::gtest
+        GTest::gtest_main
+)
+
+# Add test discovery
+include(GoogleTest)
+gtest_discover_tests(test_frame_raii
+    PROPERTIES TIMEOUT 30
+)
+
 # Generated tests from feature files
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/CMakeLists.txt")
     add_subdirectory(generated)

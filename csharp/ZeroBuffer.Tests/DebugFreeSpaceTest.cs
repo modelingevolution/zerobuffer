@@ -83,7 +83,7 @@ namespace ZeroBuffer.Tests
                     _output.WriteLine($"  Free bytes: {oieb.PayloadFreeBytes}");
                     _output.WriteLine($"  Read pos: {oieb.PayloadReadPos}");
                     
-                    var frame = reader.ReadFrame();
+                    using var frame = reader.ReadFrame();
                     
                     oieb = GetOIEB(reader);
                     _output.WriteLine($"After read:");
@@ -116,7 +116,7 @@ namespace ZeroBuffer.Tests
                 
                 // Read the wrapped frame
                 _output.WriteLine($"\n=== Reading wrapped frame ===");
-                var wrappedFrame = reader.ReadFrame();
+                using var wrappedFrame = reader.ReadFrame();
                 
                 oieb = GetOIEB(reader);
                 _output.WriteLine($"After reading wrapped frame:");

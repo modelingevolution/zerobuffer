@@ -5,11 +5,15 @@ namespace ZeroBuffer.ProtocolTests.Tests.DuplexChannel
 {
     /// <summary>
     /// Test 14.2: Sequence Number Correlation
+    /// 
+    /// In v1.0.0, sequence numbers are managed internally by the Reader/Writer pair.
+    /// This test verifies that the internal correlation mechanism works correctly
+    /// when responses arrive out of order.
     /// </summary>
     public class Test_1402_SequenceNumberCorrelation : BaseProtocolTest
     {
         public override int TestId => 1402;
-        public override string Description => "Sequence Number Correlation";
+        public override string Description => "Sequence Number Correlation (Internal v1.0.0)";
         
         private const int RequestCount = 10;
         private const int ResponseDelayMs = 500;

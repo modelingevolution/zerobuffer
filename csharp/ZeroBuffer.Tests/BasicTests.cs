@@ -59,7 +59,7 @@ namespace ZeroBuffer.Tests
             // Read frames
             for (int i = 0; i < 10; i++)
             {
-                var frame = reader.ReadFrame();
+                using var frame = reader.ReadFrame();
                 Assert.True(frame.IsValid);
                 Assert.Equal((ulong)(i + 1), frame.Sequence);
                 
@@ -92,7 +92,7 @@ namespace ZeroBuffer.Tests
             // Read frames
             for (int i = 0; i < frameCount; i++)
             {
-                var frame = reader.ReadFrame(TimeSpan.FromSeconds(1));
+                using var frame = reader.ReadFrame(TimeSpan.FromSeconds(1));
                 Assert.True(frame.IsValid);
                 
                 var value = BitConverter.ToInt32(frame.Span);
@@ -111,7 +111,7 @@ namespace ZeroBuffer.Tests
             using (var writer1 = new Writer(bufferName))
             {
                 writer1.WriteFrame(Encoding.UTF8.GetBytes("First"));
-                var frame = reader1.ReadFrame();
+                using var frame = reader1.ReadFrame();
                 Assert.Equal("First", Encoding.UTF8.GetString(frame.Span));
             }
             
@@ -120,7 +120,7 @@ namespace ZeroBuffer.Tests
             using (var writer2 = new Writer(bufferName))
             {
                 writer2.WriteFrame(Encoding.UTF8.GetBytes("Second"));
-                var frame = reader2.ReadFrame();
+                using var frame = reader2.ReadFrame();
                 Assert.Equal("Second", Encoding.UTF8.GetString(frame.Span));
                 Assert.Equal(1UL, frame.Sequence); // Should start fresh
             }
