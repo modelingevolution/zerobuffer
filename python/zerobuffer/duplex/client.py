@@ -126,14 +126,16 @@ class DuplexClient(IDuplexClient):
             _frame=frame
         )
         
-        # Note: Caller is responsible for releasing the frame
-        # by calling reader.release_frame(response._frame)
+        # Note: Frame will be disposed automatically when response goes out of scope
+        # or when explicitly disposed via response.dispose()
         return response
     
     def release_response(self, response: DuplexResponse) -> None:
-        """Release a response frame"""
-        if response._frame and self._response_reader is not None:
-            self._response_reader.release_frame(response._frame)
+        """Release a response frame (deprecated - use context manager or dispose)"""
+        # This method is kept for backward compatibility
+        # The frame now uses RAII with dispose callback
+        if response._frame:
+            response._frame.dispose()
     
     @property
     def is_server_connected(self) -> bool:

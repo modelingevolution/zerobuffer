@@ -93,7 +93,8 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                 if frame is None:
                     continue
                 
-                try:
+                # Use context manager for RAII - frame is disposed on exit
+                with frame:
                     # Process request asynchronously
                     response_data = await handler(frame)
                     
@@ -101,9 +102,6 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                     # Note: We need to preserve the sequence number from request
                     # This requires enhancing Writer to support custom sequence numbers
                     self._response_writer.write_frame(response_data)
-                    
-                finally:
-                    self._request_reader.release_frame(frame)
                     
         except (ReaderDeadException, WriterDeadException):
             if self._logger:
@@ -153,18 +151,17 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                     if frame is None:
                         continue
                     
-                    # Process request
-                    if self._handler is None:
-                        raise RuntimeError("Handler not set")
-                    response_data = self._handler(frame)
-                    
-                    # Write response with same sequence number
-                    # For now, we just write the response
-                    # TODO: Enhance Writer to support custom sequence numbers
-                    self._response_writer.write_frame(response_data)
-                    
-                    # Release frame
-                    self._request_reader.release_frame(frame)
+                    # Use context manager for RAII - frame is disposed on exit
+                    with frame:
+                        # Process request
+                        if self._handler is None:
+                            raise RuntimeError("Handler not set")
+                        response_data = self._handler(frame)
+                        
+                        # Write response with same sequence number
+                        # For now, we just write the response
+                        # TODO: Enhance Writer to support custom sequence numbers
+                        self._response_writer.write_frame(response_data)
                     
                 except (ReaderDeadException, WriterDeadException):
                     if self._logger:
@@ -297,22 +294,21 @@ class MutableDuplexServer(IMutableDuplexServer):
                     if frame is None:
                         continue
                     
-                    # Process request in-place
-                    # Note: In Python, we can't truly modify the frame data in-place
-                    # because it's in shared memory. We need to copy it.
-                    # True zero-copy would require memory-mapped access
-                    
-                    # Call handler to process frame
-                    if self._handler is None:
-                        raise RuntimeError("Handler not set")
-                    self._handler(frame)
-                    
-                    # Write the modified data as response
-                    # TODO: Support true zero-copy by using memory views
-                    self._response_writer.write_frame(bytes(frame.data))
-                    
-                    # Release frame
-                    self._request_reader.release_frame(frame)
+                    # Use context manager for RAII - frame is disposed on exit
+                    with frame:
+                        # Process request in-place
+                        # Note: In Python, we can't truly modify the frame data in-place
+                        # because it's in shared memory. We need to copy it.
+                        # True zero-copy would require memory-mapped access
+                        
+                        # Call handler to process frame
+                        if self._handler is None:
+                            raise RuntimeError("Handler not set")
+                        self._handler(frame)
+                        
+                        # Write the modified data as response
+                        # TODO: Support true zero-copy by using memory views
+                        self._response_writer.write_frame(bytes(frame.data))
                     
                 except (ReaderDeadException, WriterDeadException):
                     if self._logger:

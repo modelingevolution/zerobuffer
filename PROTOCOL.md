@@ -117,8 +117,8 @@ struct ProtocolVersion {
 ## Implementations
 
 - **C++** - Native implementation in `cpp/` directory
-- **C#** - .NET implementation in `csharp/` directory (coming soon)
-- **Python** - Python implementation in `python/` directory (coming soon)
+- **C#** - .NET implementation in `csharp/` directory
+- **Python** - Python implementation in `python/` directory
 
 All implementations follow the same protocol specification and are fully interoperable.
 

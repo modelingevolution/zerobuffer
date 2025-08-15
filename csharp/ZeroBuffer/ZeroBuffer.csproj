@@ -14,7 +14,7 @@
 
   <PropertyGroup>
     <PackageId>ZeroBuffer</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>ModelingEvolution</Authors>
     <Description>High-performance zero-copy inter-process communication library for video streaming applications. Provides efficient shared memory buffers with cross-process synchronization for real-time video data transfer.</Description>
     <PackageTags>ipc;shared-memory;video;streaming;zero-copy;inter-process;realtime</PackageTags>

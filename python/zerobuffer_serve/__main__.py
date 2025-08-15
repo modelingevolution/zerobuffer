@@ -32,6 +32,7 @@ async def main() -> None:
     from .step_definitions import (
         BasicCommunicationSteps,
         BenchmarksSteps,
+        DuplexChannelSteps,
         EdgeCasesSteps,
         ErrorHandlingSteps,
         InitializationSteps,
@@ -47,6 +48,7 @@ async def main() -> None:
     
     step_registry.register_instance(BasicCommunicationSteps(test_context, step_logger))
     step_registry.register_instance(BenchmarksSteps(test_context, step_logger))
+    step_registry.register_instance(DuplexChannelSteps(test_context, step_logger))
     step_registry.register_instance(EdgeCasesSteps(test_context, step_logger))
     step_registry.register_instance(ErrorHandlingSteps(test_context, step_logger))
     step_registry.register_instance(InitializationSteps(test_context, step_logger))

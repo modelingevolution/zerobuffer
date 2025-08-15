@@ -295,14 +295,22 @@ class BasicCommunicationSteps(BaseSteps):
             
         assert frame is not None, "No frame available to read"
         
-        # Verify size
-        assert len(frame.data) == int(size), \
-            f"Frame size mismatch: expected {size}, got {len(frame.data)}"
+        # Use context manager for RAII
+        with frame:
+            # Verify size
+            assert len(frame.data) == int(size), \
+                f"Frame size mismatch: expected {size}, got {len(frame.data)}"
             
-        self._frames_read.append(frame)
-        self._last_frame = frame
-        
-        self.logger.info(f"Read frame with sequence {frame.sequence} and size {len(frame.data)}")
+            # Store frame info (not the frame itself) for later validation
+            frame_info = {
+                'sequence': frame.sequence,
+                'size': len(frame.data),
+                'data': bytes(frame.data)  # Copy data if needed for validation
+            }
+            self._frames_read.append(frame_info)
+            self._last_frame = frame_info
+            
+            self.logger.info(f"Read frame with sequence {frame.sequence} and size {len(frame.data)}")
         
     @then(r"(?:the '([^']+)' process )?should validate frame data")
     async def validate_frame_data(self, process: Optional[str]) -> None:
@@ -310,12 +318,11 @@ class BasicCommunicationSteps(BaseSteps):
         # Accept process parameter but ignore it
         assert self._last_frame is not None, "No frame to validate"
         
-        if isinstance(self._last_frame, Frame):
-            frame_data = self._last_frame.data
-            frame_sequence = self._last_frame.sequence
-        elif isinstance(self._last_frame, dict):
+        # Now _last_frame is a dict with frame info
+        if isinstance(self._last_frame, dict):
             frame_data = self._last_frame['data']
-            frame_sequence = self._last_frame['sequence_number']
+            # Check for both possible keys
+            frame_sequence = self._last_frame.get('sequence', self._last_frame.get('sequence_number'))
         else:
             raise TypeError(f"Unexpected type for _last_frame: {type(self._last_frame)}")
         
@@ -331,11 +338,8 @@ class BasicCommunicationSteps(BaseSteps):
     @then(r"(?:the '([^']+)' process )?signals space available")
     async def signal_space_available(self, process: Optional[str]) -> None:
         """Signal that space is available (frame consumed)"""
-        # In ZeroBuffer, we need to release the frame to signal space available
-        if self._last_frame and isinstance(self._last_frame, Frame):
-            # This is a real Frame object from reader
-            reader = next(iter(self._readers.values()))
-            reader.release_frame(self._last_frame)
+        # With RAII, frames are automatically released when they go out of scope
+        # This step is now a no-op but kept for compatibility
         self._last_frame = None
             
         self.logger.info("Signaled space available")
@@ -348,10 +352,18 @@ class BasicCommunicationSteps(BaseSteps):
         
         assert frame is not None, f"No frame available with sequence {sequence}"
         
-        self._frames_read.append(frame)
-        self._last_frame = frame
-        
-        self.logger.info(f"Read frame with sequence {frame.sequence}")
+        # Use context manager for RAII
+        with frame:
+            # Store frame info for later validation
+            frame_info = {
+                'sequence': frame.sequence,
+                'size': len(frame.data),
+                'data': bytes(frame.data)
+            }
+            self._frames_read.append(frame_info)
+            self._last_frame = frame_info
+            
+            self.logger.info(f"Read frame with sequence {frame.sequence}")
         
     @then(r"(?:the '([^']+)' process )?should verify all frames maintain sequential order")
     async def verify_sequential_order(self, process: Optional[str]) -> None:
@@ -360,8 +372,9 @@ class BasicCommunicationSteps(BaseSteps):
             return
             
         for i in range(1, len(self._frames_read)):
-            prev_seq = self._frames_read[i-1].sequence
-            curr_seq = self._frames_read[i].sequence
+            # Now accessing dict entries
+            prev_seq = self._frames_read[i-1]['sequence']
+            curr_seq = self._frames_read[i]['sequence']
             assert curr_seq == prev_seq + 1, \
                 f"Sequence break: {prev_seq} -> {curr_seq}"
                 
@@ -392,10 +405,18 @@ class BasicCommunicationSteps(BaseSteps):
         
         assert frame is not None, "No frame available to read"
         
-        self._frames_read.append(frame)
-        self._last_frame = frame
-        
-        self.logger.info(f"Read frame with sequence {frame.sequence}")
+        # Use context manager for RAII
+        with frame:
+            # Store frame info for later validation
+            frame_info = {
+                'sequence': frame.sequence,
+                'size': len(frame.data),
+                'data': bytes(frame.data)
+            }
+            self._frames_read.append(frame_info)
+            self._last_frame = frame_info
+            
+            self.logger.info(f"Read frame with sequence {frame.sequence}")
         
     @then(r"(?:the '([^']+)' process )?should write successfully immediately")
     async def verify_write_succeeds(self, process: Optional[str]) -> None:
@@ -430,13 +451,22 @@ class BasicCommunicationSteps(BaseSteps):
         frame = reader.read_frame(timeout=5.0)
         
         assert frame is not None, "No frame available"
-        assert len(frame.data) == int(size), \
-            f"Frame size mismatch: expected {size}, got {len(frame.data)}"
-            
-        self._frames_read.append(frame)
-        self._last_frame = frame  # Store for verify_test_pattern
         
-        self.logger.info(f"Read frame with size {len(frame.data)}")
+        # Use context manager for RAII
+        with frame:
+            assert len(frame.data) == int(size), \
+                f"Frame size mismatch: expected {size}, got {len(frame.data)}"
+            
+            # Store frame info for later validation
+            frame_info = {
+                'sequence': frame.sequence,
+                'size': len(frame.data),
+                'data': bytes(frame.data)
+            }
+            self._frames_read.append(frame_info)
+            self._last_frame = frame_info  # Store for verify_test_pattern
+            
+            self.logger.info(f"Read frame with size {len(frame.data)}")
         
     @then(r"(?:the '([^']+)' process )?should verify frame data matches test pattern")
     async def verify_test_pattern(self, process: Optional[str]) -> None:
@@ -444,14 +474,10 @@ class BasicCommunicationSteps(BaseSteps):
         # Accept process parameter but ignore it
         assert self._last_frame is not None, "No frame to verify"
         
-        if isinstance(self._last_frame, Frame):
-            # Real Frame object
-            frame_data = bytes(self._last_frame.data)
-            sequence = self._last_frame.sequence
-        elif isinstance(self._last_frame, dict):
-            # Dict object from writer
+        if isinstance(self._last_frame, dict):
+            # Dict object (from reader or writer)
             frame_data = self._last_frame['data']
-            sequence = self._last_frame['sequence_number']
+            sequence = self._last_frame.get('sequence', self._last_frame.get('sequence_number'))
         else:
             raise TypeError(f"Unexpected type for _last_frame: {type(self._last_frame)}")
         
@@ -475,13 +501,15 @@ class BasicCommunicationSteps(BaseSteps):
             frame = reader.read_frame(timeout=5.0)
             assert frame is not None, f"Failed to read frame {i+1}"
             
-            assert len(frame.data) == expected_sizes[i], \
-                f"Frame {i+1} size mismatch: expected {expected_sizes[i]}, got {len(frame.data)}"
-            
-            # Verify frame data integrity using TestDataPatterns
-            frame_data = bytes(frame.data)
-            assert TestDataPatterns.verify_simple_frame_data(frame_data), \
-                f"Frame {i+1} data does not match expected pattern"
+            # Use context manager for RAII
+            with frame:
+                assert len(frame.data) == expected_sizes[i], \
+                    f"Frame {i+1} size mismatch: expected {expected_sizes[i]}, got {len(frame.data)}"
+                
+                # Verify frame data integrity using TestDataPatterns
+                frame_data = bytes(frame.data)
+                assert TestDataPatterns.verify_simple_frame_data(frame_data), \
+                    f"Frame {i+1} data does not match expected pattern"
                     
             self._frames_read.append(frame)
             
@@ -511,11 +539,19 @@ class BasicCommunicationSteps(BaseSteps):
         
         assert frame is not None, "No frame available"
         
-        # Convert frame data to string
-        actual_data = bytes(frame.data).decode()
-        assert actual_data == expected_data, \
-            f"Frame data mismatch: expected '{expected_data}', got '{actual_data}'"
+        # Use context manager for RAII
+        with frame:
+            # Convert frame data to string
+            actual_data = bytes(frame.data).decode()
+            assert actual_data == expected_data, \
+                f"Frame data mismatch: expected '{expected_data}', got '{actual_data}'"
             
-        self._frames_read.append(frame)
-        
-        self.logger.info(f"Read frame with data: {expected_data}")
+            # Store frame info for later validation
+            frame_info = {
+                'sequence': frame.sequence,
+                'size': len(frame.data),
+                'data': bytes(frame.data)
+            }
+            self._frames_read.append(frame_info)
+            
+            self.logger.info(f"Read frame with data: {expected_data}")

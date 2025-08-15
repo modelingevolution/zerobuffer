@@ -1,8 +1,12 @@
 # Duplex Protocol Proposition: In-Place Modification with Shared Payload
 
+**Status: FUTURE PROPOSAL (v2.0.0) - NOT IMPLEMENTED**
+
+**Current Implementation Status (v1.0.0):** The current duplex channel implementation uses separate buffers for request and response channels. See [API.md](API.md) for the current implementation details.
+
 ## Executive Summary
 
-This document proposes an extension to the ZeroBuffer protocol to support efficient request/response patterns using in-place modification with a shared payload buffer. This approach reduces memory usage by 50% compared to traditional duplex channels while maintaining zero-copy performance.
+This document proposes a future extension (v2.0.0) to the ZeroBuffer protocol to support efficient request/response patterns using in-place modification with a shared payload buffer. This approach would reduce memory usage by 50% compared to current duplex channels while maintaining zero-copy performance.
 
 ## Motivation
 

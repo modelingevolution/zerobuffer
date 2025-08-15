@@ -1,13 +1,17 @@
 # Documentation Validation Results
 
+**Last Updated:** 2024-08-15  
+**Status:** RESOLVED - All major inconsistencies have been addressed
+
 This document summarizes the validation of documentation against actual source code implementation.
 
 ## Validation Performed
 
 1. **README.md** - Main documentation
-2. **API.md** - API specification
-3. **CROSS_PLATFORM_TESTS.md** - Test interface specification
-4. **Source Code** - C++, C#, and Python implementations
+2. **PROTOCOL.md** - Protocol specification v1.0.0
+3. **API.md** - API specification
+4. **CROSS_PLATFORM_TESTS.md** - Test interface specification
+5. **Source Code** - C++, C#, and Python implementations
 
 ## Findings
 
@@ -35,19 +39,31 @@ This document summarizes the validation of documentation against actual source c
    - Exception types documented and implemented
    - Exit codes match specification
 
-### ⚠️ Minor Inconsistencies
+### ✅ Previously Resolved Issues
 
-1. **Python API Documentation**
-   - API.md shows Python as "Planned" but it's actually implemented
-   - Need to update API.md to show current Python API
+1. **Python API Documentation** - RESOLVED
+   - ~~API.md shows Python as "Planned" but it's actually implemented~~
+   - ✅ API.md now correctly shows Python implementation with examples
+   - ✅ Added Python duplex channel documentation
 
-2. **Relay Implementation**
+2. **Protocol Documentation** - RESOLVED
+   - ✅ PROTOCOL.md correctly lists all three implementations as complete
+   - ✅ DUPLEX_PROTOCOL_PROPOSITION.md clearly marked as v2.0.0 future proposal
+
+3. **Duplex Channel Implementation** - RESOLVED
+   - ✅ Python duplex channel now fully implemented and documented
+   - ✅ Cross-platform compatibility verified (test 13.1 passes)
+   - ✅ RAII/Frame disposal properly documented
+
+### ⚠️ Known Limitations (By Design)
+
+1. **Relay Implementation**
    - C++ doesn't have a general-purpose relay test app (only benchmark relay)
-   - Documentation should clarify this limitation
+   - This is acceptable as relay is primarily for testing
 
-3. **Constructor Signatures**
+2. **Constructor Signatures**
    - API.md shows proposed constructor modifications for payload sharing
-   - These are not yet implemented (marked as future work)
+   - These are correctly marked as v2.0.0 future work
 
 ### 📝 Documentation Improvements Needed
 

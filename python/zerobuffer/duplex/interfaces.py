@@ -30,6 +30,20 @@ class DuplexResponse:
     def __len__(self) -> int:
         """Get response data size"""
         return len(self.data) if self.data else 0
+    
+    def dispose(self) -> None:
+        """Dispose the underlying frame (RAII)"""
+        if self._frame:
+            self._frame.dispose()
+            self._frame = None
+    
+    def __enter__(self) -> 'DuplexResponse':
+        """Context manager entry"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Context manager exit - dispose the frame"""
+        self.dispose()
 
 
 class IDuplexClient(ABC):

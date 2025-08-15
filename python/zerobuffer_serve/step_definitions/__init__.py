@@ -6,6 +6,7 @@ Import all step definition classes to make them available for discovery.
 
 from .basic_communication import BasicCommunicationSteps
 from .benchmarks import BenchmarksSteps
+from .duplex_channel import DuplexChannelSteps
 from .edge_cases import EdgeCasesSteps
 from .error_handling import ErrorHandlingSteps
 from .initialization import InitializationSteps
@@ -17,6 +18,7 @@ from .synchronization import SynchronizationSteps
 __all__ = [
     'BasicCommunicationSteps',
     'BenchmarksSteps',
+    'DuplexChannelSteps',
     'EdgeCasesSteps',
     'ErrorHandlingSteps',
     'InitializationSteps',

@@ -649,24 +649,56 @@ if (response.IsValid && response.Sequence == sequenceNumber)
 }
 ```
 
-#### Example 2: Mutable Zero-Copy Processing
+#### Example 2: Python Immutable Server
 
 **Server Side (Python):**
 ```python
-factory = DuplexChannelFactory.get_instance()
-# Create mutable server for zero-copy processing
-server = factory.create_mutable_server("filters", BufferConfig(4096, 256*1024*1024))
+from zerobuffer.duplex import DuplexChannelFactory, ProcessingMode
+from zerobuffer import BufferConfig
 
-def apply_filter_inplace(frame: Frame):
-    # Get numpy view of frame data (zero-copy)
-    image = frame.as_numpy().reshape((1080, 1920, 3))
-    # Apply filter in-place
-    image *= 0.8  # Darken image
-    # No need to return anything - frame is modified in-place
+factory = DuplexChannelFactory()
+# Create immutable server
+server = factory.create_immutable_server("image-processing", BufferConfig(4096, 256*1024*1024))
+
+def process_image(frame):
+    """Process image and return new data"""
+    # Frame is automatically disposed via context manager (RAII)
     # Server automatically preserves frame.sequence in the response
+    
+    # Process the image data
+    data = bytes(frame.data)  # Access frame data
+    processed = apply_filters(data)  # Your processing logic
+    
+    return processed  # Return new response data
 
-server.start(apply_filter_inplace)
+# Start server with single-thread processing
+server.start(process_image, ProcessingMode.SINGLE_THREAD)
 ```
+
+**Client Side (Python):**
+```python
+from zerobuffer.duplex import DuplexChannelFactory
+
+factory = DuplexChannelFactory()
+client = factory.create_client("image-processing")
+
+# Send request
+image_data = load_image("input.jpg")
+sequence = client.send_request(image_data)
+
+# Receive response
+response = client.receive_response(timeout_ms=5000)
+
+# Verify response matches our request
+if response.is_valid and response.sequence == sequence:
+    # Use context manager for RAII - frame is disposed on exit
+    with response:
+        save_image("output.jpg", bytes(response.data))
+```
+
+#### Example 3: Mutable Zero-Copy Processing (Future - v2.0.0)
+
+**Note:** Mutable servers with true zero-copy processing are planned for v2.0.0
 
 **Client Side (C++):**
 ```cpp
@@ -729,11 +761,11 @@ The duplex channel uses the existing Frame sequence numbers for request/response
 - [ ] Add Python bindings with basic Reader/Writer
 
 ### Phase 2: Duplex Channel - Basic Implementation
-- [x] Implement basic duplex channel with two separate buffers (C++ ✅, C# ✅)
-- [x] Add request-response correlation (sequence numbers) (C++ ✅, C# ✅)
-- [x] Implement timeout handling (C++ ✅, C# ✅)
-- [x] Add comprehensive tests (C++ ✅, C# ✅)
-- [ ] Implement Python duplex channel
+- [x] Implement basic duplex channel with two separate buffers (C++ ✅, C# ✅, Python ✅)
+- [x] Add request-response correlation (sequence numbers) (C++ ✅, C# ✅, Python ✅)
+- [x] Implement timeout handling (C++ ✅, C# ✅, Python ✅)
+- [x] Add comprehensive tests (C++ ✅, C# ✅, Python ✅)
+- [x] Implement Python duplex channel with RAII Frame support
 
 ### Phase 3: Zero-Copy Optimization
 - [ ] Design shared payload space protocol

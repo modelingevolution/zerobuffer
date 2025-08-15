@@ -242,3 +242,36 @@ metadata = TestDataPatterns.generate_metadata(size=256)
 ```
 
 These utilities ensure that Python, C#, and C++ implementations can exchange data correctly in cross-platform tests.
+
+## Duplex Channel Support
+
+The Python implementation includes full support for duplex channels (bidirectional request-response communication):
+
+```python
+from zerobuffer.duplex import DuplexChannelFactory, ProcessingMode
+from zerobuffer import BufferConfig
+
+# Server side
+factory = DuplexChannelFactory()
+server = factory.create_immutable_server("my-service", BufferConfig(4096, 10*1024*1024))
+
+def process_request(frame):
+    """Process request and return response"""
+    # Frame is automatically disposed via RAII
+    data = bytes(frame.data)
+    result = process_data(data)
+    return result
+
+server.start(process_request, ProcessingMode.SINGLE_THREAD)
+
+# Client side
+client = factory.create_client("my-service")
+sequence = client.send_request(b"request data")
+response = client.receive_response(timeout_ms=5000)
+
+if response.is_valid and response.sequence == sequence:
+    with response:  # Context manager for RAII
+        print(f"Response: {bytes(response.data)}")
+```
+
+See [DUPLEX_CHANNEL.md](DUPLEX_CHANNEL.md) for detailed documentation.

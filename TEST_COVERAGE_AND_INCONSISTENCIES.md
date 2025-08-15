@@ -1,6 +1,9 @@
 # ZeroBuffer Test Coverage and Inconsistencies Report
 
-This document provides a comprehensive overview of unit test coverage across all three language implementations and documents inconsistencies found during validation.
+**Last Updated:** 2024-08-15  
+**Status:** OUTDATED - See [TEST_SCENARIOS.md](TEST_SCENARIOS.md) for current test coverage
+
+This document provides a historical overview of unit test coverage across all three language implementations and documents inconsistencies found during initial validation. Most issues have been resolved.
 
 ## Unit Test Coverage Summary
 

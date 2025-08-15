@@ -243,6 +243,16 @@ Applications should monitor `payload_free_bytes` and log warnings when entering 
 
 For secure IPC, consider encrypted alternatives. ZeroBuffer optimizes for lowest latency in trusted environments.
 
+## Documentation
+
+📚 **[See DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) for complete documentation structure**
+
+### Quick Links
+- [Protocol Specification](PROTOCOL.md) - Technical protocol details
+- [API Reference](API.md) - Complete API for all languages  
+- [Test Scenarios](TEST_SCENARIOS.md) - Comprehensive test coverage
+- [Changelog](CHANGELOG.md) - Version history
+
 ## Installation
 
 ### C++ with vcpkg

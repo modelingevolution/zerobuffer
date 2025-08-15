@@ -171,7 +171,7 @@ class TestFrameOperations:
                 assert bytes(frame.data) == data
                 
                 # Release frame
-                reader.release_frame(frame)
+                # Frame auto-released via context manager
                 
                 # Check stats
                 assert writer.frames_written == 1
@@ -198,7 +198,7 @@ class TestFrameOperations:
                     assert frame.sequence == i + 1
                     expected_data = f"Frame {i}".encode()
                     assert bytes(frame.data) == expected_data
-                    reader.release_frame(frame)
+                    # Frame auto-released via context manager
                 
                 assert writer.frames_written == frames_to_write
                 assert reader.frames_read == frames_to_write
@@ -220,7 +220,7 @@ class TestFrameOperations:
                 frame = reader.read_frame(timeout=1.0)
                 assert frame is not None
                 assert bytes(frame.data) == data
-                reader.release_frame(frame)
+                # Frame auto-released via context manager
     
     def test_frame_too_large(self, buffer_name):
         """Test writing frame larger than buffer"""
@@ -256,7 +256,7 @@ class TestFrameOperations:
                 writer.write_frame(frame_data)
                 
                 # Now release first frame to make space at beginning
-                reader.release_frame(frame1)
+                # Frame auto-released via context manager
                 
                 # Write another frame (should wrap to beginning)
                 writer.write_frame(frame_data)
@@ -266,7 +266,7 @@ class TestFrameOperations:
                     frame = reader.read_frame(timeout=1.0)
                     assert frame is not None
                     assert bytes(frame.data) == frame_data
-                    reader.release_frame(frame)
+                    # Frame auto-released via context manager
 
 
 class TestErrorConditions:
@@ -300,14 +300,14 @@ class TestErrorConditions:
                 # Read first frame
                 frame1 = reader.read_frame(timeout=1.0)
                 assert frame1.sequence == 1
-                reader.release_frame(frame1)
+                # Frame auto-released via context manager
                 
                 # Manually corrupt sequence in next frame
                 # This would require direct memory access - skip for now
                 # Just verify normal sequence works
                 frame2 = reader.read_frame(timeout=1.0)
                 assert frame2.sequence == 2
-                reader.release_frame(frame2)
+                # Frame auto-released via context manager
     
     def test_empty_frame_rejected(self, buffer_name):
         """Test that empty frames are rejected"""
@@ -346,7 +346,7 @@ class TestConcurrency:
                     frame = reader.read_frame(timeout=5.0)
                     if frame:
                         frames_read.append(frame.sequence)
-                        reader.release_frame(frame)
+                        # Frame auto-released via context manager
                 results.append(frames_read)
         
         # Start reader first
@@ -405,7 +405,7 @@ class TestZeroCopyVerification:
                 assert isinstance(slice_view, memoryview)
                 assert slice_view.tobytes() == original_data[0:8]
                 
-                reader.release_frame(frame)
+                # Frame auto-released via context manager
     
     def test_direct_buffer_access(self, buffer_name):
         """Test direct buffer access API"""
@@ -427,7 +427,7 @@ class TestZeroCopyVerification:
                 frame = reader.read_frame(timeout=1.0)
                 assert frame is not None
                 assert bytes(frame.data) == data_to_write
-                reader.release_frame(frame)
+                # Frame auto-released via context manager
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ import glob
 import logging
 
 from . import platform
-from .types import OIEB, BufferConfig, Frame, FrameHeader, align_to_boundary
+from .types import OIEB, ProtocolVersion, BufferConfig, Frame, FrameHeader, align_to_boundary
 from .exceptions import (
     ZeroBufferException,
     WriterDeadException,
@@ -80,7 +80,8 @@ class Reader(LoggerMixin):
             
             # Initialize OIEB
             oieb = OIEB(
-                operation_size=self._oieb_size,
+                oieb_size=128,  # Always 128 for v1.x.x
+                version=ProtocolVersion(major=1, minor=0, patch=0, reserved=0),
                 metadata_size=self._metadata_size,
                 metadata_free_bytes=self._metadata_size,
                 metadata_written_bytes=0,
@@ -356,18 +357,7 @@ class Reader(LoggerMixin):
                         # Writer hasn't wrapped yet, wait
                         continue
                 
-                # Create frame reference (zero-copy)
-                data_offset = header_offset + FrameHeader.SIZE
-                # Get a fresh memoryview for the payload area
-                payload_view = self._shm.get_memoryview(payload_base, self._payload_size)
-                frame = Frame(
-                    memory_view=payload_view,
-                    offset=oieb.payload_read_pos + FrameHeader.SIZE,
-                    size=header.payload_size,
-                    sequence=header.sequence_number
-                )
-                
-                # Update OIEB immediately (like C++ and C# do)
+                # Update OIEB before creating frame (prepare the state)
                 old_pos = oieb.payload_read_pos
                 oieb.payload_read_pos += total_frame_size
                 if oieb.payload_read_pos >= oieb.payload_size:
@@ -382,8 +372,22 @@ class Reader(LoggerMixin):
                 self._logger.debug("Frame read complete: seq=%d, new state: ReadCount=%d, FreeBytes=%d", 
                                  header.sequence_number, oieb.payload_read_count, oieb.payload_free_bytes)
                 
-                # Signal writer that space is available
-                self._sem_read.release()
+                # Create disposal callback that signals semaphore
+                def on_dispose():
+                    self._logger.debug("Frame disposed, signaling semaphore for seq=%d", header.sequence_number)
+                    self._sem_read.release()
+                
+                # Create frame reference (zero-copy) with disposal callback
+                data_offset = header_offset + FrameHeader.SIZE
+                # Get a fresh memoryview for the payload area
+                payload_view = self._shm.get_memoryview(payload_base, self._payload_size)
+                frame = Frame(
+                    memory_view=payload_view,
+                    offset=old_pos + FrameHeader.SIZE,  # Use old_pos since we already updated
+                    size=header.payload_size,
+                    sequence=header.sequence_number,
+                    on_dispose=on_dispose  # RAII: semaphore signaled when frame is disposed
+                )
                 
                 # Update tracking
                 self._current_frame_size = total_frame_size

@@ -10,7 +10,7 @@ from typing import Optional, Union
 import logging
 
 from . import platform
-from .types import OIEB, Frame, FrameHeader
+from .types import OIEB, Frame, FrameHeader, align_to_boundary
 from .exceptions import (
     ZeroBufferException,
     ReaderDeadException,
@@ -68,8 +68,8 @@ class Writer(LoggerMixin):
             oieb = OIEB.unpack(oieb_data)
             
             # Verify OIEB
-            if oieb.operation_size != OIEB.SIZE:
-                raise ZeroBufferException("Invalid OIEB size - version mismatch?")
+            if oieb.oieb_size != 128:
+                raise ZeroBufferException(f"Invalid OIEB size: {oieb.oieb_size} - version mismatch?")
             
             # Check if reader exists
             if oieb.reader_pid == 0 or not platform.process_exists(oieb.reader_pid):
@@ -97,7 +97,7 @@ class Writer(LoggerMixin):
             self._logger.debug("Writer PID set successfully")
             
             # Store layout info
-            self._oieb_size = oieb.operation_size
+            self._oieb_size = align_to_boundary(oieb.oieb_size)
             self._metadata_size = oieb.metadata_size
             self._payload_size = oieb.payload_size
             

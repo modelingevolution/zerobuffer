@@ -40,12 +40,12 @@ class TestDuplexChannel:
                     for _ in range(3):
                         frame = req_reader.read_frame(timeout=2.0)
                         if frame:
-                            request_data = bytes(frame.data)
-                            req_reader.release_frame(frame)
-                            
-                            # Echo back with prefix
-                            response = b"RESPONSE: " + request_data
-                            resp_writer.write_frame(response)
+                            with frame:  # Use context manager for RAII
+                                request_data = bytes(frame.data)
+                                
+                                # Echo back with prefix
+                                response = b"RESPONSE: " + request_data
+                                resp_writer.write_frame(response)
         
         def client_process():
             """Client that sends requests and receives responses"""
@@ -64,8 +64,8 @@ class TestDuplexChannel:
                         # Get response
                         frame = resp_reader.read_frame(timeout=2.0)
                         if frame:
-                            responses.append(bytes(frame.data))
-                            resp_reader.release_frame(frame)
+                            with frame:  # Use context manager for RAII
+                                responses.append(bytes(frame.data))
                     
                     return responses
         

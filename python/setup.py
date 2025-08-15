@@ -9,7 +9,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="zerobuffer",
-    version="0.1.0",
+    version="1.1.0",
     author="ZeroBuffer Contributors",
     description="High-performance zero-copy inter-process communication",
     long_description=long_description,
