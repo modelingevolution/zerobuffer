@@ -239,19 +239,22 @@ class Writer(LoggerMixin):
             frame_size = len(data)
             total_size = FrameHeader.SIZE + frame_size
             
+            # Early check if reader has disconnected gracefully
+            oieb = self._read_oieb()
+            if oieb.reader_pid == 0:
+                raise ReaderDeadException()
+            
+            # Check if frame is too large
+            if total_size > oieb.payload_size:
+                raise FrameTooLargeException()
+            
             while True:
-                oieb = self._read_oieb()
+                # Check if reader hasn't exited gracefully
+                if oieb.reader_pid == 0:
+                    raise ReaderDeadException()
                 
                 self._logger.debug("Write frame check: total_size=%d, payload_free_bytes=%d, payload_size=%d", 
                                  total_size, oieb.payload_free_bytes, oieb.payload_size)
-                
-                # Check if frame is too large
-                if total_size > oieb.payload_size:
-                    raise FrameTooLargeException()
-                
-                # Check if reader is still alive
-                if not self._is_reader_connected(oieb):
-                    raise ReaderDeadException()
                 
                 # Check for available space
                 if oieb.payload_free_bytes >= total_size:
@@ -280,10 +283,13 @@ class Writer(LoggerMixin):
                 self._logger.info("Waiting on sem_read semaphore...")
                 if not self._sem_read.acquire(timeout=5.0):
                     # Timeout - check if reader is alive
-                    if not self._is_reader_connected(oieb):
+                    if oieb.reader_pid == 0 or not platform.process_exists(oieb.reader_pid):
                         raise ReaderDeadException()
                     # Buffer is full - throw exception like C# does
                     raise BufferFullException()
+                
+                # Re-read OIEB after semaphore for next iteration
+                oieb = self._read_oieb()
             
             # Check if we need to wrap
             continuous_free = self._get_continuous_free_space(oieb)
@@ -390,14 +396,18 @@ class Writer(LoggerMixin):
             
             total_size = FrameHeader.SIZE + size
             
+            # Early check if reader has disconnected gracefully
+            oieb = self._read_oieb()
+            if oieb.reader_pid == 0:
+                raise ReaderDeadException()
+            
+            if total_size > oieb.payload_size:
+                raise FrameTooLargeException()
+            
             # Wait for space (same logic as write_frame)
             while True:
-                oieb = self._read_oieb()
-                
-                if total_size > oieb.payload_size:
-                    raise FrameTooLargeException()
-                
-                if not self._is_reader_connected(oieb):
+                # Check if reader hasn't exited gracefully
+                if oieb.reader_pid == 0:
                     raise ReaderDeadException()
                 
                 # Check for available space
@@ -405,10 +415,13 @@ class Writer(LoggerMixin):
                     break
                 
                 if not self._sem_read.acquire(timeout=5.0):
-                    if not self._is_reader_connected(oieb):
+                    if oieb.reader_pid == 0 or not platform.process_exists(oieb.reader_pid):
                         raise ReaderDeadException()
                     # Buffer is full - throw exception like C# does
                     raise BufferFullException()
+                
+                # Re-read OIEB after semaphore for next iteration
+                oieb = self._read_oieb()
             
             # Handle wrap-around if needed
             continuous_free = self._get_continuous_free_space(oieb)

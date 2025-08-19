@@ -267,6 +267,10 @@ class Reader(LoggerMixin):
                 # Semaphore was signaled - data should be available
                 oieb = self._read_oieb()
                 
+                # Quick check to ensure writer hasn't disconnected gracefully
+                if oieb.writer_pid == 0:
+                    raise WriterDeadException()
+                
                 self._logger.debug("OIEB state after semaphore: WrittenCount=%d, ReadCount=%d, WritePos=%d, ReadPos=%d, FreeBytes=%d, PayloadSize=%d",
                                  oieb.payload_written_count, oieb.payload_read_count, oieb.payload_write_pos, 
                                  oieb.payload_read_pos, oieb.payload_free_bytes, oieb.payload_size)

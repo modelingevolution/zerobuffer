@@ -218,6 +218,11 @@ public:
             
             OIEB* oieb = get_oieb();
             
+            // Quick check to ensure writer hasn't disconnected gracefully
+            if (oieb->writer_pid == 0) {
+                throw WriterDeadException();
+            }
+            
             // Read frame header directly via pointer - no copy needed
             const uint8_t* read_ptr = payload_start_ + oieb->payload_read_pos;
             const FrameHeader* header = reinterpret_cast<const FrameHeader*>(read_ptr);

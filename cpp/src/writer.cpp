@@ -167,11 +167,17 @@ public:
         
         size_t total_size = sizeof(FrameHeader) + size;
         
+        // Early check if reader has disconnected gracefully
+        OIEB* oieb = get_oieb();
+        if (oieb->reader_pid == 0) {
+            throw ReaderDeadException();
+        }
+        
         auto start = std::chrono::steady_clock::now();
         
         while (true) {
-            // Check if reader is still alive
-            if (!is_reader_connected()) {
+            // Check if reader hasn't exited gracefully
+            if (oieb->reader_pid == 0) {
                 throw ReaderDeadException();
             }
             
@@ -193,14 +199,12 @@ public:
             // Wait for reader to free space (with shorter wait to check timeout periodically)
             if (!sem_read_->wait(std::chrono::milliseconds(100))) {
                 // Short timeout - check if reader is alive and overall timeout
-                if (!is_reader_connected()) {
+                if (oieb->reader_pid == 0 || !platform::process_exists(oieb->reader_pid)) {
                     throw ReaderDeadException();
                 }
                 // Continue waiting (will check timeout in next iteration)
             }
         }
-        
-        OIEB* oieb = get_oieb();
         
         // Check if we need to wrap
         size_t space_to_end = oieb->payload_size - oieb->payload_write_pos;
@@ -270,9 +274,15 @@ public:
         
         size_t total_size = sizeof(FrameHeader) + size;
         
+        // Early check if reader has disconnected gracefully
+        OIEB* oieb = get_oieb();
+        if (oieb->reader_pid == 0) {
+            throw ReaderDeadException();
+        }
+        
         while (true) {
-            // Check if reader is still alive
-            if (!is_reader_connected()) {
+            // Check if reader hasn't exited gracefully
+            if (oieb->reader_pid == 0) {
                 throw ReaderDeadException();
             }
             
@@ -287,14 +297,12 @@ public:
             // Wait for reader to free space
             if (!sem_read_->wait(std::chrono::milliseconds(5000))) {
                 // Timeout - check if reader is alive
-                if (!is_reader_connected()) {
+                if (oieb->reader_pid == 0 || !platform::process_exists(oieb->reader_pid)) {
                     throw ReaderDeadException();
                 }
-                // Continue waiting
+                throw BufferFullException();
             }
         }
-        
-        OIEB* oieb = get_oieb();
         
         // Check if we need to wrap
         size_t space_to_end = oieb->payload_size - oieb->payload_write_pos;
