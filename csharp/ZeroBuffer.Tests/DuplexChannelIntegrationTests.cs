@@ -83,7 +83,7 @@ namespace ZeroBuffer.Tests
             Assert.Equal(testData, Encoding.UTF8.GetString(response.ToArray()));
         }
 
-        private static ReadOnlySpan<byte> OnHandle(Frame request) => request.Span;
+        private static void OnHandle(Frame request, Writer responseWriter) => responseWriter.WriteFrame(request.Span);
 
         [Fact]
         public void IndependentSendReceive_Test()
@@ -93,12 +93,12 @@ namespace ZeroBuffer.Tests
             
             // Create server that adds 1 to each byte
             using var server = factory.CreateImmutableServer(_testChannelName, config);
-            server.Start(request =>
+            server.Start((request, responseWriter) =>
             {
                 var data = request.ToArray();
                 for (int i = 0; i < data.Length; i++)
                     data[i] = (byte)((data[i] + 1) % 256);
-                return data;
+                responseWriter.WriteFrame(data);
             });
             
             Thread.Sleep(100);
@@ -165,11 +165,11 @@ namespace ZeroBuffer.Tests
             using var server = factory.CreateImmutableServer(_testChannelName, config);
             
             ulong capturedSequence = 0;
-            server.Start((Frame request) =>
+            server.Start((Frame request, Writer responseWriter) =>
             {
                 // Capture the sequence number from request
                 capturedSequence = request.Sequence;
-                return new ReadOnlySpan<byte>(new byte[] { 42 });
+                responseWriter.WriteFrame(new byte[] { 42 });
             });
             
             Thread.Sleep(100);

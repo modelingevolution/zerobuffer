@@ -36,14 +36,14 @@ namespace ZeroBuffer.Tests
             // Create server with echo handler
             using var server = factory.CreateImmutableServer(_testChannelName, config);
             
-            server.Start((Frame request) =>
+            server.Start((Frame request, Writer responseWriter) =>
             {
                 // Echo the request data back
-                return request.Span;
+                responseWriter.WriteFrame(request.Span);
             });
             
             // Give server time to initialize
-            Thread.Sleep(100);
+            //Thread.Sleep(100);
             
             // Create client
             using var client = factory.CreateClient(_testChannelName);
@@ -67,12 +67,12 @@ namespace ZeroBuffer.Tests
             // Create server that transforms data
             using var server = factory.CreateImmutableServer(_testChannelName, config);
             
-            server.Start((Frame request) =>
+            server.Start((Frame request, Writer responseWriter) =>
             {
                 var data = request.ToArray();
                 // Simple transform: reverse the bytes
                 Array.Reverse(data);
-                return new ReadOnlySpan<byte>(data);
+                responseWriter.WriteFrame(data);
             });
             
             Thread.Sleep(100);
@@ -135,7 +135,7 @@ namespace ZeroBuffer.Tests
             // Create server with minimal processing
             using var server = factory.CreateImmutableServer(_testChannelName, config);
             
-            server.Start((Frame request) => request.Span);
+            server.Start((Frame request, Writer responseWriter) => responseWriter.WriteFrame(request.Span));
             
             Thread.Sleep(100);
             
@@ -181,14 +181,15 @@ namespace ZeroBuffer.Tests
         {
             var factory = TestDuplexChannelFactory.Create(_output);
             var config = new BufferConfig(4096, 10 * 1024 * 1024);
+
             
-            using var server = factory.CreateImmutableServer(_testChannelName, config);
-            server.Start((Frame request) => request.Span);
+            using var server = factory.CreateImmutableServer(_testChannelName, config); // the response buffer is created here. 
             
-            Thread.Sleep(100);
+
+            server.Start((Frame request, Writer responseWriter) => responseWriter.WriteFrame(request.Span));
             
-            using var client = factory.CreateClient(_testChannelName);
-            
+            using var client = factory.CreateClient(_testChannelName); // the request buffer is created here
+
             // Verify connection works
             var seq1 = client.SendRequest(new byte[] { 1, 2, 3 });
             using var response = client.ReceiveResponse(TimeSpan.FromSeconds(1));
@@ -197,7 +198,6 @@ namespace ZeroBuffer.Tests
             
             // Stop server
             server.Stop();
-            Thread.Sleep(100);
             
             // Client should detect server disconnection
             // SendRequest should throw ReaderDeadException when server's reader is gone

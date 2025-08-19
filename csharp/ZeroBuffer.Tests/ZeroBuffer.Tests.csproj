@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ZeroBuffer.TestHelper\ZeroBuffer.TestHelper.csproj" />
     <ProjectReference Include="..\ZeroBuffer\ZeroBuffer.csproj" />
   </ItemGroup>
 

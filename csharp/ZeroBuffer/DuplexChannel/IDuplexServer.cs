@@ -3,11 +3,11 @@ using System;
 namespace ZeroBuffer.DuplexChannel
 {
     /// <summary>
-    /// Handler delegate that returns response data as ReadOnlySpan
+    /// Handler delegate that processes a request and writes response directly to the Writer
     /// </summary>
     /// <param name="request">The request frame</param>
-    /// <returns>Response data as ReadOnlySpan (must not be stack-allocated)</returns>
-    public delegate ReadOnlySpan<byte> RequestHandler(Frame request);
+    /// <param name="responseWriter">The writer to write response data to</param>
+    public delegate void RequestHandler(Frame request, Writer responseWriter);
     
     /// <summary>
     /// Base server-side interface with common functionality.
@@ -31,9 +31,9 @@ namespace ZeroBuffer.DuplexChannel
     public interface IImmutableDuplexServer : IDuplexServer
     {
         /// <summary>
-        /// Start processing requests with a handler that returns response data as ReadOnlySpan
+        /// Start processing requests with a handler that writes response directly to Writer
         /// </summary>
-        /// <param name="handler">Handler that processes request and returns response data</param>
+        /// <param name="handler">Handler that processes request and writes response to Writer</param>
         /// <param name="mode">Processing mode (SingleThread or ThreadPool)</param>
         void Start(RequestHandler handler, ProcessingMode mode = ProcessingMode.SingleThread);
     }

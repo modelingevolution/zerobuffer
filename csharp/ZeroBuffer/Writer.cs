@@ -86,10 +86,9 @@ namespace ZeroBuffer
                     throw new WriterAlreadyConnectedException();
                 }
 
-                // Now read a mutable copy to set our PID
-                var oieb = _sharedMemory.Read<OIEB>(0);
+                // Get a reference to set our PID directly
+                ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
                 oieb.WriterPid = (ulong)Environment.ProcessId;
-                _sharedMemory.Write(0, oieb);
                 _sharedMemory.Flush();
             }
             catch
@@ -131,12 +130,11 @@ namespace ZeroBuffer
         /// </summary>
         public void CommitMetadata()
         {
-            var oieb = _sharedMemory.Read<OIEB>(0);
+            ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
 
-            // Update OIEB
+            // Update OIEB directly in shared memory
             oieb.MetadataWrittenBytes = (ulong)_pendingMetadataSize;
             oieb.MetadataFreeBytes = oieb.MetadataSize - (ulong)_pendingMetadataSize;
-            _sharedMemory.Write(0, oieb);
             _sharedMemory.Flush();
 
             _metadataWritten = true;
@@ -165,10 +163,13 @@ namespace ZeroBuffer
             _logger.LogDebug("GetFrameBuffer called with size={Size}", size);
 
             // Check frame size
-            long totalFrameSize = Marshal.SizeOf<FrameHeader>() + size;
+            long totalFrameSize = FrameHeader.SIZE + size;
             
             // Use ReadRef for initial checks to avoid copying
             ref readonly var oiebRef = ref _sharedMemory.ReadRef<OIEB>(0);
+            if(oiebRef.ReaderPid == 0)
+                throw new ReaderDeadException();
+
             if ((ulong)totalFrameSize > oiebRef.PayloadSize)
             {
                 _logger.LogError("Frame too large: {FrameSize} > {PayloadSize}", totalFrameSize, oiebRef.PayloadSize);
@@ -178,37 +179,29 @@ namespace ZeroBuffer
             // Wait for space
             while (true)
             {
-                // Re-read the reference for each iteration
+                // First check current state
                 oiebRef = ref _sharedMemory.ReadRef<OIEB>(0);
-
-                // Check if reader is alive or disconnected
-                if (oiebRef.ReaderPid == 0)
-                {
-                    throw new ReaderDeadException(); // No reader connected
-                }
-                else if (!ProcessExists(oiebRef.ReaderPid))
-                {
-                    throw new ReaderDeadException(); // Reader process died
-                }
-
-                // Check for available space
+                
+                // Check if we already have enough space
                 if (oiebRef.PayloadFreeBytes >= (ulong)totalFrameSize)
                     break;
 
-                // Wait for reader to consume data
+                // Need to wait for space - wait on semaphore
                 if (!_readSemaphore.Wait(TimeSpan.FromSeconds(5)))
                 {
                     // Timeout - check if reader died
+                    oiebRef = ref _sharedMemory.ReadRef<OIEB>(0);
                     if (oiebRef.ReaderPid == 0 || !ProcessExists(oiebRef.ReaderPid))
                     {
                         throw new ReaderDeadException();
                     }
                     throw new BufferFullException();
                 }
+                // Loop back to check space again after semaphore signal
             }
             
-            // Now read a mutable copy for modifications
-            var oieb = _sharedMemory.Read<OIEB>(0);
+            // Get a reference for direct modifications
+            ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
 
             _logger.LogTrace("OIEB state before write: WrittenCount={WrittenCount}, ReadCount={ReadCount}, WritePos={WritePos}, ReadPos={ReadPos}, FreeBytes={FreeBytes}",
                 oieb.PayloadWrittenCount, oieb.PayloadReadCount, oieb.PayloadWritePos, oieb.PayloadReadPos, oieb.PayloadFreeBytes);
@@ -255,7 +248,7 @@ namespace ZeroBuffer
             _sharedMemory.Write(writePos, header);
 
             // Get pointer to frame data area
-            long dataPos = writePos + Marshal.SizeOf<FrameHeader>();
+            long dataPos = writePos + FrameHeader.SIZE;
             byte* framePtr = _sharedMemory.GetPointer(dataPos);
             
             // Store write position for commit
@@ -273,17 +266,15 @@ namespace ZeroBuffer
         /// </summary>
         public void CommitFrame()
         {
-            var oieb = _sharedMemory.Read<OIEB>(0);
+            ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
             
-            // Update write position
+            // Update write position directly in shared memory
             oieb.PayloadWritePos = (ulong)((_pendingWritePos + _pendingFrameSize - _payloadOffset) % (long)oieb.PayloadSize);
             oieb.PayloadWrittenCount++;
 
-            // Update free bytes
-            long totalFrameSize = Marshal.SizeOf<FrameHeader>() + _pendingFrameSize;
+            // Update free bytes directly in shared memory
+            long totalFrameSize = FrameHeader.SIZE + _pendingFrameSize;
             oieb.PayloadFreeBytes -= (ulong)totalFrameSize;
-
-            _sharedMemory.Write(0, oieb);
             _sharedMemory.Flush();
 
             // Signal data available
@@ -299,42 +290,33 @@ namespace ZeroBuffer
             ThrowIfDisposed();
 
             // Check frame size
-            long totalFrameSize = Marshal.SizeOf<FrameHeader>() + data.Length;
+            long totalFrameSize = FrameHeader.SIZE + data.Length;
             ref readonly var oiebRef = ref _sharedMemory.ReadRef<OIEB>(0);
 
             if ((ulong)totalFrameSize > oiebRef.PayloadSize)
                 throw new FrameTooLargeException();
 
-            // Wait for space - need mutable copy for the loop
-            var oieb = _sharedMemory.Read<OIEB>(0);
+            // Wait for space
+            ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
             while (true)
             {
-                oieb = _sharedMemory.Read<OIEB>(0);
-
-                // Check if reader is alive or disconnected
+                // Check if reader hasn't exited gracefully
                 if (oieb.ReaderPid == 0)
-                {
-                    throw new ReaderDeadException(); // No reader connected
-                }
-                else if (!ProcessExists(oieb.ReaderPid))
-                {
-                    throw new ReaderDeadException(); // Reader process died
-                }
-
-                // Check for available space
+                    throw new ReaderDeadException();
+                
+                // Check if we already have enough space
                 if (oieb.PayloadFreeBytes >= (ulong)totalFrameSize)
                     break;
 
-                // Wait for reader to consume data
-                if (!_readSemaphore.Wait(_writeTimeout))
+                // Need to wait for space - wait on semaphore
+                if (_readSemaphore.Wait(_writeTimeout)) continue;
+
+                if (oieb.ReaderPid == 0 || !ProcessExists(oieb.ReaderPid))
                 {
-                    // Timeout - check if reader died
-                    if (oieb.ReaderPid == 0 || !ProcessExists(oieb.ReaderPid))
-                    {
-                        throw new ReaderDeadException();
-                    }
-                    throw new BufferFullException();
+                    throw new ReaderDeadException();
                 }
+                throw new BufferFullException();
+
             }
 
             // Calculate write position
@@ -378,17 +360,18 @@ namespace ZeroBuffer
             _sharedMemory.Write(writePos, header);
 
             // Write frame data
-            long dataPos = writePos + Marshal.SizeOf<FrameHeader>();
+            long dataPos = writePos + FrameHeader.SIZE;
             _sharedMemory.WriteSpan(dataPos, data);
 
+            // Now get a reference to update the OIEB in shared memory
+            ref var oiebUpdate = ref _sharedMemory.ReadRef<OIEB>(0);
+            
             // Update write position
-            oieb.PayloadWritePos = (ulong)((dataPos + data.Length - _payloadOffset) % (long)oieb.PayloadSize);
-            oieb.PayloadWrittenCount++;
+            oiebUpdate.PayloadWritePos = (ulong)((dataPos + data.Length - _payloadOffset) % (long)oieb.PayloadSize);
+            oiebUpdate.PayloadWrittenCount = oieb.PayloadWrittenCount + 1;
 
             // Update free bytes
-            oieb.PayloadFreeBytes -= (ulong)totalFrameSize;
-
-            _sharedMemory.Write(0, oieb);
+            oiebUpdate.PayloadFreeBytes = oieb.PayloadFreeBytes - (ulong)totalFrameSize;
             _sharedMemory.Flush();
 
             // Signal data available
@@ -446,9 +429,8 @@ namespace ZeroBuffer
             // Clear writer PID
             try
             {
-                var oieb = _sharedMemory.Read<OIEB>(0);
+                ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
                 oieb.WriterPid = 0;
-                _sharedMemory.Write(0, oieb);
                 _sharedMemory.Flush();
             }
             catch { }

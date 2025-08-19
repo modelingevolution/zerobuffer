@@ -79,10 +79,10 @@ namespace ZeroBuffer.Tests.StepDefinitions
 
             if (server is ImmutableDuplexServer immutableServer)
             {
-                immutableServer.Start((Frame request) =>
+                immutableServer.Start((Frame request, Writer responseWriter) =>
                 {
                     // Echo handler - return the same data
-                    return request.Span;
+                    responseWriter.WriteFrame(request.Span);
                 });
             }
             else
@@ -105,10 +105,10 @@ namespace ZeroBuffer.Tests.StepDefinitions
 
             if (server is ImmutableDuplexServer immutableServer)
             {
-                immutableServer.Start((Frame request) =>
+                immutableServer.Start((Frame request, Writer responseWriter) =>
                 {
                     Thread.Sleep(delay);
-                    return request.Span;
+                    responseWriter.WriteFrame(request.Span);
                 });
             }
             
@@ -129,11 +129,11 @@ namespace ZeroBuffer.Tests.StepDefinitions
 
             if (server is ImmutableDuplexServer immutableServer)
             {
-                immutableServer.Start((Frame request) =>
+                immutableServer.Start((Frame request, Writer responseWriter) =>
                 {
                     var delay = random.Next(minDelay, maxDelay + 1);
                     Thread.Sleep(delay);
-                    return request.Span;
+                    responseWriter.WriteFrame(request.Span);
                 });
             }
             
@@ -151,10 +151,10 @@ namespace ZeroBuffer.Tests.StepDefinitions
 
             if (server is ImmutableDuplexServer immutableServer)
             {
-                immutableServer.Start((Frame request) =>
+                immutableServer.Start((Frame request, Writer responseWriter) =>
                 {
                     Thread.Sleep(processingTime);
-                    return request.Span;
+                    responseWriter.WriteFrame(request.Span);
                 });
             }
             
@@ -420,7 +420,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
 
             if (server is ImmutableDuplexServer immutableServer)
             {
-                immutableServer.Start((Frame request) =>
+                immutableServer.Start((Frame request, Writer responseWriter) =>
                 {
                     // XOR transform handler
                     var result = new byte[request.Size];
@@ -429,7 +429,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
                     {
                         result[i] = (byte)(span[i] ^ xorKey);
                     }
-                    return result;
+                    responseWriter.WriteFrame(result);
                 });
             }
             else
@@ -547,6 +547,16 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 var sequence = client.SendRequest(data);
                 _sentRequests[sequence] = data;
             }
+            
+            // After sending all requests, receive responses
+            for (int i = 0; i < requestCount; i++)
+            {
+                var response = client.ReceiveResponse(TimeSpan.FromSeconds(5));
+                if (response.IsValid)
+                {
+                    _responses.Add((response.Sequence, response.ToArray()));
+                }
+            }
         }
 
         [When(@"the '(.*)' process sends '(.*)' requests from single thread")]
@@ -597,10 +607,10 @@ namespace ZeroBuffer.Tests.StepDefinitions
 
             if (server is ImmutableDuplexServer immutableServer)
             {
-                immutableServer.Start((Frame request) =>
+                immutableServer.Start((Frame request, Writer responseWriter) =>
                 {
                     Thread.Sleep(processingTime);
-                    return request.Span;
+                    responseWriter.WriteFrame(request.Span);
                 });
             }
             else

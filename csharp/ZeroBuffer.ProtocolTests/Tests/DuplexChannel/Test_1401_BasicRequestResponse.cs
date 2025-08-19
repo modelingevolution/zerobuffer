@@ -24,13 +24,12 @@ namespace ZeroBuffer.ProtocolTests.Tests.DuplexChannel
                 using var server = factory.CreateImmutableServer($"duplex-{bufferName}", config);
                 
                 // Echo handler - returns exact request data
-                server.Start((Frame request) =>
+                server.Start((Frame request, Writer responseWriter) =>
                 {
                     Log($"Server: Received request with sequence {request.Sequence}, size {request.Size}");
                     
                     // Echo back the exact data
-                    var data = request.ToArray();
-                    return data;
+                    responseWriter.WriteFrame(request.Span);
                 });
                 
                 Log("Server: Started, waiting for requests");

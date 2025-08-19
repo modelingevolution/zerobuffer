@@ -72,8 +72,10 @@ namespace ZeroBuffer.Tests
                 writer.WriteFrame(data); // This should wrap
 
                 // Read the wrapped frame
-                using var wrappedFrame = reader.ReadFrame();
-                Assert.Equal(frameSize, wrappedFrame.Size);
+                {
+                    using var wrappedFrame = reader.ReadFrame();
+                    Assert.Equal(frameSize, wrappedFrame.Size);
+                }
 
                 var finalFreeSpace = GetFreeSpace(reader);
                 _output.WriteLine($"Final free space: {finalFreeSpace}");
@@ -200,9 +202,10 @@ namespace ZeroBuffer.Tests
                 _output.WriteLine($"Free space after wrap write: {afterWrapWriteSpace}");
 
                 // Read the frame (which includes processing the wrap marker)
-                var frame = reader.ReadFrame();
-                Assert.Equal(frameSize, frame.Size);
-
+                {
+                    using var frame = reader.ReadFrame();
+                    Assert.Equal(frameSize, frame.Size);
+                }
                 var afterWrapReadSpace = GetFreeSpace(reader);
                 _output.WriteLine($"Free space after wrap read: {afterWrapReadSpace}");
                 
@@ -249,7 +252,7 @@ namespace ZeroBuffer.Tests
                     else if (totalRead < totalWritten)
                     {
                         // Read a frame
-                        var frame = reader.ReadFrame();
+                        using var frame = reader.ReadFrame();
                         if (frame.IsValid)
                         {
                             totalRead++;
@@ -260,7 +263,7 @@ namespace ZeroBuffer.Tests
                 // Read all remaining frames
                 while (totalRead < totalWritten)
                 {
-                    var frame = reader.ReadFrame();
+                    using var frame = reader.ReadFrame();
                     if (frame.IsValid)
                     {
                         totalRead++;
@@ -280,17 +283,9 @@ namespace ZeroBuffer.Tests
 
         private unsafe ulong GetFreeSpace(Reader reader)
         {
-            // Use reflection to access the shared memory field from the reader
-            var sharedMemoryField = typeof(Reader).GetField("_sharedMemory", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var sharedMemory = sharedMemoryField!.GetValue(reader)!;
-            
-            // Use reflection to call the Read method
-            var readMethod = sharedMemory.GetType().GetMethod("Read", 
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            var genericMethod = readMethod!.MakeGenericMethod(typeof(OIEB));
-            var oieb = (OIEB)genericMethod.Invoke(sharedMemory, new object[] { 0L })!;
-            
+            var oieb = (OIEB)reader.GetOIEB();
+
+
             return oieb.PayloadFreeBytes;
         }
     }

@@ -18,14 +18,9 @@ namespace ZeroBuffer
         long Size { get; }
         
         /// <summary>
-        /// Reads a structure from the specified offset
+        /// Gets a writable reference to a structure at the specified offset (zero-copy)
         /// </summary>
-        T Read<T>(long offset) where T : struct;
-        
-        /// <summary>
-        /// Gets a readonly reference to a structure at the specified offset (zero-copy)
-        /// </summary>
-        ref readonly T ReadRef<T>(long offset) where T : struct;
+        ref T ReadRef<T>(long offset) where T : struct;
         
         /// <summary>
         /// Writes a structure to the specified offset

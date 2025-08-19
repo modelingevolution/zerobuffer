@@ -253,40 +253,23 @@ class Reader(LoggerMixin):
                 raise ZeroBufferException("Reader is closed")
             
             while True:
-                # Check if data is already available before waiting
+                # Wait for data signal FIRST (following the protocol correctly)
+                self._logger.debug("Waiting on write semaphore for data signal")
+                if not self._sem_write.acquire(timeout):
+                    # Timeout - check if writer is alive
+                    oieb = self._read_oieb()
+                    if oieb.writer_pid != 0 and not platform.process_exists(oieb.writer_pid):
+                        self._logger.warning("Writer process %d is dead", oieb.writer_pid)
+                        raise WriterDeadException()
+                    self._logger.debug("Read timeout after %s seconds", timeout)
+                    return None  # Timeout
+                
+                # Semaphore was signaled - data should be available
                 oieb = self._read_oieb()
                 
-                self._logger.debug("OIEB state: WrittenCount=%d, ReadCount=%d, WritePos=%d, ReadPos=%d, FreeBytes=%d, PayloadSize=%d",
+                self._logger.debug("OIEB state after semaphore: WrittenCount=%d, ReadCount=%d, WritePos=%d, ReadPos=%d, FreeBytes=%d, PayloadSize=%d",
                                  oieb.payload_written_count, oieb.payload_read_count, oieb.payload_write_pos, 
                                  oieb.payload_read_pos, oieb.payload_free_bytes, oieb.payload_size)
-                
-                # If no data available, wait for it
-                if oieb.payload_written_count <= oieb.payload_read_count:
-                    # Wait for data with timeout
-                    if not self._sem_write.acquire(timeout):
-                        # Timeout - check if writer is alive
-                        if oieb.writer_pid != 0 and not platform.process_exists(oieb.writer_pid):
-                            self._logger.warning("Writer process %d is dead", oieb.writer_pid)
-                            raise WriterDeadException()
-                        self._logger.debug("Read timeout after %s seconds", timeout)
-                        return None  # Timeout
-                    
-                    # Re-read OIEB after semaphore
-                    oieb = self._read_oieb()
-                    
-                    # Double-check if there's data to read
-                    if (oieb.payload_read_pos == oieb.payload_write_pos and 
-                        oieb.payload_written_count == oieb.payload_read_count):
-                        # No new data (spurious wakeup?)
-                        continue
-                
-                # Check if we need to wrap to follow the writer
-                if (oieb.payload_write_pos < oieb.payload_read_pos and 
-                    oieb.payload_written_count > oieb.payload_read_count):
-                    # Writer has wrapped, we need to wrap too if there's not enough space
-                    if oieb.payload_read_pos + FrameHeader.SIZE > oieb.payload_size:
-                        oieb.payload_read_pos = 0
-                        self._write_oieb(oieb)  # Update OIEB in shared memory
                 
                 # Read frame header
                 payload_base = self._oieb_size + self._metadata_size
@@ -357,24 +340,30 @@ class Reader(LoggerMixin):
                         # Writer hasn't wrapped yet, wait
                         continue
                 
-                # Update OIEB before creating frame (prepare the state)
+                # Update OIEB read position and count (but NOT free bytes yet!)
                 old_pos = oieb.payload_read_pos
                 oieb.payload_read_pos += total_frame_size
                 if oieb.payload_read_pos >= oieb.payload_size:
                     oieb.payload_read_pos -= oieb.payload_size
                 oieb.payload_read_count += 1
-                oieb.payload_free_bytes += total_frame_size
+                # NOTE: We do NOT update payload_free_bytes here!
+                # This will be done when the Frame is disposed (RAII pattern)
                 
-                self._logger.debug("Updating read position: %d -> %d", old_pos, oieb.payload_read_pos)
+                self._logger.debug("Frame read: seq=%d, new state: ReadCount=%d, ReadPos=%d", 
+                                 header.sequence_number, oieb.payload_read_count, oieb.payload_read_pos)
                 
                 self._write_oieb(oieb)
                 
-                self._logger.debug("Frame read complete: seq=%d, new state: ReadCount=%d, FreeBytes=%d", 
-                                 header.sequence_number, oieb.payload_read_count, oieb.payload_free_bytes)
-                
-                # Create disposal callback that signals semaphore
+                # Create disposal callback that updates OIEB and signals semaphore
+                # This implements proper RAII - resources are released only when Frame is disposed
                 def on_dispose():
-                    self._logger.debug("Frame disposed, signaling semaphore for seq=%d", header.sequence_number)
+                    self._logger.debug("Frame disposed, releasing %d bytes for seq=%d", 
+                                     total_frame_size, header.sequence_number)
+                    # Update OIEB to mark space as available (matching C++ pattern)
+                    oieb_release = self._read_oieb()
+                    oieb_release.payload_free_bytes += total_frame_size
+                    self._write_oieb(oieb_release)
+                    # Signal writer that space is available
                     self._sem_read.release()
                 
                 # Create frame reference (zero-copy) with disposal callback

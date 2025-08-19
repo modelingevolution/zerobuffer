@@ -40,16 +40,16 @@ class TestInterop
         
         var server = factory.CreateImmutableServer(channelName, config);
         
-        server.Start((Frame request) =>
+        server.Start((Frame request, Writer responseWriter) =>
         {
             // Read request data
             var requestData = request.ToArray();
             string requestStr = Encoding.UTF8.GetString(requestData);
             Console.WriteLine($"C# Server: Received '{requestStr}'");
             
-            // Return response
+            // Write response directly to writer
             string responseStr = $"C# Echo: {requestStr}";
-            return Encoding.UTF8.GetBytes(responseStr);
+            responseWriter.WriteFrame(Encoding.UTF8.GetBytes(responseStr));
         });
         
         Console.WriteLine("C# Server: Running for 30 seconds...");

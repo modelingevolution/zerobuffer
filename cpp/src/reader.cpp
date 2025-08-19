@@ -218,34 +218,12 @@ public:
             
             OIEB* oieb = get_oieb();
             
-            // Check if there's data to read
-            if (oieb->payload_written_count <= oieb->payload_read_count) {
-                // No new data
-                continue;
-            }
-            
-            // Check if we need to wrap to follow the writer
-            if (oieb->payload_write_pos < oieb->payload_read_pos && 
-                oieb->payload_written_count > oieb->payload_read_count) {
-                // Writer has wrapped, we need to wrap too if there's not enough space for a header
-                if (oieb->payload_read_pos + sizeof(FrameHeader) > oieb->payload_size) {
-                    // Calculate wasted space from current read position to end of buffer
-                    uint64_t wasted_space = oieb->payload_size - oieb->payload_read_pos;
-                    
-                    // Add back the wasted space to free bytes
-                    oieb->payload_free_bytes += wasted_space;
-                    
-                    oieb->payload_read_pos = 0;
-                }
-            }
-            
-            // Read frame header
+            // Read frame header directly via pointer - no copy needed
             const uint8_t* read_ptr = payload_start_ + oieb->payload_read_pos;
-            FrameHeader header;
-            std::memcpy(&header, read_ptr, sizeof(FrameHeader));
+            const FrameHeader* header = reinterpret_cast<const FrameHeader*>(read_ptr);
             
             // Check for wrap-around marker (payload_size == 0)
-            if (header.payload_size == 0) {
+            if (header->payload_size == 0) {
                 ZEROBUFFER_LOG_DEBUG("Reader") << "Found wrap marker at position " << oieb->payload_read_pos
                     << ", handling wrap-around";
                 
@@ -268,22 +246,22 @@ public:
                 // Continue immediately to read the actual frame at the beginning
                 // without going back through the semaphore wait
                 read_ptr = payload_start_ + oieb->payload_read_pos;
-                std::memcpy(&header, read_ptr, sizeof(FrameHeader));
+                header = reinterpret_cast<const FrameHeader*>(read_ptr);
                 
-                // Now header contains the actual frame at the beginning
+                // Now header points to the actual frame at the beginning
             }
             
             // Validate sequence number
-            if (header.sequence_number != expected_sequence_) {
-                throw SequenceError(expected_sequence_, header.sequence_number);
+            if (header->sequence_number != expected_sequence_) {
+                throw SequenceError(expected_sequence_, header->sequence_number);
             }
             
             // Validate frame size
-            if (header.payload_size == 0) {
+            if (header->payload_size == 0) {
                 throw ZeroBufferException("Invalid frame size: 0");
             }
             
-            size_t total_frame_size = sizeof(FrameHeader) + header.payload_size;
+            size_t total_frame_size = sizeof(FrameHeader) + header->payload_size;
             
             // Check if frame wraps around buffer
             if (oieb->payload_read_pos + total_frame_size > oieb->payload_size) {
@@ -302,11 +280,11 @@ public:
                     oieb->payload_read_pos = 0;
                     // Re-read header at new position
                     read_ptr = payload_start_ + oieb->payload_read_pos;
-                    std::memcpy(&header, read_ptr, sizeof(FrameHeader));
+                    header = reinterpret_cast<const FrameHeader*>(read_ptr);
                     
                     // Re-validate sequence number after wrap
-                    if (header.sequence_number != expected_sequence_) {
-                        throw SequenceError(expected_sequence_, header.sequence_number);
+                    if (header->sequence_number != expected_sequence_) {
+                        throw SequenceError(expected_sequence_, header->sequence_number);
                     }
                 } else {
                     // Writer hasn't wrapped yet, wait
@@ -327,7 +305,7 @@ public:
             };
             
             // Create frame with release info
-            Frame frame(frame_data, header.payload_size, header.sequence_number, release_info);
+            Frame frame(frame_data, header->payload_size, header->sequence_number, release_info);
             
             // Update OIEB immediately for read position tracking
             oieb->payload_read_pos += total_frame_size;
@@ -343,7 +321,7 @@ public:
             current_frame_size_ = total_frame_size;
             expected_sequence_++;
             frames_read_++;
-            bytes_read_ += header.payload_size;
+            bytes_read_ += header->payload_size;
             
             return frame;
         }

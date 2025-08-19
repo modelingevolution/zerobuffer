@@ -38,20 +38,20 @@ namespace ZeroBuffer
             _name = name;
             _config = config;
             _logger = logger;
-            
+
             // Create lock file path
             string lockPath = GetLockFilePath(name);
-            
+
             // Try to clean up stale resources before creating
             CleanupStaleResources();
 
             // Calculate aligned sizes
-            int oiebSize = AlignToBlockBoundary(Marshal.SizeOf<OIEB>());
+            int oiebSize = AlignToBlockBoundary(OIEB.SIZE);
             int metadataSize = AlignToBlockBoundary(config.MetadataSize);
             int payloadSize = AlignToBlockBoundary(config.PayloadSize);
-            
+
             long totalSize = oiebSize + metadataSize + payloadSize;
-            
+
             // Set offsets
             _metadataOffset = oiebSize;
             _payloadOffset = oiebSize + metadataSize;
@@ -68,7 +68,7 @@ namespace ZeroBuffer
                     _lock = FileLockFactory.Create(lockPath);
                     // Try to create shared memory
                     _sharedMemory = SharedMemoryFactory.Create(name, totalSize);
-                    
+
                     // Initialize OIEB
                     var oieb = new OIEB
                     {
@@ -86,20 +86,20 @@ namespace ZeroBuffer
                         WriterPid = 0,
                         ReaderPid = (ulong)Environment.ProcessId
                     };
-                    
+
                     _sharedMemory.Write(0, oieb);
-                    
+
                     // Create semaphores
                     _writeSemaphore = SemaphoreFactory.Create($"sem-w-{name}", 0);
                     _readSemaphore = SemaphoreFactory.Create($"sem-r-{name}", 0);
-                    
+
                     created = true;
                 }
                 catch when (retryCount < maxRetries - 1)
                 {
                     // First attempt failed - try to clean up stale resources
                     retryCount++;
-                    
+
                     // Clean up any partial resources we created
                     try { _lock?.Dispose(); } catch { }
                     try { _sharedMemory?.Dispose(); } catch { }
@@ -109,14 +109,14 @@ namespace ZeroBuffer
                     _sharedMemory = null!;
                     _writeSemaphore = null!;
                     _readSemaphore = null!;
-                    
+
                     // Check if there are stale resources from a dead process
                     bool shouldCleanup = false;
                     try
                     {
                         using var existingMem = SharedMemoryFactory.Open(name);
-                        var existingOieb = existingMem.Read<OIEB>(0);
-                        
+                        var existingOieb = existingMem.ReadRef<OIEB>(0);
+
                         // Check if the existing reader/writer processes are dead
                         if (existingOieb.ReaderPid != 0 && !ProcessExists(existingOieb.ReaderPid))
                             shouldCleanup = true;
@@ -128,7 +128,7 @@ namespace ZeroBuffer
                         // Failed to open existing memory - assume it's corrupted
                         shouldCleanup = true;
                     }
-                    
+
                     if (shouldCleanup)
                     {
                         // Remove all stale resources
@@ -142,7 +142,7 @@ namespace ZeroBuffer
                         {
                             // Ignore cleanup errors
                         }
-                        
+
                         // Small delay before retry
                         Thread.Sleep(100);
                     }
@@ -173,7 +173,7 @@ namespace ZeroBuffer
             // Get the lock directory
             string tempDir = Path.GetTempPath();
             string lockDir = Path.Combine(tempDir, "zerobuffer", "locks");
-            
+
             // Create directory if it doesn't exist
             try
             {
@@ -184,7 +184,7 @@ namespace ZeroBuffer
                 // Ignore errors creating directory
                 return;
             }
-            
+
             // Scan all lock files in the directory
             try
             {
@@ -195,23 +195,23 @@ namespace ZeroBuffer
 
                     // We successfully removed a stale lock, clean up associated resources
                     string bufferName = Path.GetFileNameWithoutExtension(lockFile);
-                        
+
                     try
                     {
                         // Try to open the shared memory to check if it's orphaned
                         using var shm = SharedMemoryFactory.Open(bufferName);
-                        var oieb = shm.Read<OIEB>(0);
-                            
+                        var oieb = shm.ReadRef<OIEB>(0);
+
                         // Check if both reader and writer are dead
                         bool readerDead = (oieb.ReaderPid == 0) || !ProcessExists(oieb.ReaderPid);
                         bool writerDead = (oieb.WriterPid == 0) || !ProcessExists(oieb.WriterPid);
-                            
+
                         if (readerDead && writerDead)
                         {
                             // Both processes are dead, safe to clean up
                             // First dispose our handle to the shared memory
                             shm.Dispose();
-                                
+
                             // Now remove all resources
                             SharedMemoryFactory.Remove(bufferName);
                             SemaphoreFactory.Remove($"sem-w-{bufferName}");
@@ -240,6 +240,7 @@ namespace ZeroBuffer
             }
         }
 
+        
         /// <summary>
         /// Get metadata - zero-copy access via ReadOnlySpan
         /// </summary>
@@ -248,7 +249,7 @@ namespace ZeroBuffer
             ThrowIfDisposed();
 
             ref readonly var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
-            
+
             if (oieb.MetadataWrittenBytes == 0)
                 return ReadOnlySpan<byte>.Empty;
 
@@ -270,108 +271,124 @@ namespace ZeroBuffer
 
             while (true)
             {
-                var oieb = _sharedMemory.Read<OIEB>(0);
-                _logger.LogTrace("OIEB state: WrittenCount={WrittenCount}, ReadCount={ReadCount}, WritePos={WritePos}, ReadPos={ReadPos}, FreeBytes={FreeBytes}, PayloadSize={PayloadSize}",
-                    oieb.PayloadWrittenCount, oieb.PayloadReadCount, oieb.PayloadWritePos, oieb.PayloadReadPos, oieb.PayloadFreeBytes, oieb.PayloadSize);
-
-                // Check if writer is alive
-                if (oieb.WriterPid != 0 && !ProcessExists(oieb.WriterPid))
-                {
-                    _logger.LogWarning("Writer process {WriterPid} is dead", oieb.WriterPid);
-                    throw new WriterDeadException();
-                }
-
-                // Check if data is available
-                if (oieb.PayloadWrittenCount > oieb.PayloadReadCount)
-                {
-                    // Read frame header
-                    long readPos = _payloadOffset + (long)oieb.PayloadReadPos;
-                    var header = _sharedMemory.Read<FrameHeader>(readPos);
-
-                    // Handle wrap marker
-                    if (header.IsWrapMarker)
-                    {
-                        _logger.LogDebug("Found wrap marker at position {ReadPos}, handling wrap-around", oieb.PayloadReadPos);
-                        
-                        // Calculate wasted space from current read position to end of buffer
-                        ulong wastedSpace = oieb.PayloadSize - oieb.PayloadReadPos;
-                        _logger.LogDebug("Wrap-around: wasted space = {WastedSpace} bytes (from {ReadPos} to {PayloadSize})", 
-                            wastedSpace, oieb.PayloadReadPos, oieb.PayloadSize);
-                        
-                        // Add back the wasted space to free bytes
-                        oieb.PayloadFreeBytes += wastedSpace;
-                        
-                        oieb.PayloadReadPos = 0;
-                        oieb.PayloadReadCount++;
-                        
-                        _logger.LogDebug("After wrap: ReadPos=0, ReadCount={ReadCount}, FreeBytes={FreeBytes}", 
-                            oieb.PayloadReadCount, oieb.PayloadFreeBytes);
-                        
-                        // Update OIEB and continue to read actual frame
-                        _sharedMemory.Write(0, oieb);
-                        _sharedMemory.Flush();
-                        
-                        // Don't signal semaphore for wrap marker - it's not a logical frame
-                        // Continue to read the actual frame at the beginning
-                        continue;
-                    }
-
-                    if (header.PayloadSize == 0 || header.PayloadSize > oieb.PayloadSize)
-                    {
-                        _logger.LogError("Invalid frame size: {FrameSize} (buffer size: {PayloadSize})", header.PayloadSize, oieb.PayloadSize);
-                        throw new InvalidOperationException($"Invalid frame size: {header.PayloadSize}");
-                    }
-
-                    _logger.LogDebug("Reading frame: seq={Sequence}, size={Size} from position {ReadPos}", 
-                        header.SequenceNumber, header.PayloadSize, oieb.PayloadReadPos);
-
-                    // Get pointer to frame data for zero-copy access
-                    long dataPos = readPos + Marshal.SizeOf<FrameHeader>();
-                    unsafe
-                    {
-                        byte* framePtr = _sharedMemory.GetPointer(dataPos);
-                        
-                        // Update read position
-                        long nextPos = dataPos + (long)header.PayloadSize - _payloadOffset;
-                        ulong newReadPos = (ulong)(nextPos % (long)oieb.PayloadSize);
-                        _logger.LogTrace("Updating read position: {OldPos} -> {NewPos} (nextPos={NextPos})", 
-                            oieb.PayloadReadPos, newReadPos, nextPos);
-                        
-                        oieb.PayloadReadPos = newReadPos;
-                        oieb.PayloadReadCount++;
-
-                        // Update free bytes - add back the frame size we just read
-                        ulong totalFrameSize = (ulong)Marshal.SizeOf<FrameHeader>() + header.PayloadSize;
-                        oieb.PayloadFreeBytes += totalFrameSize;
-
-                        _logger.LogDebug("Frame read complete: seq={Sequence}, new state: ReadCount={ReadCount}, FreeBytes={FreeBytes}", 
-                            header.SequenceNumber, oieb.PayloadReadCount, oieb.PayloadFreeBytes);
-
-                        _sharedMemory.Write(0, oieb);
-                        _sharedMemory.Flush();
-
-                        // Create Frame with disposal callback to signal semaphore
-                        // This implements RAII - semaphore is only signaled when Frame is disposed
-                        var frame = new Frame(
-                            framePtr, 
-                            (int)header.PayloadSize, 
-                            header.SequenceNumber,
-                            () => {
-                                _logger.LogTrace("Frame disposed, signaling semaphore for seq={Sequence}", header.SequenceNumber);
-                                _readSemaphore.Release();
-                            });
-
-                        return frame;
-                    }
-                }
-
-                // Wait for data
-                _logger.LogTrace("No data available, waiting on write semaphore");
+                // Wait for data signal FIRST (following the protocol correctly)
+                _logger.LogTrace("Waiting on write semaphore for data signal");
                 if (!_writeSemaphore.Wait(waitTime))
                 {
+                    // Timeout - check if writer is dead
+                    ref readonly var oiebCheck = ref _sharedMemory.ReadRef<OIEB>(0);
+                    if (oiebCheck.WriterPid == 0 || !ProcessExists(oiebCheck.WriterPid))
+                    {
+                        _logger.LogWarning("Writer process {WriterPid} is dead", oiebCheck.WriterPid);
+                        throw new WriterDeadException();
+                    }
+
                     _logger.LogDebug("Timeout waiting for frame");
                     return Frame.Invalid;
                 }
+
+                // Semaphore was signaled - data should be available
+                // Use ref to access OIEB directly (no copy needed)
+                ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
+
+                if(oieb.WriterPid == 0) // This is quick check to ensure writer hasn't disconnected gracefully.
+                    throw new WriterDeadException();
+
+                _logger.LogTrace("OIEB state after semaphore: WrittenCount={WrittenCount}, ReadCount={ReadCount}, WritePos={WritePos}, ReadPos={ReadPos}, FreeBytes={FreeBytes}, PayloadSize={PayloadSize}",
+                    oieb.PayloadWrittenCount, oieb.PayloadReadCount, oieb.PayloadWritePos, oieb.PayloadReadPos, oieb.PayloadFreeBytes, oieb.PayloadSize);
+
+
+                // Read frame header
+                long readPos = _payloadOffset + (long)oieb.PayloadReadPos;
+                ref readonly var header = ref _sharedMemory.ReadRef<FrameHeader>(readPos);
+
+                // Handle wrap marker
+                if (header.IsWrapMarker)
+                {
+                    _logger.LogDebug("Found wrap marker at position {ReadPos}, handling wrap-around", oieb.PayloadReadPos);
+
+                    // Calculate wasted space from current read position to end of buffer
+                    ulong wastedSpace = oieb.PayloadSize - oieb.PayloadReadPos;
+                    _logger.LogDebug("Wrap-around: wasted space = {WastedSpace} bytes (from {ReadPos} to {PayloadSize})",
+                        wastedSpace, oieb.PayloadReadPos, oieb.PayloadSize);
+
+                    // Update OIEB directly via ref
+                    oieb.PayloadFreeBytes += wastedSpace;
+                    oieb.PayloadReadPos = 0;
+                    oieb.PayloadReadCount++;
+
+                    _logger.LogDebug("After wrap: ReadPos=0, ReadCount={ReadCount}, FreeBytes={FreeBytes}",
+                        oieb.PayloadReadCount, oieb.PayloadFreeBytes);
+
+                    _sharedMemory.Flush();
+
+                    // Don't signal semaphore for wrap marker - it's not a logical frame
+                    // Re-read header at new position
+                    readPos = _payloadOffset;
+                    header = ref _sharedMemory.ReadRef<FrameHeader>(readPos);
+                }
+
+                if (header.PayloadSize == 0 || header.PayloadSize > oieb.PayloadSize)
+                {
+                    _logger.LogError("Invalid frame size: {FrameSize} (buffer size: {PayloadSize})", header.PayloadSize, oieb.PayloadSize);
+                    throw new InvalidOperationException($"Invalid frame size: {header.PayloadSize}");
+                }
+
+                _logger.LogDebug("Reading frame: seq={Sequence}, size={Size} from position {ReadPos}",
+                    header.SequenceNumber, header.PayloadSize, oieb.PayloadReadPos);
+
+                // Get pointer to frame data for zero-copy access
+                long dataPos = readPos + FrameHeader.SIZE;
+                unsafe
+                {
+                    byte* framePtr = _sharedMemory.GetPointer(dataPos);
+
+                    // Update OIEB directly via ref
+                    long nextPos = dataPos + (long)header.PayloadSize - _payloadOffset;
+                    ulong newReadPos = (ulong)(nextPos % (long)oieb.PayloadSize);
+                    _logger.LogTrace("Updating read position: {OldPos} -> {NewPos} (nextPos={NextPos})",
+                        oieb.PayloadReadPos, newReadPos, nextPos);
+
+                    oieb.PayloadReadPos = newReadPos;
+                    oieb.PayloadReadCount++;
+
+                    // NOTE: We do NOT update PayloadFreeBytes here!
+                    // This will be done when the Frame is disposed (RAII pattern)
+                    // This ensures the writer cannot overwrite data still being used
+
+                    _logger.LogDebug("Frame read: seq={Sequence}, new state: ReadCount={ReadCount}, ReadPos={ReadPos}",
+                        header.SequenceNumber, oieb.PayloadReadCount, oieb.PayloadReadPos);
+
+                    _sharedMemory.Flush();
+
+                    // Capture values needed for disposal callback
+                    var sequenceNumber = header.SequenceNumber;
+                    var payloadSize = (int)header.PayloadSize;
+                    ulong totalFrameSize = (ulong)FrameHeader.SIZE + header.PayloadSize;
+
+                    // Create Frame with disposal callback that updates OIEB and signals semaphore
+                    // This implements proper RAII - resources are released only when Frame is disposed
+                    var frame = new Frame(
+                        framePtr,
+                        payloadSize,
+                        sequenceNumber,
+                        () =>
+                        {
+                            _logger.LogTrace("Frame disposed, releasing {Size} bytes for seq={Sequence}", 
+                                totalFrameSize, sequenceNumber);
+                            
+                            // Update OIEB to mark space as available (matching C++ pattern)
+                            ref var oiebRelease = ref _sharedMemory.ReadRef<OIEB>(0);
+                            oiebRelease.PayloadFreeBytes += totalFrameSize;
+                            _sharedMemory.Flush();
+                            
+                            // Signal writer that space is available
+                            _readSemaphore.Release();
+                        });
+
+                    return frame;
+                }
+
             }
         }
 
@@ -418,8 +435,8 @@ namespace ZeroBuffer
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long CalculateUsedBytes(ulong writePos, ulong readPos, ulong bufferSize)
         {
-            return writePos >= readPos 
-                ? (long)(writePos - readPos) 
+            return writePos >= readPos
+                ? (long)(writePos - readPos)
                 : (long)(bufferSize - readPos + writePos);
         }
 
@@ -456,16 +473,15 @@ namespace ZeroBuffer
             // Clear reader PID
             try
             {
-                if (_sharedMemory != null)
+                if (_sharedMemory != null!)
                 {
-                    var oieb = _sharedMemory.Read<OIEB>(0);
+                    ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
                     oieb.ReaderPid = 0;
-                    _sharedMemory.Write(0, oieb);
                     _sharedMemory.Flush();
                 }
             }
-            catch 
-            { 
+            catch
+            {
                 // Ignore errors - shared memory might be corrupted
             }
 
@@ -474,7 +490,7 @@ namespace ZeroBuffer
             _writeSemaphore?.Dispose();
             _readSemaphore?.Dispose();
             _lock?.Dispose();
-            
+
             // Note: We don't remove the shared memory and semaphores here.
             // This allows a writer to connect and detect that the reader died.
             // The resources will be cleaned up when:
@@ -482,7 +498,7 @@ namespace ZeroBuffer
             // 2. The system is restarted
             // 3. Manual cleanup is performed
         }
-        
+
         /// <summary>
         /// Get the current OIEB state (for testing purposes)
         /// </summary>
@@ -490,7 +506,7 @@ namespace ZeroBuffer
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Reader));
-                
+
             return _sharedMemory.ReadRef<OIEB>(0);
         }
     }

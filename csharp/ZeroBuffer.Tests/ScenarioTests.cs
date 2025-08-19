@@ -164,9 +164,11 @@ namespace ZeroBuffer.Tests
             Assert.True(framesWritten < 10); // Should not fit all frames
 
             // Read one frame to make space
-            using var frame = reader.ReadFrame();
-            Assert.True(frame.IsValid);
-            
+            {
+                using var frame = reader.ReadFrame();
+                Assert.True(frame.IsValid);
+            }
+
             // Should be able to write again
             writer.WriteFrame(frameData);
             _output.WriteLine("✓ Successfully wrote after freeing space");
@@ -207,9 +209,11 @@ namespace ZeroBuffer.Tests
             await writerProcess.WaitForExitAsync();
             
             // Try to read - should detect writer death
+            Stopwatch sw = Stopwatch.StartNew();
             await Assert.ThrowsAsync<WriterDeadException>(async () =>
             {
-                await Task.Run(() => reader.ReadFrame(TimeSpan.FromSeconds(2)).Dispose());
+                while(sw.Elapsed < TimeSpan.FromSeconds(5)) 
+                    reader.ReadFrame(TimeSpan.FromSeconds(2)).Dispose();
             });
             
             _output.WriteLine("✓ Successfully detected writer crash");
@@ -463,7 +467,8 @@ namespace ZeroBuffer.Tests
             // On Windows, add .exe extension
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 helperExe += ".exe";
-                
+            if(!File.Exists(helperExe))    
+                throw new FileNotFoundException("Helper executable not found", helperExe);
             return helperExe;
         }
     }

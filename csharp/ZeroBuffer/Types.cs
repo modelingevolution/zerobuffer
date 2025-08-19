@@ -86,6 +86,7 @@ namespace ZeroBuffer
         {
             return PayloadFreeBytes >= frameSize;
         }
+        public static readonly int SIZE = Marshal.SizeOf<OIEB>();
     }
 
     /// <summary>
@@ -99,6 +100,7 @@ namespace ZeroBuffer
         
         // According to protocol: wrap marker has payload_size = 0
         public bool IsWrapMarker => PayloadSize == 0;
+        public static readonly int SIZE = Marshal.SizeOf<FrameHeader>();
     }
 
     /// <summary>

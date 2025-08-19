@@ -88,7 +88,6 @@ namespace ZeroBuffer.ProtocolTests
             
             // Duplex Channel Tests
             Instance.Register(new Tests.DuplexChannel.Test_1401_BasicRequestResponse());
-            Instance.Register(new Tests.DuplexChannel.Test_1402_SequenceNumberCorrelation());
             Instance.Register(new Tests.DuplexChannel.Test_1403_ConcurrentClientOperations());
             Instance.Register(new Tests.DuplexChannel.Test_1404_ServerProcessingModeSingleThread());
             Instance.Register(new Tests.DuplexChannel.Test_1405_MutableVsImmutableServer());

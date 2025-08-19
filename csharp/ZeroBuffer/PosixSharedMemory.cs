@@ -116,16 +116,7 @@ namespace ZeroBuffer
             }
         }
 
-        public T Read<T>(long offset) where T : struct
-        {
-            ThrowIfDisposed();
-            if (offset < 0 || offset + Marshal.SizeOf<T>() > _size)
-                throw new ArgumentOutOfRangeException(nameof(offset));
-                
-            return Marshal.PtrToStructure<T>(_baseAddress + (int)offset);
-        }
-        
-        public unsafe ref readonly T ReadRef<T>(long offset) where T : struct
+        public unsafe ref T ReadRef<T>(long offset) where T : struct
         {
             ThrowIfDisposed();
             if (offset < 0 || offset + Marshal.SizeOf<T>() > _size)

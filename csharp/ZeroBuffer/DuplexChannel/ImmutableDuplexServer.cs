@@ -14,7 +14,7 @@ namespace ZeroBuffer.DuplexChannel
         private readonly BufferConfig _config;
         private readonly ILogger<ImmutableDuplexServer> _logger;
         private Reader _requestReader;
-        private Writer _responseWriter;
+        private Writer? _responseWriter;
         private Thread _processingThread;
         private CancellationTokenSource _cancellationTokenSource;
         private volatile bool _isRunning;
@@ -129,7 +129,7 @@ namespace ZeroBuffer.DuplexChannel
         private void ProcessRequests(RequestHandler handler, string responseBufferName, CancellationToken cancellationToken)
         {
             // Connect to response buffer when it becomes available
-            if (_responseWriter == null)
+            if (_responseWriter == null!)
             {
                 try
                 {
@@ -151,22 +151,16 @@ namespace ZeroBuffer.DuplexChannel
                     if (!request.IsValid)
                         continue;
                     
-                    // Process request and get response data
-                    ReadOnlySpan<byte> responseData;
+                    // Let handler process request and write response directly
                     try
                     {
-                        responseData = handler(request);
+                        handler(request, _responseWriter);
                     }
                     catch (Exception ex)
                     {
-                        // Log error and send empty response
+                        // Log error but continue processing
                         _logger.LogError(ex, "Error in request handler for channel {ChannelName}", _channelName);
-                        responseData = ReadOnlySpan<byte>.Empty;
                     }
-                    
-                    // Write response directly without sequence prefix (v1.0.0 protocol)
-                    // The sequence is managed internally by Reader/Writer
-                    _responseWriter.WriteFrame(responseData);
                 }
                 catch (ReaderDeadException)
                 {

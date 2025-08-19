@@ -9,12 +9,13 @@ namespace ZeroBuffer
     /// <summary>
     /// Windows implementation of shared memory using MemoryMappedFile
     /// </summary>
-    internal sealed class WindowsSharedMemory : ISharedMemory
+    internal sealed unsafe class WindowsSharedMemory : ISharedMemory
     {
         private readonly string _name;
         private readonly long _size;
         private readonly MemoryMappedFile _mmf;
         private readonly MemoryMappedViewAccessor _accessor;
+        private readonly byte* _basePointer;
         private bool _disposed;
 
         public string Name => _name;
@@ -26,6 +27,11 @@ namespace ZeroBuffer
             _size = size;
             _mmf = MemoryMappedFile.CreateNew(name, size);
             _accessor = _mmf.CreateViewAccessor();
+            
+            // Acquire pointer once during construction
+            byte* ptr = null;
+            _accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
+            _basePointer = ptr;
         }
 
         public static WindowsSharedMemory OpenExisting(string name)
@@ -45,26 +51,21 @@ namespace ZeroBuffer
             _size = size;
             _mmf = mmf;
             _accessor = accessor;
+            
+            // Acquire pointer once during construction
+            byte* ptr = null;
+            _accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
+            _basePointer = ptr;
         }
 
-        public T Read<T>(long offset) where T : struct
-        {
-            ThrowIfDisposed();
-            _accessor.Read(offset, out T value);
-            return value;
-        }
-        
-        public unsafe ref readonly T ReadRef<T>(long offset) where T : struct
+        public ref T ReadRef<T>(long offset) where T : struct
         {
             ThrowIfDisposed();
             if (offset < 0 || offset + Unsafe.SizeOf<T>() > _size)
                 throw new ArgumentOutOfRangeException(nameof(offset));
                 
-            byte* ptr = null;
-            _accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
-            // Note: We're not releasing the pointer here as we're returning a ref to the memory
-            // This is a design tradeoff - the pointer will be held until the accessor is disposed
-            return ref Unsafe.AsRef<T>((void*)(ptr + offset));
+            // Use the pre-acquired base pointer
+            return ref Unsafe.AsRef<T>((void*)(_basePointer + offset));
         }
 
         public void Write<T>(long offset, in T value) where T : struct
@@ -131,6 +132,13 @@ namespace ZeroBuffer
                 return;
 
             _disposed = true;
+            
+            // Release the pointer before disposing accessor
+            if (_basePointer != null)
+            {
+                _accessor.SafeMemoryMappedViewHandle.ReleasePointer();
+            }
+            
             _accessor?.Dispose();
             _mmf?.Dispose();
         }
