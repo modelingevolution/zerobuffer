@@ -85,6 +85,14 @@ namespace ZeroBuffer.DuplexChannel
             return _responseReader.ReadFrame(timeout);
         }
         
+        public void SetMetadata(ReadOnlySpan<byte> data)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(DuplexClient));
+                
+            _requestWriter.SetMetadata(data);
+        }
+        
         public void Dispose()
         {
             if (_disposed)

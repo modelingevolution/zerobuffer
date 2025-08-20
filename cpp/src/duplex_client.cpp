@@ -89,4 +89,12 @@ bool DuplexClient::is_server_connected() const {
     return request_writer_ && request_writer_->is_reader_connected();
 }
 
+void DuplexClient::set_metadata(const void* data, size_t size) {
+    if (!request_writer_) {
+        throw std::runtime_error("DuplexClient has been disposed");
+    }
+    
+    request_writer_->set_metadata(data, size);
+}
+
 } // namespace zerobuffer

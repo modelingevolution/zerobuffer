@@ -29,7 +29,7 @@ namespace ZeroBuffer.DuplexChannel
         
         public bool IsRunning => _isRunning;
         
-        public void Start(RequestHandler handler, ProcessingMode mode = ProcessingMode.SingleThread)
+        public void Start(RequestHandler onFrame,Action<ReadOnlySpan<byte>> onInit=null, ProcessingMode mode = ProcessingMode.SingleThread)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(ImmutableDuplexServer));
@@ -37,8 +37,8 @@ namespace ZeroBuffer.DuplexChannel
             if (_isRunning)
                 throw new InvalidOperationException("Server is already running");
                 
-            if (handler == null)
-                throw new ArgumentNullException(nameof(handler));
+            if (onFrame == null)
+                throw new ArgumentNullException(nameof(onFrame));
                 
             // Channel naming convention:
             var requestBufferName = $"{_channelName}_request";
@@ -56,7 +56,7 @@ namespace ZeroBuffer.DuplexChannel
                 if (mode == ProcessingMode.SingleThread)
                 {
                     // Start processing thread - it will connect to response buffer when available
-                    _processingThread = new Thread(() => ProcessRequests(handler, responseBufferName, _cancellationTokenSource.Token))
+                    _processingThread = new Thread(() => ProcessRequests(onFrame, responseBufferName, onInit, _cancellationTokenSource.Token))
                     {
                         Name = $"DuplexServer_{_channelName}",
                         IsBackground = true
@@ -126,7 +126,8 @@ namespace ZeroBuffer.DuplexChannel
             throw new TimeoutException($"Timeout waiting for response buffer {bufferName}");
         }
         
-        private void ProcessRequests(RequestHandler handler, string responseBufferName, CancellationToken cancellationToken)
+        private void ProcessRequests(RequestHandler handler, string responseBufferName,
+            Action<ReadOnlySpan<byte>> metadata, CancellationToken cancellationToken)
         {
             // Connect to response buffer when it becomes available
             if (_responseWriter == null!)
@@ -150,7 +151,12 @@ namespace ZeroBuffer.DuplexChannel
                     using var request = _requestReader.ReadFrame(TimeSpan.FromSeconds(1));
                     if (!request.IsValid)
                         continue;
-                    
+
+                    if (metadata != null)
+                    {
+                        metadata(_requestReader.GetMetadata());
+                        metadata = null; // Only call once
+                    }
                     // Let handler process request and write response directly
                     try
                     {

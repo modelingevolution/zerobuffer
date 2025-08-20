@@ -16,7 +16,7 @@ namespace ZeroBuffer.Tests
             using (var immutableServer = factory.CreateImmutableServer("test-channel-1", config))
             {
                 var ex = Assert.Throws<NotSupportedException>(() => 
-                    immutableServer.Start((_, __) => { }, ProcessingMode.ThreadPool));
+                    immutableServer.Start((_, __) => { }, x => { }, ProcessingMode.ThreadPool));
                 Assert.Contains("ThreadPool", ex.Message);
                 Assert.Contains("not yet implemented", ex.Message);
             }
@@ -35,7 +35,7 @@ namespace ZeroBuffer.Tests
             using (var immutableServer = factory.CreateImmutableServer("test-channel-3", config))
             {
                 // Should not throw
-                immutableServer.Start((_, __) => { }, ProcessingMode.SingleThread);
+                immutableServer.Start((_, __) => { }, x => { },ProcessingMode.SingleThread);
                 Assert.True(immutableServer.IsRunning);
                 immutableServer.Stop();
             }

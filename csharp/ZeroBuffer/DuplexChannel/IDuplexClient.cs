@@ -43,5 +43,11 @@ namespace ZeroBuffer.DuplexChannel
         /// Check if server is connected to the request buffer
         /// </summary>
         bool IsServerConnected { get; }
+        
+        /// <summary>
+        /// Set metadata (can only be called once)
+        /// </summary>
+        /// <param name="data">Metadata to set</param>
+        void SetMetadata(ReadOnlySpan<byte> data);
     }
 }

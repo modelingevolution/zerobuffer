@@ -19,6 +19,7 @@ public:
     uint64_t commit() override;
     Frame read(std::chrono::milliseconds timeout) override;
     bool is_server_connected() const override;
+    void set_metadata(const void* data, size_t size) override;
     
 private:
     std::string channel_name_;

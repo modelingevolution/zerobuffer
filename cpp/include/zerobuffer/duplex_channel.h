@@ -44,6 +44,9 @@ public:
     
     // Check if server is connected
     virtual bool is_server_connected() const = 0;
+    
+    // Set metadata (can only be called once)
+    virtual void set_metadata(const void* data, size_t size) = 0;
 };
 
 // Base server interface

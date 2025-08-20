@@ -47,6 +47,7 @@ class Reader(LoggerMixin):
         self._frames_read = 0
         self._bytes_read = 0
         self._current_frame_size = 0
+        self._frame_disposal_data = None  # Will store (total_frame_size, sequence) for cached callback
         
         # Set logger if provided, otherwise use mixin
         if logger:
@@ -196,6 +197,27 @@ class Reader(LoggerMixin):
         """Write OIEB to shared memory"""
         # Write OIEB using the clean API
         self._shm.write_bytes(0, oieb.pack())
+    
+    def _on_frame_disposed(self) -> None:
+        """
+        Cached callback for frame disposal - avoids per-frame allocations.
+        This method is called when a Frame is disposed (via with statement or explicit dispose).
+        The frame data is stored in _frame_disposal_data before creating the Frame.
+        """
+        if self._frame_disposal_data is None:
+            return
+        
+        total_frame_size, sequence = self._frame_disposal_data
+        self._frame_disposal_data = None  # Clear for next frame
+        
+        self._logger.debug("Frame disposed, releasing %d bytes for seq=%d", 
+                         total_frame_size, sequence)
+        # Update OIEB to mark space as available (matching C++ pattern)
+        oieb_release = self._read_oieb()
+        oieb_release.payload_free_bytes += total_frame_size
+        self._write_oieb(oieb_release)
+        # Signal writer that space is available
+        self._sem_read.release()
     
     
     def _calculate_used_bytes(self, write_pos: int, read_pos: int, buffer_size: int) -> int:
@@ -358,19 +380,11 @@ class Reader(LoggerMixin):
                 
                 self._write_oieb(oieb)
                 
-                # Create disposal callback that updates OIEB and signals semaphore
-                # This implements proper RAII - resources are released only when Frame is disposed
-                def on_dispose():
-                    self._logger.debug("Frame disposed, releasing %d bytes for seq=%d", 
-                                     total_frame_size, header.sequence_number)
-                    # Update OIEB to mark space as available (matching C++ pattern)
-                    oieb_release = self._read_oieb()
-                    oieb_release.payload_free_bytes += total_frame_size
-                    self._write_oieb(oieb_release)
-                    # Signal writer that space is available
-                    self._sem_read.release()
+                # Store frame disposal data for the cached callback
+                # This avoids creating a new lambda/closure for each frame
+                self._frame_disposal_data = (total_frame_size, header.sequence_number)
                 
-                # Create frame reference (zero-copy) with disposal callback
+                # Create frame reference (zero-copy) with cached disposal callback
                 data_offset = header_offset + FrameHeader.SIZE
                 # Get a fresh memoryview for the payload area
                 payload_view = self._shm.get_memoryview(payload_base, self._payload_size)
@@ -379,7 +393,7 @@ class Reader(LoggerMixin):
                     offset=old_pos + FrameHeader.SIZE,  # Use old_pos since we already updated
                     size=header.payload_size,
                     sequence=header.sequence_number,
-                    on_dispose=on_dispose  # RAII: semaphore signaled when frame is disposed
+                    on_dispose=self._on_frame_disposed  # Use cached method - no allocation!
                 )
                 
                 # Update tracking

@@ -33,9 +33,10 @@ namespace ZeroBuffer.DuplexChannel
         /// <summary>
         /// Start processing requests with a handler that writes response directly to Writer
         /// </summary>
-        /// <param name="handler">Handler that processes request and writes response to Writer</param>
+        /// <param name="onFrame">Handler that processes request and writes response to Writer</param>
+        /// <param name="onInit">Called once, before the first invocation of onFrame</param>
         /// <param name="mode">Processing mode (SingleThread or ThreadPool)</param>
-        void Start(RequestHandler handler, ProcessingMode mode = ProcessingMode.SingleThread);
+        void Start(RequestHandler onFrame, Action<ReadOnlySpan<byte>> onInit = null, ProcessingMode mode = ProcessingMode.SingleThread);
     }
     
     // MutableDuplexServer will be implemented in v2.0.0
