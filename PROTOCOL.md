@@ -128,4 +128,61 @@ See the README.md in each language directory for implementation-specific build a
 
 ## Protocol Details
 
+## Metadata Format
+
+### Storage Format (Internal)
+The metadata is stored in the shared memory metadata segment with the following format:
+- **8 bytes**: Size prefix (uint64_t, little-endian) - indicates the size of the actual metadata content
+- **N bytes**: Actual metadata content
+
+### API Format (External)
+All Reader implementations (`get_metadata()` methods) return the metadata content WITHOUT the 8-byte size prefix. This provides a consistent API across all languages and hides internal protocol details.
+
+#### Language-specific APIs
+
+**C++ API:**
+```cpp
+// Reader returns raw metadata without prefix
+std::vector<uint8_t> Reader::get_metadata() const;
+
+// Writer adds 8-byte prefix internally
+void Writer::set_metadata(const void* data, size_t size);
+```
+
+**C# API:**
+```csharp
+// Reader returns raw metadata without prefix  
+ReadOnlySpan<byte> Reader.GetMetadata();
+
+// Writer adds 8-byte prefix internally
+void Writer.SetMetadata(ReadOnlySpan<byte> data);
+```
+
+**Python API:**
+```python
+# Reader returns raw metadata without prefix
+def get_metadata() -> Optional[memoryview]:
+
+# Writer adds 8-byte prefix internally
+def set_metadata(data: Union[bytes, bytearray, memoryview]) -> None:
+```
+
+### Writing Metadata
+When writing metadata:
+1. Application passes raw metadata content (e.g., JSON string)
+2. Writer implementation automatically adds the 8-byte size prefix
+3. Total stored size = 8 bytes (prefix) + N bytes (content)
+
+### Reading Metadata
+When reading metadata:
+1. Reader implementation reads the 8-byte size prefix internally
+2. Reader returns only the actual content to the application
+3. Application receives raw metadata without any prefix
+
+### Example
+If you write JSON metadata `{"format": "RGB", "width": 640, "height": 480}`:
+1. Application calls: `writer.set_metadata(json_bytes)`
+2. Writer stores in shared memory: `[8-byte size=45][45 bytes of JSON]`
+3. Reader returns to application: `[45 bytes of JSON]` (prefix stripped)
+
 For complete protocol specification, see [README.md](README.md)

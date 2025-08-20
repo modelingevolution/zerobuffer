@@ -111,16 +111,22 @@ namespace ZeroBuffer
 
             ref readonly var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
 
-            if ((ulong)size > oieb.MetadataSize)
+            // Total size includes 8-byte size prefix
+            ulong totalSize = (ulong)size + sizeof(ulong);
+            if (totalSize > oieb.MetadataSize)
                 throw new ArgumentException("Metadata too large for buffer");
 
             // Get pointer to metadata area
             byte* metadataPtr = _sharedMemory.GetPointer(_metadataOffset);
             
-            // Store size for commit
-            _pendingMetadataSize = size;
+            // Write size prefix (8 bytes)
+            *(ulong*)metadataPtr = (ulong)size;
             
-            return new Span<byte>(metadataPtr, size);
+            // Store size for commit
+            _pendingMetadataSize = (int)totalSize;
+            
+            // Return buffer starting after the size prefix
+            return new Span<byte>(metadataPtr + sizeof(ulong), size);
         }
         
         private int _pendingMetadataSize;
@@ -132,7 +138,7 @@ namespace ZeroBuffer
         {
             ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
 
-            // Update OIEB directly in shared memory
+            // Update OIEB with total size (including 8-byte prefix)
             oieb.MetadataWrittenBytes = (ulong)_pendingMetadataSize;
             oieb.MetadataFreeBytes = oieb.MetadataSize - (ulong)_pendingMetadataSize;
             _sharedMemory.Flush();

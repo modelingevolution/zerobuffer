@@ -25,13 +25,14 @@ class IDuplexClient {
 public:
     virtual ~IDuplexClient() = default;
     
-    // Write data to request channel, returns sequence number from Writer
-    virtual uint64_t write(const void* data, size_t size) = 0;
+    // Write data to request channel, returns sequence number from Writer. 
+    // THIS IS COMMENTED, because it is not effient and developers don't understand it.
+    // virtual uint64_t write(const void* data, size_t size) = 0;
     
-    // Write data using span
-    virtual uint64_t write(std::span<const uint8_t> data) {
-        return write(data.data(), data.size());
-    }
+    // // Write data using span
+    // virtual uint64_t write(std::span<const uint8_t> data) {
+    //     return write(data.data(), data.size());
+    // }
     
     // Acquire buffer for zero-copy write
     virtual std::span<uint8_t> acquire_buffer(size_t size) = 0;

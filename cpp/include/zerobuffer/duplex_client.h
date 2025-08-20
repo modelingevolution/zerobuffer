@@ -14,7 +14,10 @@ public:
     ~DuplexClient() override;
     
     // IDuplexClient implementation
-    uint64_t write(const void* data, size_t size) override;
+    
+    // This is commented, because it is not effient, and developers missunderstand it! 
+    // uint64_t write(const void* data, size_t size) override;
+
     std::span<uint8_t> acquire_buffer(size_t size) override;
     uint64_t commit() override;
     Frame read(std::chrono::milliseconds timeout) override;

@@ -283,7 +283,10 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
                     }
                 }
                 
-                uint64_t sequence = client->write(data.data(), data.size());
+                // Use zero-copy acquire/commit instead of write
+                auto buffer = client->acquire_buffer(data.size());
+                std::memcpy(buffer.data(), data.data(), data.size());
+                uint64_t sequence = client->commit();
                 sent_requests[sequence] = data;
                 
                 ZEROBUFFER_LOG_DEBUG("DuplexChannelSteps") 
@@ -321,7 +324,10 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
                 for (int i = 0; i < count; ++i) {
                     std::string msg = "Request " + std::to_string(i);
                     std::vector<uint8_t> data(msg.begin(), msg.end());
-                    uint64_t sequence = client->write(data.data(), data.size());
+                    // Use zero-copy acquire/commit instead of write
+                auto buffer = client->acquire_buffer(data.size());
+                std::memcpy(buffer.data(), data.data(), data.size());
+                uint64_t sequence = client->commit();
                     sent_requests[sequence] = data;
                 }
             } catch (const std::exception& e) {

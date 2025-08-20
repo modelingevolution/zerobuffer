@@ -246,6 +246,7 @@ namespace ZeroBuffer
         
         /// <summary>
         /// Get metadata - zero-copy access via ReadOnlySpan
+        /// Returns the metadata content WITHOUT the 8-byte size prefix
         /// </summary>
         public unsafe ReadOnlySpan<byte> GetMetadata()
         {
@@ -256,9 +257,14 @@ namespace ZeroBuffer
             if (oieb.MetadataWrittenBytes == 0)
                 return ReadOnlySpan<byte>.Empty;
 
-            // Return a span directly over the shared memory - true zero-copy
+            // Skip the 8-byte size prefix and return only the actual metadata
             byte* metadataPtr = _sharedMemory.GetPointer(_metadataOffset);
-            return new ReadOnlySpan<byte>(metadataPtr, (int)oieb.MetadataWrittenBytes);
+            
+            // Read the size prefix to determine actual metadata size
+            ulong metadataSize = *(ulong*)metadataPtr;
+            
+            // Return span starting after the 8-byte prefix
+            return new ReadOnlySpan<byte>(metadataPtr + sizeof(ulong), (int)metadataSize);
         }
 
         /// <summary>

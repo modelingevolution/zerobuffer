@@ -4,6 +4,24 @@ project(zerobuffer VERSION 1.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Configure debug flags for better debugging experience
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # Maximum debug info, no optimization, keep frame pointers
+    set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
+    set(CMAKE_C_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
+    
+    message(STATUS "")
+    message(STATUS "ZeroBuffer Debug Build Configuration:")
+    message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
+    message(STATUS "  C++ Debug flags: ${CMAKE_CXX_FLAGS_DEBUG}")
+    message(STATUS "  C Debug flags: ${CMAKE_C_FLAGS_DEBUG}")
+    message(STATUS "  Optimization: Disabled (-O0)")
+    message(STATUS "  Debug symbols: Maximum (-g3)")
+    message(STATUS "  Frame pointers: Enabled")
+    message(STATUS "  DEBUG macro: Defined")
+    message(STATUS "")
+endif()
+
 # Find Boost for logging
 find_package(Boost REQUIRED COMPONENTS log log_setup thread filesystem system)
 

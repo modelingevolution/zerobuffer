@@ -36,25 +36,8 @@ DuplexClient::DuplexClient(const std::string& channel_name, const BufferConfig& 
 
 DuplexClient::~DuplexClient() = default;
 
-uint64_t DuplexClient::write(const void* data, size_t size) {
-    if (!request_writer_) {
-        throw std::runtime_error("DuplexClient has been disposed");
-    }
-    
-    if (!data && size > 0) {
-        throw std::invalid_argument("data cannot be null when size > 0");
-    }
-    
-    // Use zero-copy write to get the sequence number
-    uint64_t sequence_number;
-    void* buffer = request_writer_->get_frame_buffer(size, sequence_number);
-    if (size > 0) {
-        std::memcpy(buffer, data, size);
-    }
-    request_writer_->commit_frame();
-    
-    return sequence_number;
-}
+// write() method has been removed as it's inefficient
+// Use acquire_buffer() and commit() for zero-copy operations
 
 std::span<uint8_t> DuplexClient::acquire_buffer(size_t size) {
     if (!request_writer_) {
