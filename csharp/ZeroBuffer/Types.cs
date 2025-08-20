@@ -5,6 +5,12 @@ using System.Runtime.InteropServices;
 namespace ZeroBuffer
 {
     /// <summary>
+    /// Callback delegate for frame disposal with readonly reference
+    /// </summary>
+    /// <param name="frame">The frame being disposed, passed by readonly reference</param>
+    public delegate void FrameCallback(in Frame frame);
+    
+    /// <summary>
     /// Block alignment requirement for all blocks
     /// </summary>
     public static class Constants
@@ -126,7 +132,7 @@ namespace ZeroBuffer
     {
         private readonly byte* _dataPtr;
         private readonly int _length;
-        private readonly Action? _onDispose;
+        private readonly FrameCallback? _onDispose;
         
         public ulong Sequence { get; }
         
@@ -140,7 +146,7 @@ namespace ZeroBuffer
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Frame(byte* dataPtr, int length, ulong sequence, Action? onDispose)
+        internal Frame(byte* dataPtr, int length, ulong sequence, FrameCallback? onDispose)
         {
             _dataPtr = dataPtr;
             _length = length;
@@ -184,8 +190,8 @@ namespace ZeroBuffer
         /// </summary>
         public void Dispose()
         {
-            // Call the disposal callback (e.g., signal semaphore)
-            _onDispose?.Invoke();
+            // Call the disposal callback with 'this' passed by readonly reference
+            _onDispose?.Invoke(in this);
         }
         
         // Invalid frame sentinel

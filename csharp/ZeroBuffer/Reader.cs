@@ -23,6 +23,7 @@ namespace ZeroBuffer
         private readonly ISemaphore _readSemaphore = null!;
         private readonly long _metadataOffset;
         private readonly long _payloadOffset;
+        //private readonly FrameCallback _frameDisposeCallback = null!;
         private bool _disposed;
 
         public Reader(string name, BufferConfig config) : this(name, config, NullLogger<Reader>.Instance)
@@ -55,6 +56,8 @@ namespace ZeroBuffer
             // Set offsets
             _metadataOffset = oiebSize;
             _payloadOffset = oiebSize + metadataSize;
+            
+            
 
             bool created = false;
             int retryCount = 0;
@@ -366,25 +369,13 @@ namespace ZeroBuffer
                     var payloadSize = (int)header.PayloadSize;
                     ulong totalFrameSize = (ulong)FrameHeader.SIZE + header.PayloadSize;
 
-                    // Create Frame with disposal callback that updates OIEB and signals semaphore
+                    // Create Frame with cached disposal callback - zero allocations!
                     // This implements proper RAII - resources are released only when Frame is disposed
                     var frame = new Frame(
                         framePtr,
                         payloadSize,
                         sequenceNumber,
-                        () =>
-                        {
-                            _logger.LogTrace("Frame disposed, releasing {Size} bytes for seq={Sequence}", 
-                                totalFrameSize, sequenceNumber);
-                            
-                            // Update OIEB to mark space as available (matching C++ pattern)
-                            ref var oiebRelease = ref _sharedMemory.ReadRef<OIEB>(0);
-                            oiebRelease.PayloadFreeBytes += totalFrameSize;
-                            _sharedMemory.Flush();
-                            
-                            // Signal writer that space is available
-                            _readSemaphore.Release();
-                        });
+                        OnFrameDisposed);  // Use cached callback
 
                     return frame;
                 }
@@ -463,6 +454,27 @@ namespace ZeroBuffer
             ObjectDisposedException.ThrowIf(_disposed, this);
         }
 
+        /// <summary>
+        /// Cached callback for frame disposal - called when a Frame is disposed.
+        /// This is allocated once and reused for all frames to avoid per-frame allocations.
+        /// </summary>
+        private void OnFrameDisposed(in Frame frame)
+        {
+            // Calculate total frame size from the frame itself
+            var totalFrameSize = (ulong)(frame.Size + FrameHeader.SIZE);
+            
+            _logger.LogTrace("Frame disposed, releasing {Size} bytes for seq={Sequence}", 
+                totalFrameSize, frame.Sequence);
+            
+            // Update OIEB to mark space as available (matching C++ pattern)
+            ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
+            oieb.PayloadFreeBytes += totalFrameSize;
+            _sharedMemory.Flush();
+            
+            // Signal writer that space is available
+            _readSemaphore.Release();
+        }
+        
         public void Dispose()
         {
             if (_disposed)
