@@ -109,6 +109,10 @@ class Writer(LoggerMixin):
     
     def _cleanup_on_error(self) -> None:
         """Clean up resources on initialization error"""
+        # Dispose OIEBView first to release memoryview
+        if hasattr(self, '_oieb') and self._oieb:
+            self._oieb.dispose()
+            self._oieb = None
         if hasattr(self, '_sem_read'):
             self._sem_read.close()
         if hasattr(self, '_sem_write'):
@@ -529,7 +533,10 @@ class Writer(LoggerMixin):
             except:
                 pass
             
-            # No persistent memoryviews to release anymore
+            # Properly dispose the OIEBView to release its memoryview
+            if self._oieb:
+                self._oieb.dispose()
+                self._oieb = None
             
             # Close resources (writer doesn't own them)
             if hasattr(self, '_sem_read'):

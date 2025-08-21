@@ -145,6 +145,8 @@ class TestReaderWriter:
                 read_metadata = reader.get_metadata()
                 assert read_metadata is not None
                 assert bytes(read_metadata) == metadata
+                # Release the memoryview reference before closing
+                del read_metadata
                 
                 # Cannot write metadata twice
                 with pytest.raises(MetadataAlreadyWrittenException):
@@ -176,12 +178,10 @@ class TestFrameOperations:
                 # Read frame
                 frame = reader.read_frame(timeout=1.0)
                 assert frame is not None
-                assert frame.sequence == 1
-                assert frame.size == len(data)
-                assert bytes(frame.data) == data
-                
-                # Release frame
-                # Frame auto-released via context manager
+                with frame:  # Use context manager for proper cleanup
+                    assert frame.sequence == 1
+                    assert frame.size == len(data)
+                    assert bytes(frame.data) == data
                 
                 # Check stats
                 assert writer.frames_written == 1
@@ -205,10 +205,10 @@ class TestFrameOperations:
                 for i in range(frames_to_write):
                     frame = reader.read_frame(timeout=1.0)
                     assert frame is not None
-                    assert frame.sequence == i + 1
-                    expected_data = f"Frame {i}".encode()
-                    assert bytes(frame.data) == expected_data
-                    # Frame auto-released via context manager
+                    with frame:  # Use context manager for proper cleanup
+                        assert frame.sequence == i + 1
+                        expected_data = f"Frame {i}".encode()
+                        assert bytes(frame.data) == expected_data
                 
                 assert writer.frames_written == frames_to_write
                 assert reader.frames_read == frames_to_write
@@ -229,8 +229,8 @@ class TestFrameOperations:
                 # Read and verify
                 frame = reader.read_frame(timeout=1.0)
                 assert frame is not None
-                assert bytes(frame.data) == data
-                # Frame auto-released via context manager
+                with frame:  # Use context manager for proper cleanup
+                    assert bytes(frame.data) == data
     
     def test_frame_too_large(self, buffer_name: str) -> None:
         """Test writing frame larger than buffer"""
@@ -245,38 +245,72 @@ class TestFrameOperations:
     
     def test_buffer_wrap_around(self, buffer_name: str) -> None:
         """Test buffer wrap-around behavior"""
-        # Small buffer to force wrap-around
-        config = BufferConfig(metadata_size=64, payload_size=1024)
+        import threading
+        import queue
+        from typing import Tuple, Union
+        
+        # Use small buffer to test wrap-around
+        config = BufferConfig(metadata_size=256, payload_size=2048)
         
         with Reader(buffer_name, config) as reader:
             with Writer(buffer_name) as writer:
-                # Write frames that will cause wrap-around
-                frame_data = b"x" * 200  # Each frame ~216 bytes with header
+                frames_to_write = 20
+                frame_size = 256  # Small frames
+                results: queue.Queue[Tuple[str, Union[int, str]]] = queue.Queue()
                 
-                # Write first frame
-                writer.write_frame(frame_data)
+                def write_frames() -> None:
+                    """Writer thread"""
+                    try:
+                        for i in range(frames_to_write):
+                            data = bytes([i]) + b"x" * (frame_size - 1)
+                            writer.write_frame(data)
+                            results.put(("wrote", i))
+                    except Exception as e:
+                        results.put(("error", str(e)))
                 
-                # Read but don't release (buffer stays occupied)
-                frame1 = reader.read_frame(timeout=1.0)
-                assert frame1 is not None
+                def read_frames() -> None:
+                    """Reader thread"""
+                    try:
+                        for i in range(frames_to_write):
+                            frame = reader.read_frame(timeout=2.0)
+                            if frame:
+                                with frame:  # Use context manager for proper cleanup
+                                    assert frame.data[0] == i
+                                    assert len(frame.data) == frame_size
+                                    results.put(("read", i))
+                            else:
+                                results.put(("timeout", i))
+                                break
+                    except Exception as e:
+                        results.put(("error", str(e)))
                 
-                # Write more frames to fill buffer
-                writer.write_frame(frame_data)
-                writer.write_frame(frame_data)
-                writer.write_frame(frame_data)
+                # Start threads
+                writer_thread = threading.Thread(target=write_frames)
+                reader_thread = threading.Thread(target=read_frames)
                 
-                # Now release first frame to make space at beginning
-                # Frame auto-released via context manager
+                writer_thread.start()
+                reader_thread.start()
                 
-                # Write another frame (should wrap to beginning)
-                writer.write_frame(frame_data)
+                # Wait for completion
+                writer_thread.join(timeout=10)
+                reader_thread.join(timeout=10)
                 
-                # Read remaining frames
-                for i in range(4):
-                    frame = reader.read_frame(timeout=1.0)
-                    assert frame is not None
-                    assert bytes(frame.data) == frame_data
-                    # Frame auto-released via context manager
+                # Check results
+                writes = 0
+                reads = 0
+                errors = []
+                while not results.empty():
+                    event_type, value = results.get()
+                    if event_type == "wrote":
+                        writes += 1
+                    elif event_type == "read":
+                        reads += 1
+                    elif event_type == "error":
+                        errors.append(value)
+                
+                assert not errors, f"Errors occurred: {errors}"
+                assert writes == frames_to_write, f"Expected {frames_to_write} writes, got {writes}"
+                assert reads == frames_to_write, f"Expected {frames_to_write} reads, got {reads}"
 
 
 class TestErrorConditions:
@@ -310,16 +344,16 @@ class TestErrorConditions:
                 # Read first frame
                 frame1 = reader.read_frame(timeout=1.0)
                 assert frame1 is not None
-                assert frame1.sequence == 1
-                # Frame auto-released via context manager
+                with frame1:  # Use context manager for proper cleanup
+                    assert frame1.sequence == 1
                 
                 # Manually corrupt sequence in next frame
                 # This would require direct memory access - skip for now
                 # Just verify normal sequence works
                 frame2 = reader.read_frame(timeout=1.0)
                 assert frame2 is not None
-                assert frame2.sequence == 2
-                # Frame auto-released via context manager
+                with frame2:  # Use context manager for proper cleanup
+                    assert frame2.sequence == 2
     
     def test_empty_frame_rejected(self, buffer_name: str) -> None:
         """Test that empty frames are rejected"""
@@ -357,8 +391,8 @@ class TestConcurrency:
                 for i in range(frames_to_transfer):
                     frame = reader.read_frame(timeout=5.0)
                     if frame:
-                        frames_read.append(frame.sequence)
-                        # Frame auto-released via context manager
+                        with frame:  # Use context manager for proper cleanup
+                            frames_read.append(frame.sequence)
                 results.append(frames_read)
         
         # Start reader first
@@ -405,19 +439,22 @@ class TestZeroCopyVerification:
                 frame = reader.read_frame(timeout=1.0)
                 assert frame is not None
                 
-                # Get memoryview of frame data
-                frame_view = frame.data
-                assert isinstance(frame_view, memoryview)
-                
-                # Verify data matches without copying
-                assert frame_view.tobytes() == original_data
-                
-                # Test that we can slice without copying
-                slice_view = frame_view[0:8]
-                assert isinstance(slice_view, memoryview)
-                assert slice_view.tobytes() == original_data[0:8]
-                
-                # Frame auto-released via context manager
+                with frame:  # Use context manager for proper cleanup
+                    # Get memoryview of frame data
+                    frame_view = frame.data
+                    assert isinstance(frame_view, memoryview)
+                    
+                    # Verify data matches without copying
+                    assert frame_view.tobytes() == original_data
+                    
+                    # Test that we can slice without copying
+                    slice_view = frame_view[0:8]
+                    assert isinstance(slice_view, memoryview)
+                    assert slice_view.tobytes() == original_data[0:8]
+                    
+                    # Clean up local references
+                    del slice_view
+                    del frame_view
     
     def test_direct_buffer_access(self, buffer_name: str) -> None:
         """Test direct buffer access API"""
@@ -435,11 +472,14 @@ class TestZeroCopyVerification:
                 # Commit the frame
                 writer.commit_frame()
                 
+                # Release the memoryview reference
+                del buffer
+                
                 # Read and verify
                 frame = reader.read_frame(timeout=1.0)
                 assert frame is not None
-                assert bytes(frame.data) == data_to_write
-                # Frame auto-released via context manager
+                with frame:  # Use context manager for proper cleanup
+                    assert bytes(frame.data) == data_to_write
 
 
 if __name__ == "__main__":

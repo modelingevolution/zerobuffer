@@ -191,7 +191,7 @@ class Frame:
             sequence: Sequence number
             on_dispose: Optional callback to call when frame is disposed
         """
-        self._memory_view = memory_view
+        self._memory_view: Optional[memoryview] = memory_view
         self._offset = offset
         self._size = size
         self._sequence = sequence
@@ -202,8 +202,12 @@ class Frame:
     @property
     def data(self) -> memoryview:
         """Get zero-copy view of frame data"""
-        if self._data_view is None:
+        if self._disposed:
+            raise ValueError("Cannot access data of disposed frame")
+        if self._data_view is None and self._memory_view is not None:
             self._data_view = self._memory_view[self._offset:self._offset + self._size]
+        if self._data_view is None:
+            raise ValueError("Frame has no data")
         return self._data_view
     
     @property
@@ -234,6 +238,9 @@ class Frame:
             self._disposed = True
             if self._on_dispose:
                 self._on_dispose()
+            # Release memoryview references to allow SharedMemory cleanup
+            self._memory_view = None
+            self._data_view = None
     
     def __enter__(self) -> 'Frame':
         """Enter context manager"""

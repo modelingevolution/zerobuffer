@@ -170,6 +170,10 @@ class Reader(LoggerMixin):
     
     def _cleanup_on_error(self) -> None:
         """Clean up resources on initialization error"""
+        # Dispose OIEBView first to release memoryview
+        if hasattr(self, '_oieb') and self._oieb:
+            self._oieb.dispose()
+            self._oieb = None
         if hasattr(self, '_sem_read'):
             self._sem_read.close()
             self._sem_read.unlink()
@@ -197,13 +201,23 @@ class Reader(LoggerMixin):
         total_frame_size, sequence = self._frame_disposal_data
         self._frame_disposal_data = None  # Clear for next frame
         
+        # Check if the reader is still open before trying to release semaphore
+        if self._closed:
+            return
+        
         self._logger.debug("Frame disposed, releasing %d bytes for seq=%d", 
                          total_frame_size, sequence)
         # Update OIEB directly in shared memory
         if self._oieb:
             self._oieb.payload_free_bytes += total_frame_size
         # Signal writer that space is available
-        self._sem_read.release()
+        # Only release if semaphore is still valid
+        if hasattr(self, '_sem_read') and self._sem_read:
+            try:
+                self._sem_read.release()
+            except:
+                # Semaphore might be closed, ignore
+                pass
     
     
     def _calculate_used_bytes(self, write_pos: int, read_pos: int, buffer_size: int) -> int:
@@ -314,8 +328,11 @@ class Reader(LoggerMixin):
                     # Signal that we consumed the wrap marker (freed space)
                     self._sem_read.release()
                     
-                    # Continue to read the actual frame at the beginning
-                    continue
+                    # Now read the actual frame at the beginning without waiting for another semaphore
+                    # The writer wrote both the wrap marker and the frame before signaling
+                    header_offset = payload_base  # Start of buffer
+                    header_data = self._shm.read_bytes(header_offset, FrameHeader.SIZE)
+                    header = FrameHeader.unpack(header_data)
                 
                 # Validate sequence number
                 if header.sequence_number != self._expected_sequence:
@@ -481,7 +498,10 @@ class Reader(LoggerMixin):
             except:
                 pass
             
-            # No persistent memoryviews to release anymore
+            # Properly dispose the OIEBView to release its memoryview
+            if self._oieb:
+                self._oieb.dispose()
+                self._oieb = None
             
             # Close and unlink resources (reader owns them)
             if hasattr(self, '_sem_read'):

@@ -75,6 +75,7 @@ class OIEBView:
     """
     
     __slots__ = ['_shm', '_version']  # Prevent dict, save memory
+    _shm: Optional[memoryview]
     
     # Field definitions: (offset, size, format)
     _UINT32_FMT = '<I'
@@ -106,28 +107,36 @@ class OIEBView:
         """
         if len(shared_memory) < self.SIZE:
             raise ValueError(f"Shared memory too small: {len(shared_memory)} < {self.SIZE}")
-        self._shm = shared_memory
+        self._shm: Optional[memoryview] = shared_memory
         self._version = ProtocolVersion(self._shm, self._VERSION_OFFSET)
     
     # Helper methods for field access
     def _get_uint32(self, offset: int) -> int:
         """Read uint32 from shared memory"""
+        if self._shm is None:
+            raise ValueError("OIEBView has been disposed")
         data = bytes(self._shm[offset:offset+4])
         result: int = struct.unpack(self._UINT32_FMT, data)[0]
         return result
     
     def _set_uint32(self, offset: int, value: int) -> None:
         """Write uint32 to shared memory"""
+        if self._shm is None:
+            raise ValueError("OIEBView has been disposed")
         self._shm[offset:offset+4] = struct.pack(self._UINT32_FMT, value)
     
     def _get_uint64(self, offset: int) -> int:
         """Read uint64 from shared memory"""
+        if self._shm is None:
+            raise ValueError("OIEBView has been disposed")
         data = bytes(self._shm[offset:offset+8])
         result: int = struct.unpack(self._UINT64_FMT, data)[0]
         return result
     
     def _set_uint64(self, offset: int, value: int) -> None:
         """Write uint64 to shared memory"""
+        if self._shm is None:
+            raise ValueError("OIEBView has been disposed")
         self._shm[offset:offset+8] = struct.pack(self._UINT64_FMT, value)
     
     # Properties for each field
@@ -279,6 +288,12 @@ class OIEBView:
         self.writer_pid = 0
         self.reader_pid = reader_pid
         # Reserved fields are left as-is (should be zero)
+    
+    def dispose(self) -> None:
+        """Release the memoryview reference to allow proper cleanup"""
+        if hasattr(self, '_shm'):
+            # Release the memoryview by setting to None
+            self._shm = None
     
     def __repr__(self) -> str:
         return (f"OIEBView(size={self.oieb_size}, version={self.version}, "
