@@ -57,6 +57,7 @@ class TestFreeSpaceAccounting:
                 # Read all frames to free up space
                 for i in range(8):
                     frame = reader.read_frame()
+                    assert frame is not None
                     assert len(frame.data) == frame_size
                     reader.release_frame(frame)
                 
@@ -68,6 +69,7 @@ class TestFreeSpaceAccounting:
                 
                 # Read the wrapped frame
                 frame = reader.read_frame()
+                assert frame is not None
                 assert len(frame.data) == frame_size
                 reader.release_frame(frame)
                 
@@ -96,6 +98,7 @@ class TestFreeSpaceAccounting:
                     # Read all frames
                     for i in range(3):
                         frame = reader.read_frame()
+                        assert frame is not None
                         assert len(frame.data) == 120
                         reader.release_frame(frame)
                     
@@ -123,6 +126,7 @@ class TestFreeSpaceAccounting:
                 # Read only 2 frames
                 for i in range(2):
                     frame = reader.read_frame()
+                    assert frame is not None
                     reader.release_frame(frame)
                 
                 after_partial_free = self._get_free_space(reader)
@@ -132,6 +136,7 @@ class TestFreeSpaceAccounting:
                 # Read remaining 3 frames
                 for i in range(3):
                     frame = reader.read_frame()
+                    assert frame is not None
                     reader.release_frame(frame)
                 
                 final_free = self._get_free_space(reader)
@@ -151,6 +156,7 @@ class TestFreeSpaceAccounting:
                 for i in range(9):
                     writer.write_frame(data)
                     frame = reader.read_frame()
+                    assert frame is not None
                     reader.release_frame(frame)
                 
                 before_wrap_free = self._get_free_space(reader)
@@ -160,6 +166,7 @@ class TestFreeSpaceAccounting:
                 
                 # Read the frame (which includes processing wrap marker)
                 frame = reader.read_frame()
+                assert frame is not None
                 assert len(frame.data) == frame_size
                 reader.release_frame(frame)
                 
@@ -231,6 +238,7 @@ class TestAdvancedResourceCleanup:
                     writer.write_frame(data)
                     
                     frame = reader.read_frame()
+                    assert frame is not None
                     assert frame.data[0] == i
                     reader.release_frame(frame)
             
@@ -290,6 +298,7 @@ class TestAdvancedResourceCleanup:
                     writer.write_frame(frame_data)
                     
                     frame = reader.read_frame()
+                    assert frame is not None
                     assert len(frame.data) == 512
                     assert frame.data[0] == i
                     reader.release_frame(frame)
@@ -300,6 +309,7 @@ class TestAdvancedResourceCleanup:
             with Writer(buffer_name) as writer:
                 writer.write_frame(b"\xFF")
                 frame = reader.read_frame()
+                assert frame is not None
                 assert frame.data[0] == 0xFF
                 reader.release_frame(frame)
 
@@ -415,6 +425,7 @@ class TestMetadataValidation:
                 
                 # Read metadata
                 read_metadata = reader.get_metadata()
+                assert read_metadata is not None
                 assert bytes(read_metadata) == metadata
     
     def test_metadata_size_validation(self) -> None:
@@ -435,6 +446,7 @@ class TestMetadataValidation:
                 writer.set_metadata(small_metadata)
                 
                 read_metadata = reader.get_metadata()
+                assert read_metadata is not None
                 assert bytes(read_metadata) == small_metadata
 
 

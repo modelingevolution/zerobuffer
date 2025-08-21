@@ -7,17 +7,20 @@ import time
 import threading
 import asyncio
 import pytest
+from typing import Any, List
 from zerobuffer import DuplexChannelFactory, BufferConfig
+from zerobuffer.types import Frame
+from zerobuffer.duplex.interfaces import DuplexResponse
 
 
 class TestDuplexChannelIntegration:
     """Test duplex channel integration scenarios - matches C# DuplexChannelIntegrationTests"""
     
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test channel name"""
         self._test_channel_name = f"test_duplex_{os.getpid()}_{id(self)}"
     
-    def test_simplified_protocol_echo_test(self):
+    def test_simplified_protocol_echo_test(self) -> None:
         """SimplifiedProtocol_EchoTest - matches C# test"""
         factory = DuplexChannelFactory.get_instance()
         config = BufferConfig(4096, 10 * 1024 * 1024)
@@ -25,7 +28,7 @@ class TestDuplexChannelIntegration:
         # Create server that echoes data back
         server = factory.create_immutable_server(self._test_channel_name, config)
         
-        def on_handle(request):
+        def on_handle(request: Frame) -> bytes:
             return bytes(request.data)
         
         server_thread = threading.Thread(target=lambda: server.start(on_handle))
@@ -50,13 +53,13 @@ class TestDuplexChannelIntegration:
             assert response.sequence == sequence_number
             assert response.to_bytes() == test_data
             
-            client.release_response(response)
+            response.dispose()
             
         finally:
             client.close()
             server.stop()
     
-    def test_zero_copy_client_test(self):
+    def test_zero_copy_client_test(self) -> None:
         """ZeroCopyClient_Test - matches C# test"""
         factory = DuplexChannelFactory.get_instance()
         config = BufferConfig(4096, 10 * 1024 * 1024)
@@ -64,7 +67,7 @@ class TestDuplexChannelIntegration:
         # Create server
         server = factory.create_immutable_server(self._test_channel_name, config)
         
-        def on_handle(request):
+        def on_handle(request: Frame) -> bytes:
             return bytes(request.data)
         
         server_thread = threading.Thread(target=lambda: server.start(on_handle))
@@ -91,13 +94,13 @@ class TestDuplexChannelIntegration:
             assert response.sequence == sequence_number
             assert response.to_bytes().decode('utf-8') == test_data
             
-            client.release_response(response)
+            response.dispose()
             
         finally:
             client.close()
             server.stop()
     
-    def test_independent_send_receive_test(self):
+    def test_independent_send_receive_test(self) -> None:
         """IndependentSendReceive_Test - matches C# test"""
         factory = DuplexChannelFactory.get_instance()
         config = BufferConfig(4096, 10 * 1024 * 1024)
@@ -105,7 +108,7 @@ class TestDuplexChannelIntegration:
         # Create server that adds 1 to each byte
         server = factory.create_immutable_server(self._test_channel_name, config)
         
-        def increment_handler(request):
+        def increment_handler(request: Frame) -> bytes:
             data = bytearray(request.data)
             for i in range(len(data)):
                 data[i] = (data[i] + 1) % 256
@@ -123,7 +126,7 @@ class TestDuplexChannelIntegration:
             # Send multiple requests from one thread
             sequences = []
             
-            def send_requests():
+            def send_requests() -> None:
                 nonlocal sequences
                 for i in range(10):
                     seq = client.send_request(bytes([i]))
@@ -133,14 +136,14 @@ class TestDuplexChannelIntegration:
             # Receive responses from another thread
             responses = []
             
-            def receive_responses():
+            def receive_responses() -> None:
                 nonlocal responses
                 for i in range(10):
                     response = client.receive_response(5000)
                     if response.is_valid:
                         data = response.to_bytes()
                         responses.append((response.sequence, data[0]))
-                        client.release_response(response)
+                        response.dispose()
             
             # Run send and receive concurrently
             send_thread = threading.Thread(target=send_requests)
@@ -169,7 +172,7 @@ class TestDuplexChannelIntegration:
             client.close()
             server.stop()
     
-    def test_server_preserves_sequence_number_test(self):
+    def test_server_preserves_sequence_number_test(self) -> None:
         """ServerPreservesSequenceNumber_Test - matches C# test"""
         factory = DuplexChannelFactory.get_instance()
         config = BufferConfig(4096, 10 * 1024 * 1024)
@@ -179,7 +182,7 @@ class TestDuplexChannelIntegration:
         
         captured_sequence = None
         
-        def capture_handler(request):
+        def capture_handler(request: Frame) -> bytes:
             nonlocal captured_sequence
             # Capture the sequence number from request
             captured_sequence = request.sequence
@@ -206,7 +209,7 @@ class TestDuplexChannelIntegration:
             # Verify response has the same sequence
             assert sent_sequence == response.sequence
             
-            client.release_response(response)
+            response.dispose()
             
         finally:
             client.close()

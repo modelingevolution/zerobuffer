@@ -309,6 +309,7 @@ class TestErrorConditions:
                 
                 # Read first frame
                 frame1 = reader.read_frame(timeout=1.0)
+                assert frame1 is not None
                 assert frame1.sequence == 1
                 # Frame auto-released via context manager
                 
@@ -316,6 +317,7 @@ class TestErrorConditions:
                 # This would require direct memory access - skip for now
                 # Just verify normal sequence works
                 frame2 = reader.read_frame(timeout=1.0)
+                assert frame2 is not None
                 assert frame2.sequence == 2
                 # Frame auto-released via context manager
     

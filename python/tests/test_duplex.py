@@ -9,6 +9,7 @@ import time
 import threading
 import multiprocessing
 import pytest
+from typing import List
 from zerobuffer import Reader, Writer, BufferConfig
 
 
@@ -21,7 +22,7 @@ class TestDuplexChannel:
         response_buffer = f"duplex_resp_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
-        def server_process():
+        def server_process() -> None:
             """Server that receives requests and sends responses"""
             # Create request buffer as reader
             with Reader(request_buffer, config) as req_reader:
@@ -47,7 +48,7 @@ class TestDuplexChannel:
                                 response = b"RESPONSE: " + request_data
                                 resp_writer.write_frame(response)
         
-        def client_process():
+        def client_process() -> List[bytes]:
             """Client that sends requests and receives responses"""
             # Create response buffer as reader first
             with Reader(response_buffer, config) as resp_reader:
@@ -167,13 +168,13 @@ class TestDuplexChannel:
         for channel_id in range(num_channels):
             assert results[channel_id] == 5, f"Channel {channel_id} failed"
     
-    def test_duplex_with_metadata_exchange(self):
+    def test_duplex_with_metadata_exchange(self) -> None:
         """Test duplex communication with metadata exchange"""
         req_buffer = f"duplex_meta_req_{os.getpid()}"
         resp_buffer = f"duplex_meta_resp_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
-        def server_process():
+        def server_process() -> None:
             """Server with metadata handling"""
             with Reader(req_buffer, config) as req_reader:
                 timeout_start = time.time()

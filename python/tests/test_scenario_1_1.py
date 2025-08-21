@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 import pytest
 import asyncio
+import logging
+from typing import Generator, Any, Coroutine
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -43,7 +45,7 @@ def test_simple_write_read_cycle() -> None:
 
 # Fixtures
 @pytest.fixture
-def test_context() -> TestContext:
+def test_context() -> Generator[TestContext, None, None]:
     """Provide test context"""
     context = TestContext()
     context.initialize(
@@ -57,20 +59,20 @@ def test_context() -> TestContext:
 
 
 @pytest.fixture
-def logger():
+def logger() -> logging.Logger:
     """Provide logger"""
     provider = DualLoggerProvider()
     return provider.get_logger("test_1_1")
 
 
 @pytest.fixture
-def steps(test_context, logger):
+def steps(test_context: TestContext, logger: logging.Logger) -> BasicCommunicationSteps:
     """Provide step definitions instance"""
     return BasicCommunicationSteps(test_context, logger)
 
 
 # Helper to run async functions
-def run_async(coro):
+def run_async(coro: Coroutine[Any, Any, Any]) -> Any:
     """Run async coroutine in sync context"""
     try:
         loop = asyncio.get_running_loop()
@@ -84,56 +86,56 @@ def run_async(coro):
 
 # Background steps
 @given("the test environment is initialized")
-def test_environment_initialized(steps):
+def test_environment_initialized(steps: BasicCommunicationSteps) -> None:
     """Initialize test environment"""
     steps.test_environment_initialized()
 
 
 @given("all processes are ready")
-def all_processes_ready(steps):
+def all_processes_ready(steps: BasicCommunicationSteps) -> None:
     """Confirm all processes are ready"""
     steps.all_processes_ready()
 
 
 # Scenario steps
 @given(parsers.re(r"the '(?P<process>[^']+)' process creates buffer '(?P<buffer_name>[^']+)' with metadata size '(?P<metadata_size>\d+)' and payload size '(?P<payload_size>\d+)'"))
-def create_buffer(steps, process, buffer_name, metadata_size, payload_size):
+def create_buffer(steps: BasicCommunicationSteps, process: str, buffer_name: str, metadata_size: str, payload_size: str) -> Any:
     """Create a new ZeroBuffer with specified configuration"""
     return run_async(steps.create_buffer(process, buffer_name, metadata_size, payload_size))
 
 
 @when(parsers.re(r"the '(?P<process>[^']+)' process connects to buffer '(?P<buffer_name>[^']+)'"))
-def connect_to_buffer(steps, process, buffer_name):
+def connect_to_buffer(steps: BasicCommunicationSteps, process: str, buffer_name: str) -> Any:
     """Connect a writer to an existing buffer"""
     return run_async(steps.connect_to_buffer(process, buffer_name))
 
 
 @when(parsers.re(r"the '(?P<process>[^']+)' process writes metadata with size '(?P<size>\d+)'"))
-def write_metadata(steps, process, size):
+def write_metadata(steps: BasicCommunicationSteps, process: str, size: str) -> Any:
     """Write metadata to the buffer"""
     return run_async(steps.write_metadata(process, size))
 
 
 @when(parsers.re(r"the '(?P<process>[^']+)' process writes frame with size '(?P<size>\d+)' and sequence '(?P<sequence>\d+)'"))
-def write_frame_with_sequence(steps, process, size, sequence):
+def write_frame_with_sequence(steps: BasicCommunicationSteps, process: str, size: str, sequence: str) -> Any:
     """Write a frame with specific size and sequence"""
     return run_async(steps.write_frame_with_sequence(process, size, sequence))
 
 
 @then(parsers.re(r"the '(?P<process>[^']+)' process should read frame with sequence '(?P<sequence>\d+)' and size '(?P<size>\d+)'"))
-def read_frame_verify_sequence_size(steps, process, sequence, size):
+def read_frame_verify_sequence_size(steps: BasicCommunicationSteps, process: str, sequence: str, size: str) -> Any:
     """Read and verify frame with sequence and size"""
     return run_async(steps.read_frame_verify_sequence_size(process, sequence, size))
 
 
 @then(parsers.re(r"the '(?P<process>[^']+)' process should validate frame data"))
-def validate_frame_data(steps, process):
+def validate_frame_data(steps: BasicCommunicationSteps, process: str) -> Any:
     """Validate frame data"""
     return run_async(steps.validate_frame_data(process))
 
 
 @then(parsers.re(r"the '(?P<process>[^']+)' process signals space available"))
-def signal_space_available(steps, process):
+def signal_space_available(steps: BasicCommunicationSteps, process: str) -> Any:
     """Signal that space is available"""
     return run_async(steps.signal_space_available(process))
 

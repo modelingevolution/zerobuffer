@@ -233,7 +233,7 @@ class TestScenario5WriterDisconnect:
         buffer_name = f"test_scenario_5_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
-        def writer_process(name):
+        def writer_process(name: str) -> None:
             """Writer that disconnects after writing some frames"""
             with Writer(name) as writer:
                 for i in range(5):
@@ -275,7 +275,7 @@ class TestScenario6ReaderDisconnect:
         reader_disconnected = threading.Event()
         writer_exception = []
         
-        def reader_process(name, config):
+        def reader_process(name: str, config: BufferConfig) -> None:
             """Reader that disconnects early"""
             with Reader(name, config) as reader:
                 # Read a few frames
@@ -286,7 +286,7 @@ class TestScenario6ReaderDisconnect:
                 # Reader disconnects here
             reader_disconnected.set()
         
-        def writer_process(name):
+        def writer_process(name: str) -> None:
             """Writer that tries to write many frames"""
             try:
                 with Writer(name) as writer:
@@ -369,6 +369,7 @@ class TestScenario8MetadataHandling:
                 
                 # Verify only first metadata is stored
                 read_metadata = reader.get_metadata()
+                assert read_metadata is not None
                 assert bytes(read_metadata) == metadata1
     
     def test_large_metadata(self) -> None:
@@ -389,6 +390,7 @@ class TestScenario8MetadataHandling:
                 
                 # Verify
                 read_metadata = reader.get_metadata()
+                assert read_metadata is not None
                 assert bytes(read_metadata) == valid_metadata
 
 
@@ -400,7 +402,7 @@ class TestScenario9MultiProcess:
         buffer_name = f"test_scenario_9_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
-        def writer_process(name):
+        def writer_process(name: str) -> None:
             """Run in separate process"""
             with Writer(name) as writer:
                 writer.set_metadata(b"Cross-process metadata")

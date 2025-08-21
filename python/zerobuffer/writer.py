@@ -7,7 +7,7 @@ Provides zero-copy writing to shared memory buffers.
 import os
 import threading
 from datetime import timedelta
-from typing import Optional, Union
+from typing import Optional, Union, Any
 import logging
 
 from . import platform
@@ -541,11 +541,11 @@ class Writer(LoggerMixin):
             if hasattr(self, '_shm'):
                 self._shm.close()
     
-    def __enter__(self):
+    def __enter__(self) -> 'Writer':
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
     
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()

@@ -152,7 +152,7 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
         finally:
             self._cleanup()
     
-    def _process_requests(self):
+    def _process_requests(self) -> None:
         """Process requests synchronously"""
         try:
             # Create request buffer as reader

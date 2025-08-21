@@ -112,12 +112,12 @@ class LoggerMixin:
 class NullLogger:
     """Null logger that does nothing, similar to NullLogger in C#"""
     
-    def debug(self, msg, *args, **kwargs): pass
-    def info(self, msg, *args, **kwargs): pass
-    def warning(self, msg, *args, **kwargs): pass
-    def error(self, msg, *args, **kwargs): pass
-    def critical(self, msg, *args, **kwargs): pass
-    def log(self, level, msg, *args, **kwargs): pass
+    def debug(self, msg: Any, *args: Any, **kwargs: Any) -> None: pass
+    def info(self, msg: Any, *args: Any, **kwargs: Any) -> None: pass
+    def warning(self, msg: Any, *args: Any, **kwargs: Any) -> None: pass
+    def error(self, msg: Any, *args: Any, **kwargs: Any) -> None: pass
+    def critical(self, msg: Any, *args: Any, **kwargs: Any) -> None: pass
+    def log(self, level: int, msg: Any, *args: Any, **kwargs: Any) -> None: pass
     
 
 NULL_LOGGER = NullLogger()

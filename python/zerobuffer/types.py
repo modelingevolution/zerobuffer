@@ -160,7 +160,7 @@ class BufferConfig:
     metadata_size: int = 1024
     payload_size: int = 1024 * 1024  # 1MB default
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration"""
         if self.metadata_size <= 0:
             raise ValueError("metadata_size must be positive")

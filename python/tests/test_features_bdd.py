@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import pytest
 import logging
-from typing import Any
+from typing import Any, Generator
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,9 +24,9 @@ except ImportError:
 from zerobuffer_serve.test_context import TestContext
 from zerobuffer_serve.logging.dual_logger import DualLoggerProvider
 from zerobuffer_serve.step_definitions import (
-    BasicCommunicationSteps as BasicSteps,
-    EdgeCasesSteps as EdgeSteps,
-    ErrorHandlingSteps as ErrorSteps,
+    BasicCommunicationSteps,
+    EdgeCasesSteps,
+    ErrorHandlingSteps,
     ProcessLifecycleSteps,
     SynchronizationSteps,
 )
@@ -71,7 +71,7 @@ if FEATURE_DIR.exists():
 
 # Fixtures for step classes
 @pytest.fixture
-def test_context() -> TestContext:
+def test_context() -> Generator[TestContext, None, None]:
     """Provide a test context for each test"""
     context = TestContext()
     context.initialize(
@@ -92,19 +92,19 @@ def logger() -> logging.Logger:
 
 
 @pytest.fixture
-def basic_steps(test_context: TestContext, logger: logging.Logger) -> BasicSteps:
+def basic_steps(test_context: TestContext, logger: logging.Logger) -> BasicCommunicationSteps:
     """Provide BasicCommunicationSteps instance"""
     return BasicCommunicationSteps(test_context, logger)
 
 
 @pytest.fixture
-def edge_steps(test_context: TestContext, logger: logging.Logger) -> EdgeSteps:
+def edge_steps(test_context: TestContext, logger: logging.Logger) -> EdgeCasesSteps:
     """Provide EdgeCasesSteps instance"""
     return EdgeCasesSteps(test_context, logger)
 
 
 @pytest.fixture
-def error_steps(test_context: TestContext, logger: logging.Logger) -> ErrorSteps:
+def error_steps(test_context: TestContext, logger: logging.Logger) -> ErrorHandlingSteps:
     """Provide ErrorHandlingSteps instance"""
     return ErrorHandlingSteps(test_context, logger)
 
@@ -114,20 +114,20 @@ def error_steps(test_context: TestContext, logger: logging.Logger) -> ErrorSteps
 
 # Background steps
 @given("the test environment is initialized")
-def test_environment_initialized(basic_steps: BasicSteps) -> None:
+def test_environment_initialized(basic_steps: BasicCommunicationSteps) -> None:
     """Initialize test environment"""
     basic_steps.test_environment_initialized()
 
 
 @given("all processes are ready")
-def all_processes_ready(basic_steps: BasicSteps) -> None:
+def all_processes_ready(basic_steps: BasicCommunicationSteps) -> None:
     """Confirm all processes are ready"""
     basic_steps.all_processes_ready()
 
 
 # Buffer creation
 @given(parsers.re(r"the '(?P<process>[^']+)' process creates buffer '(?P<buffer_name>[^']+)' with metadata size '(?P<metadata_size>\d+)' and payload size '(?P<payload_size>\d+)'"))
-def create_buffer(basic_steps: BasicSteps, process: str, buffer_name: str, metadata_size: int, payload_size: int) -> None:
+def create_buffer(basic_steps: BasicCommunicationSteps, process: str, buffer_name: str, metadata_size: int, payload_size: int) -> Any:
     """Create a new ZeroBuffer with specified configuration"""
     import asyncio
     # Run async method in sync context
@@ -139,7 +139,7 @@ def create_buffer(basic_steps: BasicSteps, process: str, buffer_name: str, metad
 
 # Writer connection
 @when(parsers.re(r"the '(?P<process>[^']+)' process connects to buffer '(?P<buffer_name>[^']+)'"))
-def connect_to_buffer(basic_steps: BasicSteps, process: str, buffer_name: str) -> None:
+def connect_to_buffer(basic_steps: BasicCommunicationSteps, process: str, buffer_name: str) -> Any:
     """Connect a writer to an existing buffer"""
     import asyncio
     loop = asyncio.get_event_loop()
@@ -150,7 +150,7 @@ def connect_to_buffer(basic_steps: BasicSteps, process: str, buffer_name: str) -
 
 # Metadata operations
 @when(parsers.re(r"the '(?P<process>[^']+)' process writes metadata with size '(?P<size>\d+)'"))
-def write_metadata(basic_steps: BasicSteps, process: str, size: int) -> None:
+def write_metadata(basic_steps: BasicCommunicationSteps, process: str, size: int) -> Any:
     """Write metadata to the buffer"""
     import asyncio
     loop = asyncio.get_event_loop()
@@ -161,7 +161,7 @@ def write_metadata(basic_steps: BasicSteps, process: str, size: int) -> None:
 
 # Frame operations
 @when(parsers.re(r"the '(?P<process>[^']+)' process writes frame with size '(?P<size>\d+)' and sequence '(?P<sequence>\d+)'"))
-def write_frame_with_sequence(basic_steps: BasicSteps, process: str, size: int, sequence: int) -> None:
+def write_frame_with_sequence(basic_steps: BasicCommunicationSteps, process: str, size: int, sequence: int) -> Any:
     """Write a frame with specific size and sequence"""
     import asyncio
     loop = asyncio.get_event_loop()
@@ -171,7 +171,7 @@ def write_frame_with_sequence(basic_steps: BasicSteps, process: str, size: int, 
 
 
 @then(parsers.re(r"the '(?P<process>[^']+)' process should read frame with sequence '(?P<sequence>\d+)' and size '(?P<size>\d+)'"))
-def read_frame_verify_sequence_size(basic_steps: BasicSteps, process: str, sequence: int, size: int) -> None:
+def read_frame_verify_sequence_size(basic_steps: BasicCommunicationSteps, process: str, sequence: int, size: int) -> Any:
     """Read and verify frame with sequence and size"""
     import asyncio
     loop = asyncio.get_event_loop()
@@ -181,7 +181,7 @@ def read_frame_verify_sequence_size(basic_steps: BasicSteps, process: str, seque
 
 
 @then(parsers.re(r"the '(?P<process>[^']+)' process should validate frame data"))
-def validate_frame_data(basic_steps: BasicSteps, process: str) -> None:
+def validate_frame_data(basic_steps: BasicCommunicationSteps, process: str) -> Any:
     """Validate frame data"""
     import asyncio
     loop = asyncio.get_event_loop()
@@ -191,7 +191,7 @@ def validate_frame_data(basic_steps: BasicSteps, process: str) -> None:
 
 
 @then(parsers.re(r"the '(?P<process>[^']+)' process signals space available"))
-def signal_space_available(basic_steps: BasicSteps, process: str) -> None:
+def signal_space_available(basic_steps: BasicCommunicationSteps, process: str) -> Any:
     """Signal that space is available"""
     import asyncio
     loop = asyncio.get_event_loop()

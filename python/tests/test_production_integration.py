@@ -34,7 +34,7 @@ from zerobuffer_serve.step_definitions.basic_communication_refactored import (
 from zerobuffer_serve.test_context import TestContext
 
 
-async def run_production_test():
+async def run_production_test() -> None:
     """
     Run a test using all production components.
     
@@ -193,7 +193,7 @@ async def run_production_test():
                 print(f"    export {key}={value}")
 
 
-async def run_test_steps(steps: BasicCommunicationSteps):
+async def run_test_steps(steps: BasicCommunicationSteps) -> None:
     """
     Simulate running test 1.1 steps.
     
@@ -248,7 +248,7 @@ async def run_test_steps(steps: BasicCommunicationSteps):
     )
 
 
-def demonstrate_type_safety():
+def demonstrate_type_safety() -> None:
     """
     Demonstrate compile-time type safety with mypy.
     
@@ -286,7 +286,7 @@ def demonstrate_type_safety():
     print("\nRunning './test.sh --type-check-only' catches these before runtime!")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     
     # Run the integration test

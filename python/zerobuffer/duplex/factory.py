@@ -2,6 +2,7 @@
 Duplex Channel Factory implementation
 """
 
+from typing import Optional, Any
 from ..types import BufferConfig
 from .interfaces import IDuplexChannelFactory, IImmutableDuplexServer, IDuplexClient
 from .client import DuplexClient
@@ -13,7 +14,7 @@ class DuplexChannelFactory(IDuplexChannelFactory):
     
     _instance = None
     
-    def __init__(self, logger_factory=None):
+    def __init__(self, logger_factory: Optional[Any] = None) -> None:
         """
         Create factory instance
         
@@ -23,7 +24,7 @@ class DuplexChannelFactory(IDuplexChannelFactory):
         self._logger_factory = logger_factory
     
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls) -> 'DuplexChannelFactory':
         """Get singleton instance"""
         if cls._instance is None:
             cls._instance = cls()
@@ -37,7 +38,7 @@ class DuplexChannelFactory(IDuplexChannelFactory):
         
         return ImmutableDuplexServer(channel_name, config, logger)
     
-    def create_mutable_server(self, channel_name: str, config: BufferConfig) -> None:
+    def create_mutable_server(self, channel_name: str, config: BufferConfig) -> Any:
         """Create a mutable server (not yet implemented - planned for v2.0)"""
         raise NotImplementedError("MutableDuplexServer is planned for v2.0")
     

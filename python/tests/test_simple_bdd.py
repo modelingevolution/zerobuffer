@@ -7,6 +7,7 @@ This is a minimal example to test the architecture before full implementation.
 
 import pytest
 from pathlib import Path
+from typing import Any
 
 # Try to import pytest-bdd
 try:
@@ -18,7 +19,7 @@ except ImportError:
     pytestmark = pytest.mark.skip(reason="pytest-bdd not installed")
 
 
-def test_pytest_bdd_available():
+def test_pytest_bdd_available() -> None:
     """Test that pytest-bdd is available"""
     assert PYTEST_BDD_AVAILABLE, "pytest-bdd should be installed for BDD tests"
 
@@ -46,36 +47,36 @@ if PYTEST_BDD_AVAILABLE:
     
     # Define the scenario
     @scenario(temp_feature_path, 'Basic buffer creation')
-    def test_basic_buffer_creation():
+    def test_basic_buffer_creation() -> None:
         """Test basic buffer creation scenario"""
         pass
     
     # Step definitions
     @given("the test environment is initialized")
-    def init_environment():
+    def init_environment() -> dict:
         """Initialize test environment"""
         return {"initialized": True}
     
     @when(parsers.parse("a buffer named '{name}' is created with size {size:d}"))
-    def create_buffer(name, size):
+    def create_buffer(name: str, size: str) -> dict:
         """Create a buffer"""
         # Simulate buffer creation
         buffer = {"name": name, "size": size}
         return buffer
     
     @then(parsers.parse("the buffer '{name}' should exist"))
-    def verify_buffer_exists(name, create_buffer):
+    def verify_buffer_exists(name: str, create_buffer: dict) -> None:
         """Verify buffer exists"""
         assert create_buffer["name"] == name
     
     @then(parsers.parse("the buffer '{name}' should have size {size:d}"))
-    def verify_buffer_size(name, size, create_buffer):
+    def verify_buffer_size(name: str, size: str, create_buffer: dict) -> None:
         """Verify buffer size"""
         assert create_buffer["name"] == name
         assert create_buffer["size"] == size
 
 
-def test_feature_files_exist():
+def test_feature_files_exist() -> None:
     """Test that feature files exist in expected location"""
     possible_paths = [
         Path(__file__).parent.parent.parent / "ZeroBuffer.Harmony.Tests" / "Features",

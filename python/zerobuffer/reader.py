@@ -6,7 +6,7 @@ Provides zero-copy reading from shared memory buffers.
 
 import os
 import threading
-from typing import Optional, Union
+from typing import Optional, Union, Any
 from pathlib import Path
 import glob
 import logging
@@ -117,9 +117,9 @@ class Reader(LoggerMixin):
                     try_remove = platform.PlatformFileLock.try_remove_stale
                 else:
                     # Fallback to Linux implementation if available
-                    try_remove = getattr(platform, 'LinuxFileLock', lambda: None)
-                    if try_remove:
-                        try_remove = getattr(try_remove, 'try_remove_stale', lambda path: False)
+                    linux_file_lock = getattr(platform, 'LinuxFileLock', None)
+                    if linux_file_lock:
+                        try_remove = getattr(linux_file_lock, 'try_remove_stale', lambda path: False)
                     else:
                         try_remove = lambda path: False
                 
@@ -499,11 +499,11 @@ class Reader(LoggerMixin):
             if hasattr(self, '_lock_file'):
                 self._lock_file.close()
     
-    def __enter__(self):
+    def __enter__(self) -> 'Reader':
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
     
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()

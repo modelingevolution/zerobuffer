@@ -51,7 +51,7 @@ class SharedMemory(ABC):
     def __enter__(self) -> 'SharedMemory':
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
 
 
@@ -98,10 +98,10 @@ class Semaphore(ABC):
         """Remove semaphore from system (platform-specific)"""
         pass
     
-    def __enter__(self) -> 'SharedMemory':
+    def __enter__(self) -> 'Semaphore':
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
 
 
@@ -128,8 +128,8 @@ class FileLock(ABC):
         """Release and remove the lock"""
         pass
     
-    def __enter__(self) -> 'SharedMemory':
+    def __enter__(self) -> 'FileLock':
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()

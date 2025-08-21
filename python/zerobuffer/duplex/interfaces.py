@@ -3,7 +3,7 @@ Duplex Channel interfaces matching C# API
 """
 
 from abc import ABC, abstractmethod
-from typing import Tuple, Callable, Optional, Awaitable, List, Type
+from typing import Tuple, Callable, Optional, Awaitable, List, Type, Any
 from types import TracebackType
 from dataclasses import dataclass
 from ..types import Frame, BufferConfig
@@ -115,12 +115,12 @@ class IDuplexClient(ABC):
         pass
     
     @abstractmethod
-    def __enter__(self):
+    def __enter__(self) -> 'IDuplexClient':
         """Context manager entry"""
         pass
     
     @abstractmethod
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit"""
         pass
 

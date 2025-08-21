@@ -160,7 +160,7 @@ class StepRegistry:
         pattern: str,
         method: Callable,
         instance: Any
-    ):
+    ) -> None:
         """Register a single step definition"""
         # Compile regex
         regex = re.compile(f"^{pattern}$")
@@ -371,9 +371,9 @@ class StepRegistry:
 
 # Always use our own decorators for Harmony compatibility
 # These decorators ensure step discovery works correctly
-def given(pattern: str):
+def given(pattern: str) -> Callable:
     """Decorator for Given steps"""
-    def decorator(func):
+    def decorator(func: Any) -> Any:
         if not hasattr(func, '_step_definitions'):
             func._step_definitions = []
         func._step_definitions.append({
@@ -383,9 +383,9 @@ def given(pattern: str):
         return func
     return decorator
 
-def when(pattern: str):
+def when(pattern: str) -> Callable:
     """Decorator for When steps"""
-    def decorator(func):
+    def decorator(func: Any) -> Any:
         if not hasattr(func, '_step_definitions'):
             func._step_definitions = []
         func._step_definitions.append({
@@ -395,9 +395,9 @@ def when(pattern: str):
         return func
     return decorator
 
-def then(pattern: str):
+def then(pattern: str) -> Callable:
     """Decorator for Then steps"""
-    def decorator(func):
+    def decorator(func: Any) -> Any:
         if not hasattr(func, '_step_definitions'):
             func._step_definitions = []
         func._step_definitions.append({
@@ -410,11 +410,11 @@ def then(pattern: str):
 # Placeholder for parsers compatibility
 class parsers:
     @staticmethod
-    def re(pattern: str):
+    def re(pattern: str) -> Any:
         """Regex parser - returns pattern as-is for Harmony"""
         return pattern
     
     @staticmethod
-    def parse(pattern: str):
+    def parse(pattern: str) -> Any:
         """Parse parser - returns pattern as-is for Harmony"""
         return pattern
