@@ -7,7 +7,7 @@ import threading
 from typing import Optional, Dict, List, Any
 import asyncio
 
-from zerobuffer import BufferConfig
+from zerobuffer import BufferConfig, Frame
 from zerobuffer.duplex import (
     DuplexChannelFactory,
     ImmutableDuplexServer,
@@ -86,11 +86,11 @@ class DuplexChannelSteps(BaseSteps):
         if not isinstance(server, ImmutableDuplexServer):
             raise TypeError(f"Expected ImmutableDuplexServer, got {type(server)}")
             
-        def echo_handler(frame):
+        def echo_handler(frame: Frame) -> bytes:
             """Echo handler - return the same data"""
             return bytes(frame.data)
             
-        server.start(echo_handler, ProcessingMode.SINGLE_THREAD)
+        server.start(echo_handler, mode=ProcessingMode.SINGLE_THREAD)
         
         # Give server time to initialize
         await asyncio.sleep(0.1)
@@ -106,12 +106,12 @@ class DuplexChannelSteps(BaseSteps):
             
         delay = int(delay_ms) / 1000.0  # Convert to seconds
         
-        def delayed_handler(frame):
+        def delayed_handler(frame: Frame) -> bytes:
             """Handler with processing delay"""
             time.sleep(delay)
             return bytes(frame.data)
             
-        server.start(delayed_handler, ProcessingMode.SINGLE_THREAD)
+        server.start(delayed_handler, mode=ProcessingMode.SINGLE_THREAD)
         
         # Give server time to initialize
         await asyncio.sleep(0.1)
@@ -125,12 +125,12 @@ class DuplexChannelSteps(BaseSteps):
         if not isinstance(server, ImmutableDuplexServer):
             raise TypeError(f"Expected ImmutableDuplexServer, got {type(server)}")
             
-        def doubling_handler(frame):
+        def doubling_handler(frame: Frame) -> bytes:
             """Handler that doubles the data"""
             data = bytes(frame.data)
             return data + data  # Double the data
             
-        server.start(doubling_handler, ProcessingMode.SINGLE_THREAD)
+        server.start(doubling_handler, mode=ProcessingMode.SINGLE_THREAD)
         
         # Give server time to initialize
         await asyncio.sleep(0.1)
@@ -199,7 +199,10 @@ class DuplexChannelSteps(BaseSteps):
             response = client.receive_response(timeout_ms=10000)
             if response.is_valid:
                 with response:  # Use context manager for RAII
-                    self._received_responses.append((response.sequence, bytes(response.data)))
+                    if response.data is not None:
+                        self._received_responses.append((response.sequence, bytes(response.data)))
+                    else:
+                        self._received_responses.append((response.sequence, b''))
                     
         self._response_time = time.time() - self._measurement_start
         
@@ -217,14 +220,17 @@ class DuplexChannelSteps(BaseSteps):
         assert response.is_valid, "Response should be valid"
         
         with response:  # Use context manager for RAII
+            assert response.data is not None, "Response data should not be None"
             assert len(response.data) == int(size), f"Response size mismatch: expected {size}, got {len(response.data)}"
             
             # Verify data matches if we have the original request
             if response.sequence in self._sent_requests:
                 original_data = self._sent_requests[response.sequence]
+                assert response.data is not None, "Response data should not be None"
                 response_data = bytes(response.data)
                 assert response_data == original_data, "Response data doesn't match request"
                 
+            # response.data is guaranteed to be not None here due to assertions above
             self._received_responses.append((response.sequence, bytes(response.data)))
             
         self.logger.info(f"Response matched request with size {size}")
@@ -244,7 +250,10 @@ class DuplexChannelSteps(BaseSteps):
             assert response.is_valid, f"Response {i} should be valid"
             
             with response:  # Use context manager for RAII
-                self._received_responses.append((response.sequence, bytes(response.data)))
+                if response.data is not None:
+                    self._received_responses.append((response.sequence, bytes(response.data)))
+                else:
+                    self._received_responses.append((response.sequence, b''))
                 
         assert len(self._received_responses) == expected_count, \
             f"Expected {expected_count} responses, got {len(self._received_responses)}"

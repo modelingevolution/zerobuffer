@@ -29,6 +29,12 @@ class WriterAlreadyConnectedException(ZeroBufferException):
         super().__init__("Another writer is already connected")
 
 
+class ReaderAlreadyConnectedException(ZeroBufferException):
+    """Raised when attempting to connect a second reader"""
+    def __init__(self) -> None:
+        super().__init__("Another reader is already connected")
+
+
 class BufferFullException(ZeroBufferException):
     """Raised when the buffer is full and cannot accept more data"""
     def __init__(self) -> None:

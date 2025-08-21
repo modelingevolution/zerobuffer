@@ -15,20 +15,22 @@ from .exceptions import (
     WriterDeadException,
     ReaderDeadException,
     WriterAlreadyConnectedException,
+    ReaderAlreadyConnectedException,
     BufferFullException,
     FrameTooLargeException,
     SequenceError,
     InvalidFrameSizeException,
     MetadataAlreadyWrittenException
 )
+from .error_event_args import ErrorEventArgs
 from .logging_config import setup_logging, get_logger
+from .logger_factory import ILoggerFactory, LoggerFactory, NullLoggerFactory, get_default_factory, set_default_factory
 
 # Duplex channel support
 from .duplex import (
     DuplexChannelFactory,
     DuplexClient,
     ImmutableDuplexServer,
-    MutableDuplexServer,
     IDuplexClient,
     IDuplexServer,
     IImmutableDuplexServer,
@@ -49,19 +51,25 @@ __all__ = [
     'WriterDeadException',
     'ReaderDeadException',
     'WriterAlreadyConnectedException',
+    'ReaderAlreadyConnectedException',
     'BufferFullException',
     'FrameTooLargeException',
     'SequenceError',
     'InvalidFrameSizeException',
     'MetadataAlreadyWrittenException',
+    'ErrorEventArgs',
     # Logging
     'setup_logging',
     'get_logger',
+    'ILoggerFactory',
+    'LoggerFactory',
+    'NullLoggerFactory',
+    'get_default_factory',
+    'set_default_factory',
     # Duplex channel
     'DuplexChannelFactory',
     'DuplexClient',
     'ImmutableDuplexServer',
-    'MutableDuplexServer',
     'IDuplexClient',
     'IDuplexServer',
     'IImmutableDuplexServer',

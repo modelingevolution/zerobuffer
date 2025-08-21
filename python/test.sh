@@ -148,7 +148,7 @@ EOF
         return 0
     else
         echo -e "${RED}✗ Type checking failed${NC}"
-        echo -e "${YELLOW}Fix type errors or use --no-type-check to skip${NC}"
+        echo -e "${YELLOW}Fix type errors! NO SHITY CODE, THIS IS PRODUCTION, ENTERPRISE CODE${NC}"
         return 1
     fi
 }

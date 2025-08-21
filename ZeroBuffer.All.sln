@@ -5,8 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Harmony", "Harmony", "{1A2B3C4D-5E6F-7890-AB12-CD34567890EF}"
 	ProjectSection(SolutionItems) = preProject
-		modules\harmony\README.md = modules\harmony\README.md
 		FEATURE-FILES-STRUCTURE.md = FEATURE-FILES-STRUCTURE.md
+		modules\harmony\README.md = modules\harmony\README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelingEvolution.Harmony", "modules\harmony\ModelingEvolution.Harmony\ModelingEvolution.Harmony.csproj", "{A1B2C3D4-E5F6-7890-AB12-34567890ABCD}"
@@ -44,17 +44,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.CrossPlatform", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "C++ Servo", "C++ Servo", "{3C4D5E6F-7A8B-9012-CD34-EF56789012AB}"
 	ProjectSection(SolutionItems) = preProject
-		cpp\README.md = cpp\README.md
 		cpp\CMakeLists.txt = cpp\CMakeLists.txt
+		cpp\README.md = cpp\README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Cpp.Integration.Tests", "cpp\ZeroBuffer.Cpp.Integration.Tests\ZeroBuffer.Cpp.Integration.Tests.csproj", "{F2A3B4C5-D6E7-8A0B-C9D1-E2F3A4B5C6D7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python Servo", "Python Servo", "{4D5E6F7A-8B9C-0123-DE45-F67890123BCD}"
 	ProjectSection(SolutionItems) = preProject
+		python\pyproject.toml = python\pyproject.toml
+		python\PYTHON_TEST_GAPS.md = python\PYTHON_TEST_GAPS.md
 		python\README.md = python\README.md
 		python\setup.py = python\setup.py
-		python\pyproject.toml = python\pyproject.toml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroBuffer.Python.Integration.Tests", "python\ZeroBuffer.Python.Integration.Tests\ZeroBuffer.Python.Integration.Tests.csproj", "{A3B4C5D6-E7F8-9B0C-D1E2-F3A4B5C6D7E8}"
@@ -67,27 +68,27 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestJsonRpc", "test-jsonrpc
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{6F7A8B9C-0D1E-2345-F678-90ABCDEF2345}"
 	ProjectSection(SolutionItems) = preProject
-		README.md = README.md
-		CLAUDE.md = CLAUDE.md
 		API.md = API.md
-		PROTOCOL.md = PROTOCOL.md
-		CROSS_PLATFORM_TESTS.md = CROSS_PLATFORM_TESTS.md
 		BENCHMARKING_GUIDE.md = BENCHMARKING_GUIDE.md
+		CLAUDE.md = CLAUDE.md
+		CROSS_PLATFORM_TESTS.md = CROSS_PLATFORM_TESTS.md
+		CUSTOM_REGISTRY_CONCERNS.md = CUSTOM_REGISTRY_CONCERNS.md
+		DOCUMENTATION_VALIDATION.md = DOCUMENTATION_VALIDATION.md
+		IMPROVEMENTS_TODO.md = IMPROVEMENTS_TODO.md
+		PROTOCOL.md = PROTOCOL.md
+		README.md = README.md
+		README_PROJECT_STRUCTURE.md = README_PROJECT_STRUCTURE.md
+		RELEASE.md = RELEASE.md
 		TEST_COVERAGE_AND_INCONSISTENCIES.md = TEST_COVERAGE_AND_INCONSISTENCIES.md
 		TEST_SCENARIOS.md = TEST_SCENARIOS.md
-		IMPROVEMENTS_TODO.md = IMPROVEMENTS_TODO.md
-		DOCUMENTATION_VALIDATION.md = DOCUMENTATION_VALIDATION.md
-		CUSTOM_REGISTRY_CONCERNS.md = CUSTOM_REGISTRY_CONCERNS.md
-		RELEASE.md = RELEASE.md
 		VCPKG_BASELINE_EXPLAINED.md = VCPKG_BASELINE_EXPLAINED.md
 		VCPKG_SUBMISSION.md = VCPKG_SUBMISSION.md
-		README_PROJECT_STRUCTURE.md = README_PROJECT_STRUCTURE.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7A8B9C0D-1E2F-3456-A789-0BCDEF345678}"
 	ProjectSection(SolutionItems) = preProject
-		.gitignore = .gitignore
 		.gitattributes = .gitattributes
+		.gitignore = .gitignore
 	EndProjectSection
 EndProject
 Global

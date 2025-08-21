@@ -26,14 +26,7 @@ namespace ZeroBuffer.DuplexChannel
         /// </summary>
         bool IsRunning { get; }
     }
-    public class ErrorEventArgs : EventArgs
-    {
-        public Exception Exception { get; }
-        public ErrorEventArgs(Exception exception)
-        {
-            Exception = exception;
-        }
-    }
+
     /// <summary>
     /// Server that processes immutable requests and returns new response data
     /// </summary>

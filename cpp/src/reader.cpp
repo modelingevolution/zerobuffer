@@ -219,7 +219,8 @@ public:
             OIEB* oieb = get_oieb();
             
             // Quick check to ensure writer hasn't disconnected gracefully
-            if (oieb->writer_pid == 0) {
+            // When writer_pid == 0 we can check payload_written_count as it won't be changed anymore by external process
+            if (oieb->writer_pid == 0 && oieb->payload_written_count <= oieb->payload_read_count) {
                 throw WriterDeadException();
             }
             

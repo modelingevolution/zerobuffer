@@ -3,10 +3,11 @@ Duplex Channel interfaces matching C# API
 """
 
 from abc import ABC, abstractmethod
-from typing import Tuple, Callable, Optional, Awaitable
+from typing import Tuple, Callable, Optional, Awaitable, List
 from dataclasses import dataclass
 from ..types import Frame, BufferConfig
 from .processing_mode import ProcessingMode
+from ..error_event_args import ErrorEventArgs
 
 
 @dataclass
@@ -131,18 +132,39 @@ class IDuplexServer(ABC):
     def is_running(self) -> bool:
         """Check if running"""
         pass
+    
+    @abstractmethod
+    def add_error_handler(self, handler: Callable[[ErrorEventArgs], None]) -> None:
+        """
+        Add an error event handler
+        
+        Args:
+            handler: Function to call when an error occurs
+        """
+        pass
+    
+    @abstractmethod
+    def remove_error_handler(self, handler: Callable[[ErrorEventArgs], None]) -> None:
+        """
+        Remove an error event handler
+        
+        Args:
+            handler: Handler to remove
+        """
+        pass
 
 
 class IImmutableDuplexServer(IDuplexServer):
     """Server that processes immutable requests and returns new response data"""
     
     @abstractmethod
-    def start(self, handler: Callable[[Frame], bytes], mode: ProcessingMode = ProcessingMode.SINGLE_THREAD) -> None:
+    def start(self, handler: Callable[[Frame], bytes], on_init: Optional[Callable[[memoryview], None]] = None, mode: ProcessingMode = ProcessingMode.SINGLE_THREAD) -> None:
         """
         Start processing requests with a handler that returns new data.
         
         Args:
             handler: Function that takes a Frame and returns response bytes
+            on_init: Optional callback that receives metadata when client connects
             mode: Processing mode - SINGLE_THREAD runs in one background thread,
                   THREAD_POOL would process each request in a thread pool (not yet implemented)
         """

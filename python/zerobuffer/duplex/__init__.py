@@ -15,7 +15,7 @@ from .interfaces import (
 
 from .factory import DuplexChannelFactory
 from .client import DuplexClient
-from .server import ImmutableDuplexServer, MutableDuplexServer
+from .server import ImmutableDuplexServer
 from .processing_mode import ProcessingMode
 
 __all__ = [
@@ -28,6 +28,5 @@ __all__ = [
     'DuplexChannelFactory',
     'DuplexClient',
     'ImmutableDuplexServer',
-    'MutableDuplexServer',
     'ProcessingMode'
 ]

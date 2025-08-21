@@ -47,7 +47,7 @@ class Reader(LoggerMixin):
         self._frames_read = 0
         self._bytes_read = 0
         self._current_frame_size = 0
-        self._frame_disposal_data = None  # Will store (total_frame_size, sequence) for cached callback
+        self._frame_disposal_data: Optional[tuple[int, int]] = None  # Will store (total_frame_size, sequence) for cached callback
         
         # Set logger if provided, otherwise use mixin
         if logger:
@@ -290,7 +290,8 @@ class Reader(LoggerMixin):
                 oieb = self._read_oieb()
                 
                 # Quick check to ensure writer hasn't disconnected gracefully
-                if oieb.writer_pid == 0:
+                # When writer_pid == 0 we can check payload_written_count as it won't be changed anymore by external process
+                if oieb.writer_pid == 0 and oieb.payload_written_count <= oieb.payload_read_count:
                     raise WriterDeadException()
                 
                 self._logger.debug("OIEB state after semaphore: WrittenCount=%d, ReadCount=%d, WritePos=%d, ReadPos=%d, FreeBytes=%d, PayloadSize=%d",

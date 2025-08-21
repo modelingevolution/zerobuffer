@@ -27,7 +27,7 @@ class BasicCommunicationSteps(BaseSteps):
         self._writers: Dict[str, Writer] = {}
         self._last_frame: Optional[Union[Frame, Dict[str, Any]]] = None
         self._frames_written: List[Dict[str, Any]] = []
-        self._frames_read: List[Frame] = []
+        self._frames_read: List[Dict[str, Any]] = []
         self._write_error: Optional[Exception] = None
         self._buffer_naming = BufferNamingService(self.logger)
         self._current_buffer = ""
@@ -326,8 +326,9 @@ class BasicCommunicationSteps(BaseSteps):
         else:
             raise TypeError(f"Unexpected type for _last_frame: {type(self._last_frame)}")
         
+        assert frame_sequence is not None, "Frame sequence should not be None"
         # Generate expected data using the shared pattern
-        expected_data = TestDataPatterns.generate_frame_data(len(frame_data), frame_sequence)
+        expected_data = TestDataPatterns.generate_frame_data(len(frame_data), int(frame_sequence))
         
         # Compare frame data with expected data
         assert frame_data == expected_data, "Frame data does not match expected pattern"
@@ -482,7 +483,8 @@ class BasicCommunicationSteps(BaseSteps):
             raise TypeError(f"Unexpected type for _last_frame: {type(self._last_frame)}")
         
         # Generate the expected test pattern based on the frame's sequence number
-        expected_pattern = TestDataPatterns.generate_frame_data(len(frame_data), sequence)
+        assert sequence is not None, "Frame sequence should not be None"
+        expected_pattern = TestDataPatterns.generate_frame_data(len(frame_data), int(sequence))
         
         assert frame_data == expected_pattern, "Frame data does not match test pattern"
         
@@ -511,7 +513,13 @@ class BasicCommunicationSteps(BaseSteps):
                 assert TestDataPatterns.verify_simple_frame_data(frame_data), \
                     f"Frame {i+1} data does not match expected pattern"
                     
-            self._frames_read.append(frame)
+            # Store frame info as dict  
+            frame_info = {
+                'sequence': frame.sequence,
+                'size': len(frame.data),
+                'data': bytes(frame.data)
+            }
+            self._frames_read.append(frame_info)
             
         self.logger.info(f"Read {count} frames with correct sizes")
         

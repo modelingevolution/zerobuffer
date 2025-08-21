@@ -3,9 +3,9 @@ Duplex Channel Factory implementation
 """
 
 from ..types import BufferConfig
-from .interfaces import IDuplexChannelFactory, IImmutableDuplexServer, IMutableDuplexServer, IDuplexClient
+from .interfaces import IDuplexChannelFactory, IImmutableDuplexServer, IDuplexClient
 from .client import DuplexClient
-from .server import ImmutableDuplexServer, MutableDuplexServer
+from .server import ImmutableDuplexServer
 
 
 class DuplexChannelFactory(IDuplexChannelFactory):
@@ -37,13 +37,9 @@ class DuplexChannelFactory(IDuplexChannelFactory):
         
         return ImmutableDuplexServer(channel_name, config, logger)
     
-    def create_mutable_server(self, channel_name: str, config: BufferConfig) -> IMutableDuplexServer:
-        """Create a mutable server"""
-        logger = None
-        if self._logger_factory:
-            logger = self._logger_factory.create_logger(f"MutableDuplexServer.{channel_name}")
-        
-        return MutableDuplexServer(channel_name, config, logger)
+    def create_mutable_server(self, channel_name: str, config: BufferConfig):
+        """Create a mutable server (not yet implemented - planned for v2.0)"""
+        raise NotImplementedError("MutableDuplexServer is planned for v2.0")
     
     def create_client(self, channel_name: str) -> IDuplexClient:
         """Connect to existing duplex channel"""
