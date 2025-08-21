@@ -300,7 +300,8 @@ namespace ZeroBuffer
                 // Use ref to access OIEB directly (no copy needed)
                 ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
 
-                if(oieb.WriterPid == 0) // This is quick check to ensure writer hasn't disconnected gracefully.
+                // This is quick check to ensure writer hasn't disconnected gracefully; when writerPid == 0 we can check PayloadWrittenCount as it won't be changed anymore by external process.
+                if (oieb.WriterPid == 0 && oieb.PayloadWrittenCount <= oieb.PayloadReadCount) 
                     throw new WriterDeadException();
 
                 _logger.LogTrace("OIEB state after semaphore: WrittenCount={WrittenCount}, ReadCount={ReadCount}, WritePos={WritePos}, ReadPos={ReadPos}, FreeBytes={FreeBytes}, PayloadSize={PayloadSize}",
