@@ -37,7 +37,7 @@ class DuplexChannelFactory(IDuplexChannelFactory):
         
         return ImmutableDuplexServer(channel_name, config, logger)
     
-    def create_mutable_server(self, channel_name: str, config: BufferConfig):
+    def create_mutable_server(self, channel_name: str, config: BufferConfig) -> None:
         """Create a mutable server (not yet implemented - planned for v2.0)"""
         raise NotImplementedError("MutableDuplexServer is planned for v2.0")
     

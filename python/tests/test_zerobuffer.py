@@ -22,34 +22,44 @@ from zerobuffer.types import OIEB, FrameHeader, align_to_boundary
 class TestTypes:
     """Test core data structures"""
     
-    def test_oieb_pack_unpack(self):
-        """Test OIEB serialization"""
-        oieb = OIEB(
-            operation_size=128,
-            metadata_size=1024,
-            metadata_free_bytes=1024,
-            metadata_written_bytes=0,
-            payload_size=65536,
-            payload_free_bytes=65536,
-            payload_write_pos=0,
-            payload_read_pos=0,
-            payload_written_count=0,
-            payload_read_count=0,
-            writer_pid=1234,
-            reader_pid=5678
-        )
+    def test_oieb_view_direct_access(self) -> None:
+        """Test OIEBView direct memory access"""
+        from zerobuffer.oieb_view import OIEBView
         
-        # Pack and unpack
-        data = oieb.pack()
-        assert len(data) == 128  # OIEB is 128 bytes
+        # Create a bytearray to simulate shared memory
+        buffer = bytearray(128)
         
-        oieb2 = OIEB.unpack(data)
-        assert oieb2.operation_size == oieb.operation_size
-        assert oieb2.metadata_size == oieb.metadata_size
-        assert oieb2.writer_pid == oieb.writer_pid
-        assert oieb2.reader_pid == oieb.reader_pid
+        # Create view
+        oieb_view = OIEBView(memoryview(buffer))
+        
+        # Initialize with test values
+        oieb_view.oieb_size = 128
+        oieb_view.metadata_size = 1024
+        oieb_view.metadata_free_bytes = 1024
+        oieb_view.metadata_written_bytes = 0
+        oieb_view.payload_size = 65536
+        oieb_view.payload_free_bytes = 65536
+        oieb_view.payload_write_pos = 0
+        oieb_view.payload_read_pos = 0
+        oieb_view.payload_written_count = 0
+        oieb_view.payload_read_count = 0
+        oieb_view.writer_pid = 1234
+        oieb_view.reader_pid = 5678
+        
+        # Verify values are written directly to buffer
+        assert oieb_view.oieb_size == 128
+        assert oieb_view.metadata_size == 1024
+        assert oieb_view.writer_pid == 1234
+        assert oieb_view.reader_pid == 5678
+        
+        # Create another view on same buffer to verify data persistence
+        oieb_view2 = OIEBView(memoryview(buffer))
+        assert oieb_view2.oieb_size == 128
+        assert oieb_view2.metadata_size == 1024
+        assert oieb_view2.writer_pid == 1234
+        assert oieb_view2.reader_pid == 5678
     
-    def test_frame_header_pack_unpack(self):
+    def test_frame_header_pack_unpack(self) -> None:
         """Test FrameHeader serialization"""
         header = FrameHeader(payload_size=1024, sequence_number=42)
         
@@ -60,7 +70,7 @@ class TestTypes:
         assert header2.payload_size == header.payload_size
         assert header2.sequence_number == header.sequence_number
     
-    def test_align_to_boundary(self):
+    def test_align_to_boundary(self) -> None:
         """Test alignment function"""
         assert align_to_boundary(0) == 0
         assert align_to_boundary(1) == 64
@@ -73,11 +83,11 @@ class TestReaderWriter:
     """Test Reader and Writer basic functionality"""
     
     @pytest.fixture
-    def buffer_name(self):
+    def buffer_name(self) -> str:
         """Generate unique buffer name for each test"""
         return f"test_buffer_{os.getpid()}_{time.time()}"
     
-    def test_create_reader(self, buffer_name):
+    def test_create_reader(self, buffer_name: str) -> None:
         """Test creating a reader"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -87,7 +97,7 @@ class TestReaderWriter:
             assert reader.frames_read == 0
             assert reader.bytes_read == 0
     
-    def test_connect_writer(self, buffer_name):
+    def test_connect_writer(self, buffer_name: str) -> None:
         """Test connecting a writer to existing buffer"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -101,7 +111,7 @@ class TestReaderWriter:
                 assert writer.frames_written == 0
                 assert writer.bytes_written == 0
     
-    def test_multiple_writers_rejected(self, buffer_name):
+    def test_multiple_writers_rejected(self, buffer_name: str) -> None:
         """Test that only one writer can connect"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -111,12 +121,12 @@ class TestReaderWriter:
                 with pytest.raises(WriterAlreadyConnectedException):
                     Writer(buffer_name)
     
-    def test_writer_without_reader(self, buffer_name):
+    def test_writer_without_reader(self, buffer_name: str) -> None:
         """Test that writer cannot connect without reader"""
         with pytest.raises(ZeroBufferException):
             Writer(buffer_name)
     
-    def test_metadata_write_read(self, buffer_name):
+    def test_metadata_write_read(self, buffer_name: str) -> None:
         """Test metadata writing and reading"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -149,11 +159,11 @@ class TestFrameOperations:
     """Test frame reading and writing"""
     
     @pytest.fixture
-    def buffer_name(self):
+    def buffer_name(self) -> str:
         """Generate unique buffer name for each test"""
         return f"test_buffer_{os.getpid()}_{time.time()}"
     
-    def test_single_frame_write_read(self, buffer_name):
+    def test_single_frame_write_read(self, buffer_name: str) -> None:
         """Test writing and reading a single frame"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -179,7 +189,7 @@ class TestFrameOperations:
                 assert reader.frames_read == 1
                 assert reader.bytes_read == len(data)
     
-    def test_multiple_frames(self, buffer_name):
+    def test_multiple_frames(self, buffer_name: str) -> None:
         """Test writing and reading multiple frames"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -203,7 +213,7 @@ class TestFrameOperations:
                 assert writer.frames_written == frames_to_write
                 assert reader.frames_read == frames_to_write
     
-    def test_zero_copy_write(self, buffer_name):
+    def test_zero_copy_write(self, buffer_name: str) -> None:
         """Test zero-copy writing with memoryview"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -213,8 +223,8 @@ class TestFrameOperations:
                 data = bytearray(b"Zero-copy data")
                 view = memoryview(data)
                 
-                # Write with zero-copy
-                writer.write_frame_zero_copy(view)
+                # Write with zero-copy (memoryview is zero-copy)
+                writer.write_frame(view)
                 
                 # Read and verify
                 frame = reader.read_frame(timeout=1.0)
@@ -222,7 +232,7 @@ class TestFrameOperations:
                 assert bytes(frame.data) == data
                 # Frame auto-released via context manager
     
-    def test_frame_too_large(self, buffer_name):
+    def test_frame_too_large(self, buffer_name: str) -> None:
         """Test writing frame larger than buffer"""
         config = BufferConfig(metadata_size=1024, payload_size=1024)  # Small buffer
         
@@ -233,7 +243,7 @@ class TestFrameOperations:
                 with pytest.raises(FrameTooLargeException):
                     writer.write_frame(large_data)
     
-    def test_buffer_wrap_around(self, buffer_name):
+    def test_buffer_wrap_around(self, buffer_name: str) -> None:
         """Test buffer wrap-around behavior"""
         # Small buffer to force wrap-around
         config = BufferConfig(metadata_size=64, payload_size=1024)
@@ -273,11 +283,11 @@ class TestErrorConditions:
     """Test error handling and edge cases"""
     
     @pytest.fixture
-    def buffer_name(self):
+    def buffer_name(self) -> str:
         """Generate unique buffer name for each test"""
         return f"test_buffer_{os.getpid()}_{time.time()}"
     
-    def test_reader_timeout(self, buffer_name):
+    def test_reader_timeout(self, buffer_name: str) -> None:
         """Test reader timeout when no data available"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -287,7 +297,7 @@ class TestErrorConditions:
                 frame = reader.read_frame(timeout=0.1)
                 assert frame is None  # Should timeout
     
-    def test_sequence_validation(self, buffer_name):
+    def test_sequence_validation(self, buffer_name: str) -> None:
         """Test sequence number validation"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -309,7 +319,7 @@ class TestErrorConditions:
                 assert frame2.sequence == 2
                 # Frame auto-released via context manager
     
-    def test_empty_frame_rejected(self, buffer_name):
+    def test_empty_frame_rejected(self, buffer_name: str) -> None:
         """Test that empty frames are rejected"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -323,23 +333,23 @@ class TestConcurrency:
     """Test concurrent operations"""
     
     @pytest.fixture
-    def buffer_name(self):
+    def buffer_name(self) -> str:
         """Generate unique buffer name for each test"""
         return f"test_buffer_{os.getpid()}_{time.time()}"
     
-    def test_concurrent_write_read(self, buffer_name):
+    def test_concurrent_write_read(self, buffer_name: str) -> None:
         """Test concurrent writing and reading"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         frames_to_transfer = 100
         
-        def writer_thread(name):
+        def writer_thread(name: str) -> None:
             with Writer(name) as writer:
                 for i in range(frames_to_transfer):
                     data = f"Frame {i}".encode()
                     writer.write_frame(data)
                     time.sleep(0.001)  # Small delay
         
-        def reader_thread(name, results):
+        def reader_thread(name: str, results: list[list[int]]) -> None:
             with Reader(name, config) as reader:
                 frames_read = []
                 for i in range(frames_to_transfer):
@@ -350,7 +360,7 @@ class TestConcurrency:
                 results.append(frames_read)
         
         # Start reader first
-        results = []
+        results: list[list[int]] = []
         reader_t = threading.Thread(target=reader_thread, args=(buffer_name, results))
         reader_t.start()
         
@@ -375,11 +385,11 @@ class TestZeroCopyVerification:
     """Verify zero-copy behavior"""
     
     @pytest.fixture
-    def buffer_name(self):
+    def buffer_name(self) -> str:
         """Generate unique buffer name for each test"""
         return f"test_buffer_{os.getpid()}_{time.time()}"
     
-    def test_memoryview_zero_copy(self, buffer_name):
+    def test_memoryview_zero_copy(self, buffer_name: str) -> None:
         """Test that memoryview provides zero-copy access"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
@@ -407,7 +417,7 @@ class TestZeroCopyVerification:
                 
                 # Frame auto-released via context manager
     
-    def test_direct_buffer_access(self, buffer_name):
+    def test_direct_buffer_access(self, buffer_name: str) -> None:
         """Test direct buffer access API"""
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         

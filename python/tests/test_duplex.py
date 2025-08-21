@@ -15,7 +15,7 @@ from zerobuffer import Reader, Writer, BufferConfig
 class TestDuplexChannel:
     """Test bidirectional communication patterns"""
     
-    def test_basic_duplex_communication(self):
+    def test_basic_duplex_communication(self) -> None:
         """Test basic request-response pattern"""
         request_buffer = f"duplex_req_{os.getpid()}"
         response_buffer = f"duplex_resp_{os.getpid()}"
@@ -87,18 +87,18 @@ class TestDuplexChannel:
             server.terminate()
             server.join(timeout=2.0)
     
-    def test_concurrent_duplex_channels(self):
+    def test_concurrent_duplex_channels(self) -> None:
         """Test multiple concurrent duplex channels"""
         num_channels = 3
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
         
-        def channel_worker(channel_id, results_queue):
+        def channel_worker(channel_id: int, results_queue: multiprocessing.Queue) -> None:
             """Worker for a single duplex channel"""
             req_buffer = f"duplex_req_{channel_id}_{os.getpid()}"
             resp_buffer = f"duplex_resp_{channel_id}_{os.getpid()}"
             
             # Server side
-            def server():
+            def server() -> None:
                 with Reader(req_buffer, config) as req_reader:
                     timeout_start = time.time()
                     while time.time() - timeout_start < 5.0:
@@ -142,7 +142,7 @@ class TestDuplexChannel:
                 server_thread.join(timeout=2.0)
         
         # Run multiple channels concurrently
-        results_queue = multiprocessing.Queue()
+        results_queue: multiprocessing.Queue[dict] = multiprocessing.Queue()
         processes = []
         
         for i in range(num_channels):

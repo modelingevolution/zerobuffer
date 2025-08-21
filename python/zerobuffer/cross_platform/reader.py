@@ -41,7 +41,7 @@ def verify_frame_data(data: bytes, frame_index: int, pattern: str) -> bool:
         raise ValueError(f"Unknown pattern: {pattern}")
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="Read frames from a ZeroBuffer for testing",
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -88,7 +88,7 @@ def main():
         reader = Reader(args.buffer_name)
         
         # Read metadata if available
-        metadata = reader.read_metadata()
+        metadata = reader.get_metadata()
         if metadata:
             result["metadata_size"] = len(metadata)
             if args.verbose and not args.json_output:
@@ -102,7 +102,7 @@ def main():
         while frame_index < frames_to_read:
             try:
                 # Read frame with timeout
-                frame = reader.read_frame(timeout_ms=args.timeout_ms)
+                frame = reader.read_frame(timeout=args.timeout_ms / 1000.0 if args.timeout_ms else None)
                 
                 if frame is None:
                     # Timeout or no more frames
@@ -118,14 +118,14 @@ def main():
                 
                 # Verify data pattern if requested
                 if args.verify != "none":
-                    if not verify_frame_data(frame, frame_index, args.verify):
+                    if not verify_frame_data(bytes(frame.data), frame_index, args.verify):
                         result["verification_errors"] += 1
                         if args.verbose and not args.json_output:
                             print(f"Frame {frame_index}: Verification failed")
                 
                 # Calculate checksum if requested
                 if args.checksum:
-                    checksum = hashlib.md5(frame).hexdigest()
+                    checksum = hashlib.md5(bytes(frame.data)).hexdigest()
                     if len(result["checksums"]) < 100:  # Limit stored checksums
                         result["checksums"].append({
                             "frame": frame_index,

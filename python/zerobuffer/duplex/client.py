@@ -37,7 +37,7 @@ class DuplexClient(IDuplexClient):
         # Initialize connections
         self._connect()
     
-    def _connect(self):
+    def _connect(self) -> None:
         """Initialize connections to buffers"""
         # Default config matching C# defaults
         config = BufferConfig(metadata_size=4096, payload_size=256*1024*1024)

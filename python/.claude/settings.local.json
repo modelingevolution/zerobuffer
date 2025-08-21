@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m mypy:*)",
+      "Bash(python3 -m mypy:*)",
+      "Bash(source:*)",
+      "Bash(./verify-code-quality.sh:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

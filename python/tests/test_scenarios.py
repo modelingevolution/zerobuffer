@@ -25,7 +25,7 @@ from zerobuffer import (
 class TestScenario1BasicDataTransfer:
     """Scenario 1: Basic single frame write and read"""
     
-    def test_single_frame_transfer(self):
+    def test_single_frame_transfer(self) -> None:
         """1.1 Single frame write and read"""
         buffer_name = f"test_scenario_1_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -65,7 +65,7 @@ class TestScenario1BasicDataTransfer:
 class TestScenario2ContinuousStreaming:
     """Scenario 2: Continuous data streaming"""
     
-    def test_continuous_streaming(self):
+    def test_continuous_streaming(self) -> None:
         """2.1 Stream 1000 frames continuously"""
         buffer_name = f"test_scenario_2_{os.getpid()}_{time.time()}"
         config = BufferConfig(metadata_size=1024, payload_size=1024*1024)  # 1MB payload
@@ -80,7 +80,7 @@ class TestScenario2ContinuousStreaming:
         frames_read = []
         errors = []
         
-        def writer_thread():
+        def writer_thread() -> None:
             try:
                 for i in range(num_frames):
                     data = f"Frame {i:04d}".encode() + b"x" * 1000
@@ -89,7 +89,7 @@ class TestScenario2ContinuousStreaming:
             except Exception as e:
                 errors.append(f"Writer error: {e}")
         
-        def reader_thread():
+        def reader_thread() -> None:
             try:
                 for i in range(num_frames):
                     frame = reader.read_frame(timeout=5.0)
@@ -130,7 +130,7 @@ class TestScenario2ContinuousStreaming:
 class TestScenario3BufferFullCondition:
     """Scenario 3: Buffer full handling"""
     
-    def test_buffer_full_blocking(self):
+    def test_buffer_full_blocking(self) -> None:
         """3.1 Writer blocks when buffer is full"""
         buffer_name = f"test_scenario_3_{os.getpid()}"
         # Small buffer to easily fill
@@ -146,7 +146,7 @@ class TestScenario3BufferFullCondition:
                 frames_written = []
                 writer_blocked = threading.Event()
                 
-                def writer_thread():
+                def writer_thread() -> None:
                     for i in range(10):  # Try to write more than buffer can hold
                         writer.write_frame(frame_data)
                         frames_written.append(i)
@@ -194,7 +194,7 @@ class TestScenario3BufferFullCondition:
 class TestScenario4WrapAround:
     """Scenario 4: Buffer wrap-around"""
     
-    def test_wrap_around_handling(self):
+    def test_wrap_around_handling(self) -> None:
         """4.1 Correct wrap-around at buffer boundary"""
         buffer_name = f"test_scenario_4_{os.getpid()}"
         # Small buffer to force wrap-around
@@ -228,7 +228,7 @@ class TestScenario4WrapAround:
 class TestScenario5WriterDisconnect:
     """Scenario 5: Writer disconnect detection"""
     
-    def test_writer_disconnect_detection(self):
+    def test_writer_disconnect_detection(self) -> None:
         """5.1 Reader detects writer disconnect"""
         buffer_name = f"test_scenario_5_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -267,7 +267,7 @@ class TestScenario5WriterDisconnect:
 class TestScenario6ReaderDisconnect:
     """Scenario 6: Reader disconnect detection"""
     
-    def test_reader_disconnect_detection(self):
+    def test_reader_disconnect_detection(self) -> None:
         """6.1 Writer detects reader disconnect"""
         buffer_name = f"test_scenario_6_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=1024)  # Small buffer
@@ -329,7 +329,7 @@ class TestScenario6ReaderDisconnect:
 class TestScenario7SequenceValidation:
     """Scenario 7: Sequence number validation"""
     
-    def test_sequence_validation(self):
+    def test_sequence_validation(self) -> None:
         """7.1 Verify sequence numbers are consecutive"""
         buffer_name = f"test_scenario_7_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -352,7 +352,7 @@ class TestScenario7SequenceValidation:
 class TestScenario8MetadataHandling:
     """Scenario 8: Metadata operations"""
     
-    def test_metadata_write_once(self):
+    def test_metadata_write_once(self) -> None:
         """8.1 Metadata can only be written once"""
         buffer_name = f"test_scenario_8_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -371,7 +371,7 @@ class TestScenario8MetadataHandling:
                 read_metadata = reader.get_metadata()
                 assert bytes(read_metadata) == metadata1
     
-    def test_large_metadata(self):
+    def test_large_metadata(self) -> None:
         """8.2 Large metadata handling"""
         buffer_name = f"test_scenario_8b_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -395,7 +395,7 @@ class TestScenario8MetadataHandling:
 class TestScenario9MultiProcess:
     """Scenario 9: Multi-process support"""
     
-    def test_cross_process_communication(self):
+    def test_cross_process_communication(self) -> None:
         """9.1 Reader and writer in different processes"""
         buffer_name = f"test_scenario_9_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -438,7 +438,7 @@ class TestScenario9MultiProcess:
 class TestScenario10ResourceCleanup:
     """Scenario 10: Resource cleanup"""
     
-    def test_cleanup_on_normal_exit(self):
+    def test_cleanup_on_normal_exit(self) -> None:
         """10.1 Resources cleaned up on normal exit"""
         buffer_name = f"test_scenario_10_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -451,7 +451,7 @@ class TestScenario10ResourceCleanup:
         reader2 = Reader(buffer_name, config)
         reader2.close()
     
-    def test_name_reuse_after_cleanup(self):
+    def test_name_reuse_after_cleanup(self) -> None:
         """10.3 Buffer names can be reused after cleanup"""
         buffer_name = f"test_scenario_10b_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -477,7 +477,7 @@ class TestScenario10ResourceCleanup:
 class TestScenario11Performance:
     """Scenario 11: Performance characteristics"""
     
-    def test_zero_copy_verification(self):
+    def test_zero_copy_verification(self) -> None:
         """11.1 Verify zero-copy operation"""
         buffer_name = f"test_scenario_11_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -488,8 +488,8 @@ class TestScenario11Performance:
                 large_data = bytearray(b"x" * 10000)
                 view = memoryview(large_data)
                 
-                # Write using zero-copy
-                writer.write_frame_zero_copy(view)
+                # Write using zero-copy (memoryview is zero-copy)
+                writer.write_frame(view)
                 
                 # Read frame
                 frame = reader.read_frame(timeout=1.0)
@@ -507,7 +507,7 @@ class TestScenario11Performance:
                 
                 reader.release_frame(frame)
     
-    def test_throughput(self):
+    def test_throughput(self) -> None:
         """11.2 Measure throughput"""
         buffer_name = f"test_scenario_11b_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=10*1024*1024)  # 10MB
@@ -546,14 +546,14 @@ class TestScenario11Performance:
 class TestScenario12ErrorRecovery:
     """Scenario 12: Error recovery"""
     
-    def test_recovery_after_sequence_error(self):
+    def test_recovery_after_sequence_error(self) -> None:
         """12.1 Recovery after sequence error"""
         # This test would require corrupting memory directly
         # which is not easily doable in Python without ctypes
         # Skip for now
         pass
     
-    def test_partial_frame_handling(self):
+    def test_partial_frame_handling(self) -> None:
         """12.2 Handling of partial frames"""
         # This would require simulating process crash mid-write
         # which is complex to test reliably

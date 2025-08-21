@@ -67,7 +67,10 @@ class WindowsSharedMemory(SharedMemory):
     def get_buffer(self) -> memoryview:
         """Get memoryview of entire shared memory buffer"""
         if self._buffer is None:
-            self._buffer = memoryview(self._shm.buf)
+            if self._shm is not None:
+                self._buffer = memoryview(self._shm.buf)
+            else:
+                raise ValueError("Shared memory not initialized")
         return self._buffer
     
     def close(self) -> None:

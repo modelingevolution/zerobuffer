@@ -3,7 +3,7 @@ Abstract base classes for platform-specific implementations
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 
 class SharedMemory(ABC):
@@ -48,7 +48,7 @@ class SharedMemory(ABC):
         """Get the size of the shared memory segment"""
         pass
     
-    def __enter__(self):
+    def __enter__(self) -> 'SharedMemory':
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -98,7 +98,7 @@ class Semaphore(ABC):
         """Remove semaphore from system (platform-specific)"""
         pass
     
-    def __enter__(self):
+    def __enter__(self) -> 'SharedMemory':
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -128,7 +128,7 @@ class FileLock(ABC):
         """Release and remove the lock"""
         pass
     
-    def __enter__(self):
+    def __enter__(self) -> 'SharedMemory':
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):

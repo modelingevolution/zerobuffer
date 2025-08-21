@@ -24,8 +24,8 @@ elif command == "reader":
     from .reader import main
     sys.exit(main())
 elif command == "relay":
-    from .relay import main
-    sys.exit(main())
+    print("Error: relay command not yet implemented", file=sys.stderr)
+    sys.exit(1)
 else:
     print(f"Unknown command: {command}")
     print("Valid commands: writer, reader, relay")

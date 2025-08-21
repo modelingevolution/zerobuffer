@@ -5,7 +5,7 @@ Provides a factory pattern for creating loggers, similar to C#'s ILoggerFactory.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from abc import ABC, abstractmethod
 
 
@@ -32,7 +32,7 @@ class LoggerFactory(ILoggerFactory):
     def __init__(self, 
                  level: int = logging.INFO,
                  format_string: Optional[str] = None,
-                 handlers: Optional[list] = None):
+                 handlers: Optional[List[Any]] = None):
         """
         Create a logger factory
         

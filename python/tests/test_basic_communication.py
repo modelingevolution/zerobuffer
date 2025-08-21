@@ -22,7 +22,7 @@ from zerobuffer_serve.step_definitions import BasicCommunicationSteps
 class TestBasicCommunication:
     """Tests for Basic Communication scenarios"""
     
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup for each test"""
         self.logger_provider = DualLoggerProvider()
         self.test_context = TestContext()
@@ -37,21 +37,21 @@ class TestBasicCommunication:
             self.logger_provider.get_logger("BasicCommunicationSteps")
         )
         
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Cleanup after each test"""
         try:
             # Clean up any readers and writers from the steps
             if hasattr(self.steps, '_readers'):
                 for reader in self.steps._readers.values():
                     try:
-                        reader.cleanup()
+                        reader.close()
                     except:
                         pass
                         
             if hasattr(self.steps, '_writers'):
                 for writer in self.steps._writers.values():
                     try:
-                        writer.cleanup()
+                        writer.close()
                     except:
                         pass
                         
@@ -60,7 +60,7 @@ class TestBasicCommunication:
             pass
         
     @pytest.mark.asyncio
-    async def test_1_1_simple_write_read_cycle(self):
+    async def test_1_1_simple_write_read_cycle(self) -> None:
         """Test 1.1 - Simple Write-Read Cycle"""
         print("\n=== Test 1.1 - Simple Write-Read Cycle ===")
         
@@ -92,7 +92,7 @@ class TestBasicCommunication:
         print("✅ Test 1.1 completed successfully!")
         
     @pytest.mark.asyncio
-    async def test_1_2_multiple_frames_sequential(self):
+    async def test_1_2_multiple_frames_sequential(self) -> None:
         """Test 1.2 - Multiple Frames Sequential"""
         print("\n=== Test 1.2 - Multiple Frames Sequential ===")
         
@@ -136,7 +136,7 @@ class TestBasicCommunication:
         print("✅ Test 1.2 completed successfully!")
         
     @pytest.mark.asyncio
-    async def test_1_3_buffer_full_handling(self):
+    async def test_1_3_buffer_full_handling(self) -> None:
         """Test 1.3 - Buffer Full Handling"""
         print("\n=== Test 1.3 - Buffer Full Handling ===")
         
@@ -168,7 +168,7 @@ class TestBasicCommunication:
         print("✅ Test 1.3 completed successfully!")
         
     @pytest.mark.asyncio
-    async def test_1_4_zero_copy_write_operations(self):
+    async def test_1_4_zero_copy_write_operations(self) -> None:
         """Test 1.4 - Zero-Copy Write Operations"""
         print("\n=== Test 1.4 - Zero-Copy Write Operations ===")
         
@@ -200,7 +200,7 @@ class TestBasicCommunication:
         print("✅ Test 1.4 completed successfully!")
         
     @pytest.mark.asyncio
-    async def test_1_5_mixed_frame_sizes(self):
+    async def test_1_5_mixed_frame_sizes(self) -> None:
         """Test 1.5 - Mixed Frame Sizes"""
         print("\n=== Test 1.5 - Mixed Frame Sizes ===")
         

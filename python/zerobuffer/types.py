@@ -7,7 +7,8 @@ ensuring binary compatibility with C++ and C# implementations.
 
 import struct
 from dataclasses import dataclass
-from typing import Optional, Tuple, Callable
+from typing import Optional, Tuple, Callable, Type
+from types import TracebackType
 
 # Constants
 BLOCK_ALIGNMENT = 64
@@ -238,7 +239,12 @@ class Frame:
         """Enter context manager"""
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self, 
+        exc_type: Optional[Type[BaseException]], 
+        exc_val: Optional[BaseException], 
+        exc_tb: Optional[TracebackType]
+    ) -> None:
         """Exit context manager - dispose the frame"""
         self.dispose()
         

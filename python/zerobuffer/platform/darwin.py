@@ -49,7 +49,10 @@ class DarwinSharedMemory(SharedMemory):
     def get_buffer(self) -> memoryview:
         """Get memoryview of entire shared memory buffer"""
         if self._buffer is None:
-            self._buffer = memoryview(self._shm.buf)
+            if self._shm is not None:
+                self._buffer = memoryview(self._shm.buf)
+            else:
+                raise ValueError("Shared memory not initialized")
         return self._buffer
     
     def close(self) -> None:
@@ -184,8 +187,9 @@ class DarwinFileLock(FileLock):
             self._locked = True
         except BlockingIOError:
             # Lock is held by another process
-            os.close(self._fd)
-            self._fd = None
+            if self._fd is not None:
+                os.close(self._fd)
+                self._fd = None
             raise ZeroBufferException(f"Failed to acquire lock: {path}")
         except Exception as e:
             if self._fd is not None:

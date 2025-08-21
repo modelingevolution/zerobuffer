@@ -12,7 +12,8 @@ import glob
 import logging
 
 from . import platform
-from .types import OIEB, ProtocolVersion, BufferConfig, Frame, FrameHeader, align_to_boundary
+from .types import BufferConfig, Frame, FrameHeader, align_to_boundary
+from .oieb_view import OIEBView
 from .exceptions import (
     ZeroBufferException,
     WriterDeadException,
@@ -48,6 +49,7 @@ class Reader(LoggerMixin):
         self._bytes_read = 0
         self._current_frame_size = 0
         self._frame_disposal_data: Optional[tuple[int, int]] = None  # Will store (total_frame_size, sequence) for cached callback
+        self._oieb: Optional[OIEBView] = None  # Will be initialized after shm is created
         
         # Set logger if provided, otherwise use mixin
         if logger:
@@ -57,7 +59,7 @@ class Reader(LoggerMixin):
         
         
         # Calculate aligned sizes
-        self._oieb_size = align_to_boundary(OIEB.SIZE)
+        self._oieb_size = align_to_boundary(OIEBView.SIZE)
         self._metadata_size = align_to_boundary(self._config.metadata_size)
         self._payload_size = align_to_boundary(self._config.payload_size)
         
@@ -79,27 +81,16 @@ class Reader(LoggerMixin):
             # Don't create persistent memoryviews - use the API directly
             # This avoids the "cannot close exported pointers" error
             
-            # Initialize OIEB
-            oieb = OIEB(
-                oieb_size=128,  # Always 128 for v1.x.x
-                version=ProtocolVersion(major=1, minor=0, patch=0, reserved=0),
+            # Initialize OIEB using direct memory view
+            self._oieb = OIEBView(self._shm.get_memoryview(0, OIEBView.SIZE))
+            self._oieb.initialize(
                 metadata_size=self._metadata_size,
-                metadata_free_bytes=self._metadata_size,
-                metadata_written_bytes=0,
                 payload_size=self._payload_size,
-                payload_free_bytes=self._payload_size,
-                payload_write_pos=0,
-                payload_read_pos=0,
-                payload_written_count=0,
-                payload_read_count=0,
-                writer_pid=0,
                 reader_pid=os.getpid()
             )
-            # Write OIEB using the clean API
-            self._shm.write_bytes(0, oieb.pack())
             
             self._logger.debug("Initialized OIEB: payload_free_bytes=%d, payload_size=%d", 
-                             oieb.payload_free_bytes, oieb.payload_size)
+                             self._oieb.payload_free_bytes, self._oieb.payload_size)
             
             # Create semaphores
             self._logger.debug("Creating semaphores: write=%s, read=%s", f"sem-w-{name}", f"sem-r-{name}")
@@ -113,7 +104,7 @@ class Reader(LoggerMixin):
             self._cleanup_on_error()
             raise
     
-    def _cleanup_stale_resources(self):
+    def _cleanup_stale_resources(self) -> None:
         """Clean up stale resources from dead processes"""
         lock_dir = Path(platform.get_temp_directory())
         
@@ -126,7 +117,11 @@ class Reader(LoggerMixin):
                     try_remove = platform.PlatformFileLock.try_remove_stale
                 else:
                     # Fallback to Linux implementation if available
-                    try_remove = getattr(platform.LinuxFileLock, 'try_remove_stale', lambda path: False)
+                    try_remove = getattr(platform, 'LinuxFileLock', lambda: None)
+                    if try_remove:
+                        try_remove = getattr(try_remove, 'try_remove_stale', lambda path: False)
+                    else:
+                        try_remove = lambda path: False
                 
                 if try_remove(str(lock_file)):
                     # We removed a stale lock, clean up associated resources
@@ -136,19 +131,19 @@ class Reader(LoggerMixin):
                     try:
                         # Check if shared memory exists and is orphaned
                         shm = SharedMemoryFactory.open(buffer_name)
-                        oieb_data = shm.read_bytes(0, OIEB.SIZE)
-                        oieb = OIEB.unpack(oieb_data)
+                        # Use OIEBView to check PIDs
+                        temp_oieb = OIEBView(shm.get_memoryview(0, OIEBView.SIZE))
                         
                         # Check if both reader and writer are dead
-                        reader_dead = (oieb.reader_pid == 0 or 
-                                     not platform.process_exists(oieb.reader_pid))
-                        writer_dead = (oieb.writer_pid == 0 or 
-                                     not platform.process_exists(oieb.writer_pid))
+                        reader_dead = (temp_oieb.reader_pid == 0 or 
+                                     not platform.process_exists(temp_oieb.reader_pid))
+                        writer_dead = (temp_oieb.writer_pid == 0 or 
+                                     not platform.process_exists(temp_oieb.writer_pid))
                         
                         if reader_dead and writer_dead:
                             # Both processes are dead, safe to clean up
                             self._logger.info("Cleaning up orphaned buffer: %s (reader_pid=%d, writer_pid=%d)", 
-                                            buffer_name, oieb.reader_pid, oieb.writer_pid)
+                                            buffer_name, temp_oieb.reader_pid, temp_oieb.writer_pid)
                             shm.close()
                             shm.unlink()
                             
@@ -173,7 +168,7 @@ class Reader(LoggerMixin):
             # Ignore errors during cleanup
             pass
     
-    def _cleanup_on_error(self):
+    def _cleanup_on_error(self) -> None:
         """Clean up resources on initialization error"""
         if hasattr(self, '_sem_read'):
             self._sem_read.close()
@@ -187,16 +182,8 @@ class Reader(LoggerMixin):
         if hasattr(self, '_lock_file'):
             self._lock_file.close()
     
-    def _read_oieb(self) -> OIEB:
-        """Read current OIEB from shared memory"""
-        # Read OIEB using the clean API
-        oieb_data = self._shm.read_bytes(0, OIEB.SIZE)
-        return OIEB.unpack(oieb_data)
-    
-    def _write_oieb(self, oieb: OIEB) -> None:
-        """Write OIEB to shared memory"""
-        # Write OIEB using the clean API
-        self._shm.write_bytes(0, oieb.pack())
+    # OIEB access is now direct through self._oieb (OIEBView)
+    # No need for _read_oieb or _write_oieb methods
     
     def _on_frame_disposed(self) -> None:
         """
@@ -212,10 +199,9 @@ class Reader(LoggerMixin):
         
         self._logger.debug("Frame disposed, releasing %d bytes for seq=%d", 
                          total_frame_size, sequence)
-        # Update OIEB to mark space as available (matching C++ pattern)
-        oieb_release = self._read_oieb()
-        oieb_release.payload_free_bytes += total_frame_size
-        self._write_oieb(oieb_release)
+        # Update OIEB directly in shared memory
+        if self._oieb:
+            self._oieb.payload_free_bytes += total_frame_size
         # Signal writer that space is available
         self._sem_read.release()
     
@@ -238,8 +224,7 @@ class Reader(LoggerMixin):
             if self._closed:
                 raise ZeroBufferException("Reader is closed")
             
-            oieb = self._read_oieb()
-            if oieb.metadata_written_bytes == 0:
+            if not self._oieb or self._oieb.metadata_written_bytes == 0:
                 return None
             
             # Read metadata size prefix
@@ -247,7 +232,7 @@ class Reader(LoggerMixin):
             size_bytes = self._shm.read_bytes(metadata_offset, 8)
             size = int.from_bytes(size_bytes, byteorder='little')
             
-            if size == 0 or size > oieb.metadata_written_bytes - 8:
+            if size == 0 or size > self._oieb.metadata_written_bytes - 8:
                 raise ZeroBufferException("Invalid metadata size")
             
             # Return view of actual metadata (skip size prefix)
@@ -279,52 +264,52 @@ class Reader(LoggerMixin):
                 self._logger.debug("Waiting on write semaphore for data signal")
                 if not self._sem_write.acquire(timeout):
                     # Timeout - check if writer is alive
-                    oieb = self._read_oieb()
-                    if oieb.writer_pid != 0 and not platform.process_exists(oieb.writer_pid):
-                        self._logger.warning("Writer process %d is dead", oieb.writer_pid)
+                    if self._oieb and self._oieb.writer_pid != 0 and not platform.process_exists(self._oieb.writer_pid):
+                        self._logger.warning("Writer process %d is dead", self._oieb.writer_pid)
                         raise WriterDeadException()
                     self._logger.debug("Read timeout after %s seconds", timeout)
                     return None  # Timeout
                 
                 # Semaphore was signaled - data should be available
-                oieb = self._read_oieb()
                 
                 # Quick check to ensure writer hasn't disconnected gracefully
                 # When writer_pid == 0 we can check payload_written_count as it won't be changed anymore by external process
-                if oieb.writer_pid == 0 and oieb.payload_written_count <= oieb.payload_read_count:
+                if self._oieb and self._oieb.writer_pid == 0 and self._oieb.payload_written_count <= self._oieb.payload_read_count:
                     raise WriterDeadException()
                 
-                self._logger.debug("OIEB state after semaphore: WrittenCount=%d, ReadCount=%d, WritePos=%d, ReadPos=%d, FreeBytes=%d, PayloadSize=%d",
-                                 oieb.payload_written_count, oieb.payload_read_count, oieb.payload_write_pos, 
-                                 oieb.payload_read_pos, oieb.payload_free_bytes, oieb.payload_size)
+                if self._oieb:
+                    self._logger.debug("OIEB state after semaphore: WrittenCount=%d, ReadCount=%d, WritePos=%d, ReadPos=%d, FreeBytes=%d, PayloadSize=%d",
+                                     self._oieb.payload_written_count, self._oieb.payload_read_count, self._oieb.payload_write_pos, 
+                                     self._oieb.payload_read_pos, self._oieb.payload_free_bytes, self._oieb.payload_size)
                 
                 # Read frame header
+                if not self._oieb:
+                    raise ZeroBufferException("Reader not properly initialized")
+                
                 payload_base = self._oieb_size + self._metadata_size
-                header_offset = payload_base + oieb.payload_read_pos
+                header_offset = payload_base + self._oieb.payload_read_pos
                 header_data = self._shm.read_bytes(header_offset, FrameHeader.SIZE)
                 header = FrameHeader.unpack(header_data)
                 
                 # Check for wrap-around marker
                 if header.payload_size == 0:
                     # This is a wrap marker
-                    self._logger.debug("Found wrap marker at position %d, handling wrap-around", oieb.payload_read_pos)
+                    self._logger.debug("Found wrap marker at position %d, handling wrap-around", self._oieb.payload_read_pos)
                     
                     # Calculate wasted space from current read position to end of buffer
-                    wasted_space = oieb.payload_size - oieb.payload_read_pos
+                    wasted_space = self._oieb.payload_size - self._oieb.payload_read_pos
                     self._logger.debug("Wrap-around: wasted space = %d bytes (from %d to %d)", 
-                                     wasted_space, oieb.payload_read_pos, oieb.payload_size)
+                                     wasted_space, self._oieb.payload_read_pos, self._oieb.payload_size)
                     
                     # Add back the wasted space to free bytes
-                    oieb.payload_free_bytes += wasted_space
+                    self._oieb.payload_free_bytes += wasted_space
                     
                     # Move to beginning of buffer
-                    oieb.payload_read_pos = 0
-                    oieb.payload_read_count += 1  # Count the wrap marker as a "frame"
-                    
-                    self._write_oieb(oieb)  # Update OIEB in shared memory
+                    self._oieb.payload_read_pos = 0
+                    self._oieb.payload_read_count += 1  # Count the wrap marker as a "frame"
                     
                     self._logger.debug("After wrap: ReadPos=0, ReadCount=%d, FreeBytes=%d", 
-                                     oieb.payload_read_count, oieb.payload_free_bytes)
+                                     self._oieb.payload_read_count, self._oieb.payload_free_bytes)
                     
                     # Signal that we consumed the wrap marker (freed space)
                     self._sem_read.release()
@@ -346,15 +331,14 @@ class Reader(LoggerMixin):
                 total_frame_size = FrameHeader.SIZE + header.payload_size
                 
                 self._logger.debug("Reading frame: seq=%d, size=%d from position %d", 
-                                 header.sequence_number, header.payload_size, oieb.payload_read_pos)
+                                 header.sequence_number, header.payload_size, self._oieb.payload_read_pos)
                 
                 # Check if frame wraps around buffer
-                if oieb.payload_read_pos + total_frame_size > oieb.payload_size:
+                if self._oieb.payload_read_pos + total_frame_size > self._oieb.payload_size:
                     # Frame would extend beyond buffer
-                    if oieb.payload_write_pos < oieb.payload_read_pos:
+                    if self._oieb.payload_write_pos < self._oieb.payload_read_pos:
                         # Writer has wrapped, we should wrap too
-                        oieb.payload_read_pos = 0
-                        self._write_oieb(oieb)  # Update OIEB in shared memory
+                        self._oieb.payload_read_pos = 0
                         # Re-read header at new position
                         header_offset = payload_base  # Start of payload buffer
                         header_data = self._shm.read_bytes(header_offset, FrameHeader.SIZE)
@@ -368,18 +352,16 @@ class Reader(LoggerMixin):
                         continue
                 
                 # Update OIEB read position and count (but NOT free bytes yet!)
-                old_pos = oieb.payload_read_pos
-                oieb.payload_read_pos += total_frame_size
-                if oieb.payload_read_pos >= oieb.payload_size:
-                    oieb.payload_read_pos -= oieb.payload_size
-                oieb.payload_read_count += 1
+                old_pos = self._oieb.payload_read_pos
+                self._oieb.payload_read_pos += total_frame_size
+                if self._oieb.payload_read_pos >= self._oieb.payload_size:
+                    self._oieb.payload_read_pos -= self._oieb.payload_size
+                self._oieb.payload_read_count += 1
                 # NOTE: We do NOT update payload_free_bytes here!
                 # This will be done when the Frame is disposed (RAII pattern)
                 
                 self._logger.debug("Frame read: seq=%d, new state: ReadCount=%d, ReadPos=%d", 
-                                 header.sequence_number, oieb.payload_read_count, oieb.payload_read_pos)
-                
-                self._write_oieb(oieb)
+                                 header.sequence_number, self._oieb.payload_read_count, self._oieb.payload_read_pos)
                 
                 # Store frame disposal data for the cached callback
                 # This avoids creating a new lambda/closure for each frame
@@ -438,8 +420,9 @@ class Reader(LoggerMixin):
             
             if timeout_ms is None:
                 # Immediate check
-                oieb = self._read_oieb()
-                return oieb.writer_pid != 0 and platform.process_exists(oieb.writer_pid)
+                if not self._oieb:
+                    return False
+                return self._oieb.writer_pid != 0 and platform.process_exists(self._oieb.writer_pid)
             
             # Wait for writer connection with timeout
             start_time = time.time() * 1000  # Convert to milliseconds
@@ -453,11 +436,11 @@ class Reader(LoggerMixin):
                 writer_pid_bytes = self._shm.read_bytes(80, 8)
                 self._logger.debug("Raw bytes 80-88 (writer_pid): %s", writer_pid_bytes.hex())
                 
-                oieb = self._read_oieb()
-                self._logger.debug("Checking writer connection: writer_pid=%d", oieb.writer_pid)
-                if oieb.writer_pid != 0 and platform.process_exists(oieb.writer_pid):
-                    self._logger.debug("Writer connected! PID=%d", oieb.writer_pid)
-                    return True
+                if self._oieb:
+                    self._logger.debug("Checking writer connection: writer_pid=%d", self._oieb.writer_pid)
+                    if self._oieb.writer_pid != 0 and platform.process_exists(self._oieb.writer_pid):
+                        self._logger.debug("Writer connected! PID=%d", self._oieb.writer_pid)
+                        return True
                 
                 current_time = time.time() * 1000
                 if current_time >= end_time:
@@ -493,9 +476,8 @@ class Reader(LoggerMixin):
             
             # Clear reader PID
             try:
-                oieb = self._read_oieb()
-                oieb.reader_pid = 0
-                self._write_oieb(oieb)
+                if self._oieb:
+                    self._oieb.reader_pid = 0
             except:
                 pass
             

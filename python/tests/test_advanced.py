@@ -28,10 +28,12 @@ class TestFreeSpaceAccounting:
     
     def _get_free_space(self, reader: Reader) -> int:
         """Helper to get free space from OIEB"""
-        oieb = reader._read_oieb()
-        return oieb.payload_free_bytes
+        # Access the OIEB directly from reader
+        if reader._oieb:
+            return reader._oieb.payload_free_bytes
+        return 0
     
-    def test_free_space_after_simple_wrap(self):
+    def test_free_space_after_simple_wrap(self) -> None:
         """Test free space accounting after simple wrap"""
         buffer_name = f"test_freespace_wrap_{os.getpid()}"
         # Small buffer to force wrapping
@@ -72,7 +74,7 @@ class TestFreeSpaceAccounting:
                 final_free = self._get_free_space(reader)
                 assert final_free == initial_free
     
-    def test_free_space_after_multiple_wraps(self):
+    def test_free_space_after_multiple_wraps(self) -> None:
         """Test free space accounting after multiple wraps"""
         buffer_name = f"test_freespace_multi_{os.getpid()}"
         # Very small buffer to force frequent wraps
@@ -100,7 +102,7 @@ class TestFreeSpaceAccounting:
                     current_free = self._get_free_space(reader)
                     assert current_free == initial_free
     
-    def test_free_space_with_partial_reads(self):
+    def test_free_space_with_partial_reads(self) -> None:
         """Test free space with partial reads"""
         buffer_name = f"test_freespace_partial_{os.getpid()}"
         config = BufferConfig(metadata_size=100, payload_size=1000)
@@ -135,7 +137,7 @@ class TestFreeSpaceAccounting:
                 final_free = self._get_free_space(reader)
                 assert final_free == initial_free
     
-    def test_wrap_marker_space_accounted_correctly(self):
+    def test_wrap_marker_space_accounted_correctly(self) -> None:
         """Test wrap marker space accounting"""
         buffer_name = f"test_wrap_marker_{os.getpid()}"
         config = BufferConfig(metadata_size=100, payload_size=1000)
@@ -164,7 +166,7 @@ class TestFreeSpaceAccounting:
                 after_wrap_free = self._get_free_space(reader)
                 assert after_wrap_free == before_wrap_free
     
-    def test_stress_free_space_accounting(self):
+    def test_stress_free_space_accounting(self) -> None:
         """Stress test free space accounting"""
         buffer_name = f"test_stress_free_{os.getpid()}"
         config = BufferConfig(metadata_size=100, payload_size=10000)
@@ -213,7 +215,7 @@ class TestFreeSpaceAccounting:
 class TestAdvancedResourceCleanup:
     """Advanced resource cleanup tests"""
     
-    def test_create_destroy_multiple_times(self):
+    def test_create_destroy_multiple_times(self) -> None:
         """Test create/destroy multiple times"""
         buffer_name = f"test_multi_create_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=10240)
@@ -235,7 +237,7 @@ class TestAdvancedResourceCleanup:
             # Small delay to ensure cleanup
             time.sleep(0.1)
     
-    def test_multiple_buffers_cleanup(self):
+    def test_multiple_buffers_cleanup(self) -> None:
         """Test multiple buffers cleanup"""
         buffer_names = [
             f"test_multi_buf_1_{os.getpid()}",
@@ -273,7 +275,7 @@ class TestAdvancedResourceCleanup:
                 if not reader._closed:
                     reader.close()
     
-    def test_cleanup_with_wrap_around(self):
+    def test_cleanup_with_wrap_around(self) -> None:
         """Test cleanup with buffer wrap-around"""
         buffer_name = f"test_cleanup_wrap_{os.getpid()}"
         small_buffer = 4096  # Small buffer to force wrap
@@ -305,7 +307,7 @@ class TestAdvancedResourceCleanup:
 class TestPatternValidation:
     """Pattern validation with hash tests"""
     
-    def test_pattern_validation_with_hash(self):
+    def test_pattern_validation_with_hash(self) -> None:
         """Test pattern validation with hash verification"""
         buffer_name = f"test_pattern_hash_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=256*1024)
@@ -338,21 +340,21 @@ class TestPatternValidation:
                     frame = reader.read_frame(timeout=5.0)
                     assert frame is not None, f"Frame {i} is None"
                     
-                    data = bytes(frame.data)
-                    assert len(data) == frame_size
+                    frame_data = bytes(frame.data)
+                    assert len(frame_data) == frame_size
                     
                     # Verify the pattern matches expected for this frame
                     expected_first = generate_pattern(i, 0)
                     expected_last = generate_pattern(i, frame_size - 1)
-                    assert data[0] == expected_first
-                    assert data[frame_size - 1] == expected_last
+                    assert frame_data[0] == expected_first
+                    assert frame_data[frame_size - 1] == expected_last
                     
                     # Sample check in the middle
                     expected_middle = generate_pattern(i, frame_size // 2)
-                    assert data[frame_size // 2] == expected_middle
+                    assert frame_data[frame_size // 2] == expected_middle
                     
                     # Verify hash
-                    actual_hash = hashlib.sha256(data).hexdigest()
+                    actual_hash = hashlib.sha256(frame_data).hexdigest()
                     assert actual_hash == frame_hashes[i]
                     
                     received_frames.add(i)
@@ -364,7 +366,7 @@ class TestPatternValidation:
 class TestRapidOperations:
     """Rapid operation tests"""
     
-    def test_rapid_write_read_cycles(self):
+    def test_rapid_write_read_cycles(self) -> None:
         """Test rapid write-read cycles"""
         buffer_name = f"test_rapid_cycles_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -396,7 +398,7 @@ class TestRapidOperations:
 class TestMetadataValidation:
     """Metadata validation tests"""
     
-    def test_metadata_write_once(self):
+    def test_metadata_write_once(self) -> None:
         """Test metadata write-once constraint"""
         buffer_name = f"test_metadata_once_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -415,7 +417,7 @@ class TestMetadataValidation:
                 read_metadata = reader.get_metadata()
                 assert bytes(read_metadata) == metadata
     
-    def test_metadata_size_validation(self):
+    def test_metadata_size_validation(self) -> None:
         """Test metadata size validation"""
         buffer_name = f"test_metadata_size_{os.getpid()}"
         config = BufferConfig(metadata_size=256, payload_size=64*1024)
@@ -439,7 +441,7 @@ class TestMetadataValidation:
 class TestSequentialOperations:
     """Sequential operation tests"""
     
-    def test_sequential_write_read(self):
+    def test_sequential_write_read(self) -> None:
         """Test sequential write/read within a single process"""
         buffer_name = f"test_sequential_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=64*1024)
@@ -462,7 +464,7 @@ class TestSequentialOperations:
                     assert value == i
                     reader.release_frame(frame)
     
-    def test_multiple_frames_sequential(self):
+    def test_multiple_frames_sequential(self) -> None:
         """Test multiple frames sequential"""
         buffer_name = f"test_multi_seq_{os.getpid()}"
         config = BufferConfig(metadata_size=1024, payload_size=256*1024)

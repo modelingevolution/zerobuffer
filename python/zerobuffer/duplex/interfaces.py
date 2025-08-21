@@ -3,7 +3,8 @@ Duplex Channel interfaces matching C# API
 """
 
 from abc import ABC, abstractmethod
-from typing import Tuple, Callable, Optional, Awaitable, List
+from typing import Tuple, Callable, Optional, Awaitable, List, Type
+from types import TracebackType
 from dataclasses import dataclass
 from ..types import Frame, BufferConfig
 from .processing_mode import ProcessingMode
@@ -42,7 +43,12 @@ class DuplexResponse:
         """Context manager entry"""
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType]
+    ) -> None:
         """Context manager exit - dispose the frame"""
         self.dispose()
 

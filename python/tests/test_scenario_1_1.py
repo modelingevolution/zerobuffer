@@ -36,14 +36,14 @@ if not FEATURE_FILE.exists():
 
 # Define the scenario
 @scenario(str(FEATURE_FILE), 'Test 1.1 - Simple Write-Read Cycle')
-def test_simple_write_read_cycle():
+def test_simple_write_read_cycle() -> None:
     """Test 1.1 - Simple Write-Read Cycle"""
     pass
 
 
 # Fixtures
 @pytest.fixture
-def test_context():
+def test_context() -> TestContext:
     """Provide test context"""
     context = TestContext()
     context.initialize(

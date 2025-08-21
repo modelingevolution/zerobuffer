@@ -32,7 +32,7 @@ def fill_frame_data(data: bytearray, frame_index: int, pattern: str) -> None:
         raise ValueError(f"Unknown pattern: {pattern}")
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="Write frames to a ZeroBuffer for testing",
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -87,7 +87,7 @@ def main():
                 metadata = f.read()
         
         if metadata:
-            writer.write_metadata(metadata)
+            writer.set_metadata(metadata)
             result["metadata_size"] = len(metadata)
             if args.verbose and not args.json_output:
                 print(f"Wrote metadata: {len(metadata)} bytes")
