@@ -160,7 +160,7 @@ namespace ZeroBuffer
         /// <summary>
         /// Get a buffer for writing frame data directly (zero-copy write)
         /// Returns a span where you can write your data directly
-        /// Call CommitFrame() after writing to complete the operation
+        /// Call CommitFrame() after writing to complete the operation, can throw ReaderDeadException, FrameTooLargeException, BufferFullException
         /// </summary>
         public unsafe Span<byte> GetFrameBuffer(int size, out ulong sequenceNumber)
         {

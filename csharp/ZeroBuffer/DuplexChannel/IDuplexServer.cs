@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace ZeroBuffer.DuplexChannel
 {
@@ -18,13 +19,21 @@ namespace ZeroBuffer.DuplexChannel
         /// Stop processing
         /// </summary>
         void Stop();
-        
+
+        event EventHandler<ErrorEventArgs> OnError;
         /// <summary>
         /// Check if running
         /// </summary>
         bool IsRunning { get; }
     }
-    
+    public class ErrorEventArgs : EventArgs
+    {
+        public Exception Exception { get; }
+        public ErrorEventArgs(Exception exception)
+        {
+            Exception = exception;
+        }
+    }
     /// <summary>
     /// Server that processes immutable requests and returns new response data
     /// </summary>
@@ -36,6 +45,7 @@ namespace ZeroBuffer.DuplexChannel
         /// <param name="onFrame">Handler that processes request and writes response to Writer</param>
         /// <param name="onInit">Called once, before the first invocation of onFrame</param>
         /// <param name="mode">Processing mode (SingleThread or ThreadPool)</param>
+        
         void Start(RequestHandler onFrame, Action<ReadOnlySpan<byte>> onInit = null, ProcessingMode mode = ProcessingMode.SingleThread);
     }
     

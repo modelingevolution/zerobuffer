@@ -1,3 +1,5 @@
+using System;
+
 namespace ZeroBuffer.DuplexChannel
 {
     /// <summary>
@@ -11,7 +13,7 @@ namespace ZeroBuffer.DuplexChannel
         /// <param name="channelName">Name of the duplex channel</param>
         /// <param name="config">Buffer configuration</param>
         /// <returns>Immutable duplex server</returns>
-        IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config);
+        IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config, TimeSpan? timeout=null);
         
         // MutableDuplexServer will be implemented in v2.0.0
         // /// <summary>

@@ -12,6 +12,7 @@ namespace ZeroBuffer.DuplexChannel
     {
         private readonly string _channelName;
         private readonly BufferConfig _config;
+        private readonly TimeSpan? _timeout;
         private readonly ILogger<ImmutableDuplexServer> _logger;
         private Reader _requestReader;
         private Writer? _responseWriter;
@@ -20,10 +21,13 @@ namespace ZeroBuffer.DuplexChannel
         private volatile bool _isRunning;
         private bool _disposed;
         
-        public ImmutableDuplexServer(string channelName, BufferConfig config, ILogger<ImmutableDuplexServer>? logger = null)
+        public event EventHandler<ErrorEventArgs> OnError;
+        
+        public ImmutableDuplexServer(string channelName, BufferConfig config,TimeSpan? timeout=null,  ILogger<ImmutableDuplexServer>? logger = null)
         {
             _channelName = channelName;
             _config = config;
+            _timeout = timeout;
             _logger = logger ?? NullLogger<ImmutableDuplexServer>.Instance;
         }
         
@@ -59,7 +63,7 @@ namespace ZeroBuffer.DuplexChannel
                     _processingThread = new Thread(() => ProcessRequests(onFrame, responseBufferName, onInit, _cancellationTokenSource.Token))
                     {
                         Name = $"DuplexServer_{_channelName}",
-                        IsBackground = true
+                        IsBackground = false
                     };
                     _processingThread.Start();
                 }
@@ -138,7 +142,9 @@ namespace ZeroBuffer.DuplexChannel
                 }
                 catch (Exception ex)
                 {
+                    OnError?.Invoke(this, new ErrorEventArgs(ex));
                     _logger.LogError(ex, "Failed to connect to response buffer {BufferName}", responseBufferName);
+                    _isRunning = false;
                     return;
                 }
             }
@@ -148,7 +154,7 @@ namespace ZeroBuffer.DuplexChannel
                 try
                 {
                     // Read request with timeout - using ensures Dispose is called
-                    using var request = _requestReader.ReadFrame(TimeSpan.FromSeconds(1));
+                    using var request = _requestReader.ReadFrame(_timeout);
                     if (!request.IsValid)
                         continue;
 
@@ -165,25 +171,31 @@ namespace ZeroBuffer.DuplexChannel
                     catch (Exception ex)
                     {
                         // Log error but continue processing
+                        OnError?.Invoke(this, new ErrorEventArgs(ex));
                         _logger.LogError(ex, "Error in request handler for channel {ChannelName}", _channelName);
                     }
                 }
-                catch (ReaderDeadException)
+                catch (ReaderDeadException ex)
                 {
+                    OnError?.Invoke(this, new ErrorEventArgs(ex));
+                    _logger.LogInformation("Reader disconnected", _channelName);
                     // Client disconnected
                     break;
                 }
-                catch (WriterDeadException)
+                catch (WriterDeadException ex)
                 {
-                    // Client's response reader died
+                    OnError?.Invoke(this, new ErrorEventArgs(ex));
+                    _logger.LogInformation("Writer disconnected", _channelName);
                     break;
                 }
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
                     // Log unexpected errors
+                    OnError?.Invoke(this, new ErrorEventArgs(ex));
                     _logger.LogError(ex, "Server processing error on channel {ChannelName}", _channelName);
                 }
             }
+            _isRunning = false;
         }
     }
 }

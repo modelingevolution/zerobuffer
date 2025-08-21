@@ -269,7 +269,7 @@ namespace ZeroBuffer
 
         /// <summary>
         /// Read a frame from the buffer with RAII semantics.
-        /// The returned Frame should be used with 'using' to ensure proper disposal.
+        /// The returned Frame should be used with 'using' to ensure proper disposal. Can throw WriterDeadException.
         /// </summary>
         public Frame ReadFrame(TimeSpan? timeout = null)
         {

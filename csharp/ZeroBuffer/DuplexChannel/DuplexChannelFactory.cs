@@ -21,7 +21,7 @@ namespace ZeroBuffer.DuplexChannel
         }
         
         /// <inheritdoc/>
-        public IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config)
+        public IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config, TimeSpan? timeout = null)
         {
             if (string.IsNullOrEmpty(channelName))
                 throw new ArgumentException("Channel name cannot be null or empty", nameof(channelName));
@@ -30,7 +30,7 @@ namespace ZeroBuffer.DuplexChannel
                 throw new ArgumentNullException(nameof(config));
                 
             var logger = _loggerFactory.CreateLogger<ImmutableDuplexServer>();
-            return new ImmutableDuplexServer(channelName, config, logger);
+            return new ImmutableDuplexServer(channelName, config, timeout ?? TimeSpan.FromSeconds(5), logger);
         }
         
         // MutableDuplexServer will be implemented in v2.0.0
