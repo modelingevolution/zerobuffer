@@ -207,13 +207,14 @@ class IDuplexChannelFactory(ABC):
     """Factory for creating duplex channels"""
     
     @abstractmethod
-    def create_immutable_server(self, channel_name: str, config: BufferConfig) -> IImmutableDuplexServer:
+    def create_immutable_server(self, channel_name: str, config: BufferConfig, timeout: Optional[float] = None) -> IImmutableDuplexServer:
         """
         Create an immutable server (processes immutable requests, returns new response data)
         
         Args:
             channel_name: Name of the duplex channel
             config: Buffer configuration
+            timeout: Optional timeout in seconds (None for default of 5 seconds)
             
         Returns:
             IImmutableDuplexServer instance

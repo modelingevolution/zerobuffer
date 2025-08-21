@@ -5,7 +5,7 @@ A Python implementation of the ZeroBuffer protocol for efficient IPC
 with true zero-copy data access.
 """
 
-__version__ = "0.1.0"
+__version__ = "1.1.8"
 
 from .reader import Reader
 from .writer import Writer

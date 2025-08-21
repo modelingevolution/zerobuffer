@@ -30,13 +30,23 @@ class DuplexChannelFactory(IDuplexChannelFactory):
             cls._instance = cls()
         return cls._instance
     
-    def create_immutable_server(self, channel_name: str, config: BufferConfig) -> IImmutableDuplexServer:
-        """Create an immutable server"""
+    def create_immutable_server(self, channel_name: str, config: BufferConfig, timeout: Optional[float] = None) -> IImmutableDuplexServer:
+        """
+        Create an immutable server
+        
+        Args:
+            channel_name: Name of the duplex channel
+            config: Buffer configuration
+            timeout: Optional timeout in seconds (None for default of 5 seconds)
+            
+        Returns:
+            ImmutableDuplexServer instance
+        """
         logger = None
         if self._logger_factory:
             logger = self._logger_factory.create_logger(f"ImmutableDuplexServer.{channel_name}")
         
-        return ImmutableDuplexServer(channel_name, config, logger)
+        return ImmutableDuplexServer(channel_name, config, timeout, logger)
     
     def create_mutable_server(self, channel_name: str, config: BufferConfig) -> Any:
         """Create a mutable server (not yet implemented - planned for v2.0)"""
