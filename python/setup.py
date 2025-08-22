@@ -16,6 +16,9 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/zerobuffer/zerobuffer-python",
     packages=find_packages(),
+    package_data={
+        "zerobuffer": ["py.typed"],
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

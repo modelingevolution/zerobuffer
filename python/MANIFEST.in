@@ -8,6 +8,7 @@ include requirements*.txt
 
 # Include all source code
 recursive-include zerobuffer *.py
+recursive-include zerobuffer py.typed
 
 # Include tests in source distribution (but not in wheel)
 recursive-include tests *.py

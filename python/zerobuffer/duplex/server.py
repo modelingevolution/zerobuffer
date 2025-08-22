@@ -207,15 +207,11 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                     
                     # Use context manager for RAII - frame is disposed on exit
                     with frame:
-                        # Process request
+                        # Process request - pass both frame and response writer like C#
                         if self._handler is None:
                             raise RuntimeError("Handler not set")
-                        response_data = self._handler(frame)
-                        
-                        # Write response with same sequence number
-                        # For now, we just write the response
-                        # TODO: Enhance Writer to support custom sequence numbers
-                        self._response_writer.write_frame(response_data)
+                        # Match C# signature: handler(request, responseWriter)
+                        self._handler(frame, self._response_writer)
                     
                 except (ReaderDeadException, WriterDeadException) as e:
                     if self._logger:
