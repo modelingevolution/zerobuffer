@@ -7,7 +7,7 @@ import threading
 from typing import Optional, Dict, List, Any
 import asyncio
 
-from zerobuffer import BufferConfig, Frame
+from zerobuffer import BufferConfig, Frame, Writer
 from zerobuffer.duplex import (
     DuplexChannelFactory,
     ImmutableDuplexServer,
@@ -86,9 +86,11 @@ class DuplexChannelSteps(BaseSteps):
         if not isinstance(server, ImmutableDuplexServer):
             raise TypeError(f"Expected ImmutableDuplexServer, got {type(server)}")
             
-        def echo_handler(frame: Frame) -> bytes:
+        def echo_handler(frame: Frame, writer: Writer) -> None:
             """Echo handler - return the same data"""
-            return bytes(frame.data)
+            buffer = writer.get_frame_buffer(len(frame.data))
+            buffer[:] = frame.data
+            writer.commit_frame()
             
         server.start(echo_handler, mode=ProcessingMode.SINGLE_THREAD)
         
@@ -106,10 +108,12 @@ class DuplexChannelSteps(BaseSteps):
             
         delay = int(delay_ms) / 1000.0  # Convert to seconds
         
-        def delayed_handler(frame: Frame) -> bytes:
+        def delayed_handler(frame: Frame, writer: Writer) -> None:
             """Handler with processing delay"""
             time.sleep(delay)
-            return bytes(frame.data)
+            buffer = writer.get_frame_buffer(len(frame.data))
+            buffer[:] = frame.data
+            writer.commit_frame()
             
         server.start(delayed_handler, mode=ProcessingMode.SINGLE_THREAD)
         
@@ -125,10 +129,13 @@ class DuplexChannelSteps(BaseSteps):
         if not isinstance(server, ImmutableDuplexServer):
             raise TypeError(f"Expected ImmutableDuplexServer, got {type(server)}")
             
-        def doubling_handler(frame: Frame) -> bytes:
+        def doubling_handler(frame: Frame, writer: Writer) -> None:
             """Handler that doubles the data"""
             data = bytes(frame.data)
-            return data + data  # Double the data
+            doubled = data + data  # Double the data
+            buffer = writer.get_frame_buffer(len(doubled))
+            buffer[:] = doubled
+            writer.commit_frame()
             
         server.start(doubling_handler, mode=ProcessingMode.SINGLE_THREAD)
         

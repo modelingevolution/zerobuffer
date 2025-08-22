@@ -49,7 +49,7 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
         self._response_writer: Optional[Writer] = None
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._handler: Optional[Callable[[Frame], bytes]] = None
+        self._handler: Optional[Callable[[Frame, Writer], None]] = None
         self._lock = threading.Lock()
         self._error_handlers: List[Callable[[ErrorEventArgs], None]] = []
     
@@ -82,7 +82,7 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                 if self._logger:
                     self._logger.error(f"Error in error handler: {e}")
     
-    def start(self, handler: Callable[[Frame], bytes], on_init: Optional[Callable[[memoryview], None]] = None, mode: ProcessingMode = ProcessingMode.SINGLE_THREAD) -> None:
+    def start(self, handler: Callable[[Frame, Writer], None], on_init: Optional[Callable[[memoryview], None]] = None, mode: ProcessingMode = ProcessingMode.SINGLE_THREAD) -> None:
         """Start processing requests"""
         with self._lock:
             if self._running:

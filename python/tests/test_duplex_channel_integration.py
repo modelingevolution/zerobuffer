@@ -8,7 +8,7 @@ import threading
 import asyncio
 import pytest
 from typing import Any, List
-from zerobuffer import DuplexChannelFactory, BufferConfig
+from zerobuffer import DuplexChannelFactory, BufferConfig, Writer
 from zerobuffer.types import Frame
 from zerobuffer.duplex.interfaces import DuplexResponse
 
@@ -28,8 +28,10 @@ class TestDuplexChannelIntegration:
         # Create server that echoes data back
         server = factory.create_immutable_server(self._test_channel_name, config)
         
-        def on_handle(request: Frame) -> bytes:
-            return bytes(request.data)
+        def on_handle(request: Frame, writer: Writer) -> None:
+            buffer = writer.get_frame_buffer(len(request.data))
+            buffer[:] = request.data
+            writer.commit_frame()
         
         server_thread = threading.Thread(target=lambda: server.start(on_handle))
         server_thread.daemon = True
@@ -67,8 +69,10 @@ class TestDuplexChannelIntegration:
         # Create server
         server = factory.create_immutable_server(self._test_channel_name, config)
         
-        def on_handle(request: Frame) -> bytes:
-            return bytes(request.data)
+        def on_handle(request: Frame, writer: Writer) -> None:
+            buffer = writer.get_frame_buffer(len(request.data))
+            buffer[:] = request.data
+            writer.commit_frame()
         
         server_thread = threading.Thread(target=lambda: server.start(on_handle))
         server_thread.daemon = True
@@ -108,11 +112,13 @@ class TestDuplexChannelIntegration:
         # Create server that adds 1 to each byte
         server = factory.create_immutable_server(self._test_channel_name, config)
         
-        def increment_handler(request: Frame) -> bytes:
+        def increment_handler(request: Frame, writer: Writer) -> None:
             data = bytearray(request.data)
             for i in range(len(data)):
                 data[i] = (data[i] + 1) % 256
-            return bytes(data)
+            buffer = writer.get_frame_buffer(len(data))
+            buffer[:] = data
+            writer.commit_frame()
         
         server_thread = threading.Thread(target=lambda: server.start(increment_handler))
         server_thread.daemon = True
@@ -182,11 +188,13 @@ class TestDuplexChannelIntegration:
         
         captured_sequence = None
         
-        def capture_handler(request: Frame) -> bytes:
+        def capture_handler(request: Frame, writer: Writer) -> None:
             nonlocal captured_sequence
             # Capture the sequence number from request
             captured_sequence = request.sequence
-            return bytes([42])
+            buffer = writer.get_frame_buffer(1)
+            buffer[:] = bytes([42])
+            writer.commit_frame()
         
         server_thread = threading.Thread(target=lambda: server.start(capture_handler))
         server_thread.daemon = True

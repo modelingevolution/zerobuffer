@@ -10,7 +10,7 @@ import pytest
 from typing import Any, List
 from zerobuffer import (
     DuplexChannelFactory, BufferConfig, 
-    ReaderDeadException, ProcessingMode
+    ReaderDeadException, ProcessingMode, Writer
 )
 from zerobuffer.types import Frame
 from zerobuffer.duplex.interfaces import DuplexResponse
@@ -31,9 +31,11 @@ class TestDuplexChannel:
         # Create server with echo handler
         server = factory.create_immutable_server(self._test_channel_name, config)
         
-        def echo_handler(request_frame: Frame) -> bytes:
+        def echo_handler(request_frame: Frame, writer: Writer) -> None:
             # Echo the request data back
-            return bytes(request_frame.data)
+            buffer = writer.get_frame_buffer(len(request_frame.data))
+            buffer[:] = request_frame.data
+            writer.commit_frame()
         
         # Start server in background thread
         server.start(echo_handler, mode=ProcessingMode.SINGLE_THREAD)
@@ -68,11 +70,13 @@ class TestDuplexChannel:
         # Create server that transforms data
         server = factory.create_immutable_server(self._test_channel_name, config)
         
-        def transform_handler(request_frame: Frame) -> bytes:
+        def transform_handler(request_frame: Frame, writer: Writer) -> None:
             data = bytearray(request_frame.data)
             # Simple transform: reverse the bytes
             data.reverse()
-            return bytes(data)
+            buffer = writer.get_frame_buffer(len(data))
+            buffer[:] = data
+            writer.commit_frame()
         
         # Start server in background thread
         server.start(transform_handler, mode=ProcessingMode.SINGLE_THREAD)
@@ -144,7 +148,11 @@ class TestDuplexChannel:
         server = factory.create_immutable_server(self._test_channel_name, config)
         
         # Start server in background thread with minimal processing
-        server.start(lambda frame: bytes(frame.data), mode=ProcessingMode.SINGLE_THREAD)
+        def echo_handler(frame: Frame, writer: Writer) -> None:
+            buffer = writer.get_frame_buffer(len(frame.data))
+            buffer[:] = frame.data
+            writer.commit_frame()
+        server.start(echo_handler, mode=ProcessingMode.SINGLE_THREAD)
         
         time.sleep(0.1)
         
@@ -197,7 +205,11 @@ class TestDuplexChannel:
         
         server = factory.create_immutable_server(self._test_channel_name, config)
         # Start server in background thread with minimal processing
-        server.start(lambda frame: bytes(frame.data), mode=ProcessingMode.SINGLE_THREAD)
+        def echo_handler(frame: Frame, writer: Writer) -> None:
+            buffer = writer.get_frame_buffer(len(frame.data))
+            buffer[:] = frame.data
+            writer.commit_frame()
+        server.start(echo_handler, mode=ProcessingMode.SINGLE_THREAD)
         
         time.sleep(0.1)
         
