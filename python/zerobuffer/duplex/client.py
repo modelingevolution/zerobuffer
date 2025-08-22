@@ -158,6 +158,11 @@ class DuplexClient(IDuplexClient):
             
             self._closed = True
             
+            # Release pending buffer if any
+            if self._pending_buffer is not None:
+                self._pending_buffer.release()
+                self._pending_buffer = None
+            
             if self._request_writer:
                 self._request_writer.close()
             

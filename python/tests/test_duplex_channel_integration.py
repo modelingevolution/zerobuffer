@@ -29,8 +29,8 @@ class TestDuplexChannelIntegration:
         server = factory.create_immutable_server(self._test_channel_name, config)
         
         def on_handle(request: Frame, writer: Writer) -> None:
-            buffer = writer.get_frame_buffer(len(request.data))
-            buffer[:] = request.data
+            with writer.get_frame_buffer(len(request.data)) as buffer:
+                buffer[:] = request.data
             writer.commit_frame()
         
         server_thread = threading.Thread(target=lambda: server.start(on_handle))
@@ -70,8 +70,8 @@ class TestDuplexChannelIntegration:
         server = factory.create_immutable_server(self._test_channel_name, config)
         
         def on_handle(request: Frame, writer: Writer) -> None:
-            buffer = writer.get_frame_buffer(len(request.data))
-            buffer[:] = request.data
+            with writer.get_frame_buffer(len(request.data)) as buffer:
+                buffer[:] = request.data
             writer.commit_frame()
         
         server_thread = threading.Thread(target=lambda: server.start(on_handle))
@@ -88,8 +88,12 @@ class TestDuplexChannelIntegration:
             test_bytes = test_data.encode('utf-8')
             
             sequence_number, buffer = client.acquire_request_buffer(len(test_bytes))
-            buffer[:] = test_bytes
-            client.commit_request()
+            try:
+                buffer[:] = test_bytes
+                client.commit_request()
+            finally:
+                # Release the buffer memoryview
+                buffer.release()
             
             # Receive response
             response = client.receive_response(5000)
@@ -116,8 +120,8 @@ class TestDuplexChannelIntegration:
             data = bytearray(request.data)
             for i in range(len(data)):
                 data[i] = (data[i] + 1) % 256
-            buffer = writer.get_frame_buffer(len(data))
-            buffer[:] = data
+            with writer.get_frame_buffer(len(data)) as buffer:
+                buffer[:] = data
             writer.commit_frame()
         
         server_thread = threading.Thread(target=lambda: server.start(increment_handler))
@@ -192,8 +196,8 @@ class TestDuplexChannelIntegration:
             nonlocal captured_sequence
             # Capture the sequence number from request
             captured_sequence = request.sequence
-            buffer = writer.get_frame_buffer(1)
-            buffer[:] = bytes([42])
+            with writer.get_frame_buffer(1) as buffer:
+                buffer[:] = bytes([42])
             writer.commit_frame()
         
         server_thread = threading.Thread(target=lambda: server.start(capture_handler))

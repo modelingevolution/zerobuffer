@@ -176,16 +176,6 @@ class IImmutableDuplexServer(IDuplexServer):
                   THREAD_POOL would process each request in a thread pool (not yet implemented)
         """
         pass
-    
-    @abstractmethod
-    async def start_async(self, handler: Callable[[Frame], Awaitable[bytes]]) -> None:
-        """
-        Start processing asynchronously with async handler.
-        
-        Args:
-            handler: Async function that takes a Frame and returns response bytes
-        """
-        pass
 
 
 class IMutableDuplexServer(IDuplexServer):

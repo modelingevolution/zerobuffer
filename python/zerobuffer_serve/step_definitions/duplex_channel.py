@@ -88,8 +88,8 @@ class DuplexChannelSteps(BaseSteps):
             
         def echo_handler(frame: Frame, writer: Writer) -> None:
             """Echo handler - return the same data"""
-            buffer = writer.get_frame_buffer(len(frame.data))
-            buffer[:] = frame.data
+            with writer.get_frame_buffer(len(frame.data)) as buffer:
+                buffer[:] = frame.data
             writer.commit_frame()
             
         server.start(echo_handler, mode=ProcessingMode.SINGLE_THREAD)
@@ -111,8 +111,8 @@ class DuplexChannelSteps(BaseSteps):
         def delayed_handler(frame: Frame, writer: Writer) -> None:
             """Handler with processing delay"""
             time.sleep(delay)
-            buffer = writer.get_frame_buffer(len(frame.data))
-            buffer[:] = frame.data
+            with writer.get_frame_buffer(len(frame.data)) as buffer:
+                buffer[:] = frame.data
             writer.commit_frame()
             
         server.start(delayed_handler, mode=ProcessingMode.SINGLE_THREAD)
@@ -133,8 +133,8 @@ class DuplexChannelSteps(BaseSteps):
             """Handler that doubles the data"""
             data = bytes(frame.data)
             doubled = data + data  # Double the data
-            buffer = writer.get_frame_buffer(len(doubled))
-            buffer[:] = doubled
+            with writer.get_frame_buffer(len(doubled)) as buffer:
+                buffer[:] = doubled
             writer.commit_frame()
             
         server.start(doubling_handler, mode=ProcessingMode.SINGLE_THREAD)

@@ -291,8 +291,9 @@ class OIEBView:
     
     def dispose(self) -> None:
         """Release the memoryview reference to allow proper cleanup"""
-        if hasattr(self, '_shm'):
-            # Release the memoryview by setting to None
+        if hasattr(self, '_shm') and self._shm is not None:
+            # Properly release the memoryview
+            self._shm.release()
             self._shm = None
     
     def __repr__(self) -> str:

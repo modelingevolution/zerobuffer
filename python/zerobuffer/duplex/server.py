@@ -103,54 +103,6 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
             else:
                 raise ValueError(f"Invalid processing mode: {mode}")
     
-    async def start_async(self, handler: Callable[[Frame], Awaitable[bytes]]) -> None:
-        """Start processing asynchronously"""
-        if self._running:
-            raise ZeroBufferException("Server is already running")
-        
-        self._running = True
-        
-        # Create buffers
-        self._request_reader = Reader(self._request_buffer_name, self._config)
-        
-        # Wait for client to connect
-        while self._running and not self._request_reader.is_writer_connected():
-            await asyncio.sleep(0.1)
-        
-        if not self._running:
-            return
-        
-        # Connect to response buffer
-        self._response_writer = Writer(self._response_buffer_name)
-        
-        # Process requests asynchronously
-        try:
-            while self._running:
-                # Read request
-                frame = self._request_reader.read_frame(timeout=self._timeout)
-                if frame is None:
-                    continue
-                
-                # Use context manager for RAII - frame is disposed on exit
-                with frame:
-                    # Process request asynchronously
-                    response_data = await handler(frame)
-                    
-                    # Write response with same sequence number
-                    # Note: We need to preserve the sequence number from request
-                    # This requires enhancing Writer to support custom sequence numbers
-                    self._response_writer.write_frame(response_data)
-                    
-        except (ReaderDeadException, WriterDeadException) as e:
-            if self._logger:
-                self._logger.info("Client disconnected")
-            self._invoke_error_handlers(e)
-        except Exception as e:
-            if self._logger:
-                self._logger.error(f"Error in async processing: {e}")
-            self._invoke_error_handlers(e)
-        finally:
-            self._cleanup()
     
     def _process_requests(self) -> None:
         """Process requests synchronously"""
@@ -194,6 +146,9 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                         if self._logger:
                             self._logger.error(f"Error in initialization callback: {e}")
                         self._invoke_error_handlers(e)
+                    finally:
+                        # Release the memoryview
+                        metadata.release()
             
             # Process requests
             while True:

@@ -45,6 +45,7 @@ case $TEST_TYPE in
         echo -e "${YELLOW}════════════════════════════════════════════════════════${NC}\n"
         
         run_test "Core ZeroBuffer Tests" "pytest tests/test_zerobuffer.py -v --tb=short"
+        run_test "Duplex Channel Tests" "pytest tests/test_duplex.py tests/test_duplex_channel.py tests/test_duplex_channel_integration.py -v --tb=short"
         ;;
         
     1.1)
@@ -120,7 +121,7 @@ case $TEST_TYPE in
         echo -e "${YELLOW}Running Duplex Channel Tests${NC}"
         echo -e "${YELLOW}════════════════════════════════════════════════════════${NC}\n"
         
-        run_test "Duplex Tests" "pytest tests/test_duplex.py tests/test_duplex_channel.py -v --tb=short"
+        run_test "Duplex Tests" "pytest tests/test_duplex.py tests/test_duplex_channel.py tests/test_duplex_channel_integration.py -v --tb=short"
         ;;
         
     all)

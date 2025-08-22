@@ -238,9 +238,13 @@ class Frame:
             self._disposed = True
             if self._on_dispose:
                 self._on_dispose()
-            # Release memoryview references to allow SharedMemory cleanup
-            self._memory_view = None
-            self._data_view = None
+            # Properly release memoryview references
+            if self._data_view is not None:
+                self._data_view.release()
+                self._data_view = None
+            if self._memory_view is not None:
+                self._memory_view.release()
+                self._memory_view = None
     
     def __enter__(self) -> 'Frame':
         """Enter context manager"""

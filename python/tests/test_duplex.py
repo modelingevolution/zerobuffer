@@ -70,8 +70,8 @@ class TestDuplexChannel:
                     
                     return responses
         
-        # Start server
-        server = multiprocessing.Process(target=server_process)
+        # Start server in thread
+        server = threading.Thread(target=server_process, daemon=True)
         server.start()
         
         # Give server time to start
@@ -85,7 +85,7 @@ class TestDuplexChannel:
             assert responses[1] == b"RESPONSE: World"
             assert responses[2] == b"RESPONSE: Duplex"
         finally:
-            server.terminate()
+            # Thread doesn't have terminate, just join
             server.join(timeout=2.0)
     
     def test_concurrent_duplex_channels(self) -> None:
@@ -187,7 +187,11 @@ class TestDuplexChannel:
                 
                 # Get client metadata
                 client_meta = req_reader.get_metadata()
-                client_info = bytes(client_meta).decode() if client_meta else "Unknown"
+                if client_meta:
+                    client_info = bytes(client_meta).decode()
+                    client_meta.release()  # Release the memoryview
+                else:
+                    client_info = "Unknown"
                 
                 with Writer(resp_buffer) as resp_writer:
                     # Set server metadata
@@ -198,14 +202,13 @@ class TestDuplexChannel:
                     for _ in range(3):
                         frame = req_reader.read_frame(timeout=2.0)
                         if frame:
-                            data = bytes(frame.data)
-                            req_reader.release_frame(frame)
-                            
-                            response = f"[{client_info}] {data.decode()}".encode()
-                            resp_writer.write_frame(response)
+                            with frame:  # Use context manager for RAII
+                                data = bytes(frame.data)
+                                response = f"[{client_info}] {data.decode()}".encode()
+                                resp_writer.write_frame(response)
         
-        # Start server
-        server = multiprocessing.Process(target=server_process)
+        # Start server in thread instead of process
+        server = threading.Thread(target=server_process, daemon=True)
         server.start()
         time.sleep(0.5)
         
@@ -229,6 +232,7 @@ class TestDuplexChannel:
                     assert server_meta is not None
                     assert b"Server v1.0" in bytes(server_meta)
                     assert b"TestClient v2.0" in bytes(server_meta)
+                    server_meta.release()  # Release the memoryview
                     
                     # Exchange messages
                     messages = [b"First", b"Second", b"Third"]
@@ -237,13 +241,12 @@ class TestDuplexChannel:
                         
                         frame = resp_reader.read_frame(timeout=2.0)
                         assert frame is not None
-                        response = bytes(frame.data)
-                        resp_reader.release_frame(frame)
-                        
-                        expected = f"[TestClient v2.0] {msg.decode()}".encode()
-                        assert response == expected
+                        with frame:  # Use context manager for RAII
+                            response = bytes(frame.data)
+                            expected = f"[TestClient v2.0] {msg.decode()}".encode()
+                            assert response == expected
         finally:
-            server.terminate()
+            # Thread doesn't have terminate, just join
             server.join(timeout=2.0)
 
 
