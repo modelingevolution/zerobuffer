@@ -38,7 +38,7 @@ endif()
 
 # Library sources
 add_library(zerobuffer STATIC
-    src/Reader.cpp
+    src/reader.cpp
     src/writer.cpp
     src/duplex_client.cpp
     src/immutable_duplex_server.cpp
