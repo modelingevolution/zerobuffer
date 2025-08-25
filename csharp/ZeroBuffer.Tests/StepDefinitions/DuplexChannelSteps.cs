@@ -89,9 +89,6 @@ namespace ZeroBuffer.Tests.StepDefinitions
             {
                 throw new InvalidOperationException($"Unsupported server type: {server.GetType().Name}. Only ImmutableDuplexServer is supported in v1.0.0");
             }
-            
-            // Give server time to initialize
-            Thread.Sleep(100);
         }
 
         [Given(@"the '(.*)' process starts delayed echo handler with '(.*)' ms delay")]
@@ -111,8 +108,6 @@ namespace ZeroBuffer.Tests.StepDefinitions
                     responseWriter.WriteFrame(request.Span);
                 });
             }
-            
-            Thread.Sleep(100);
         }
 
         [Given(@"the '(.*)' process starts variable delay handler '(.*)' ms")]
@@ -136,8 +131,6 @@ namespace ZeroBuffer.Tests.StepDefinitions
                     responseWriter.WriteFrame(request.Span);
                 });
             }
-            
-            Thread.Sleep(100);
         }
 
         [Given(@"the '(.*)' process starts handler with '(.*)' second processing time")]
@@ -157,8 +150,6 @@ namespace ZeroBuffer.Tests.StepDefinitions
                     responseWriter.WriteFrame(request.Span);
                 });
             }
-            
-            Thread.Sleep(100);
         }
 
         [When(@"the '(.*)' process creates duplex channel client '(.*)'")]
@@ -436,8 +427,6 @@ namespace ZeroBuffer.Tests.StepDefinitions
             {
                 throw new InvalidOperationException("Only ImmutableDuplexServer is supported in v1.0.0");
             }
-            
-            Thread.Sleep(100);
         }
 
         [When(@"the '(.*)' process sends '(.*)' byte frame with test pattern")]
@@ -617,8 +606,6 @@ namespace ZeroBuffer.Tests.StepDefinitions
             {
                 throw new InvalidOperationException("Only ImmutableDuplexServer is supported in v1.0.0");
             }
-            
-            Thread.Sleep(100);
         }
 
         [AfterScenario]

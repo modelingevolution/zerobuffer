@@ -14,7 +14,7 @@ import pytest
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from zerobuffer_serve.test_context import TestContext
+from zerobuffer_serve.test_context import HarmonyTestContext
 from zerobuffer_serve.logging.dual_logger import DualLoggerProvider
 from zerobuffer_serve.step_definitions import BasicCommunicationSteps
 
@@ -25,7 +25,7 @@ class TestBasicCommunication:
     def setup_method(self) -> None:
         """Setup for each test"""
         self.logger_provider = DualLoggerProvider()
-        self.test_context = TestContext()
+        self.test_context = HarmonyTestContext()
         self.test_context.initialize(
             role="test",  # Not used anymore, but needed for initialization
             platform="python",

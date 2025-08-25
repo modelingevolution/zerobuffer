@@ -7,19 +7,19 @@ Provides common functionality for all step definition classes.
 import logging
 from typing import Dict, Any, Optional
 
-from ..test_context import TestContext
+from ..test_context import HarmonyTestContext
 from ..step_registry import given, when, then
 
 
 class BaseSteps:
     """Base class for step definitions"""
     
-    def __init__(self, test_context: TestContext, logger: logging.Logger) -> None:
+    def __init__(self, test_context: HarmonyTestContext, logger: logging.Logger) -> None:
         self._context = test_context
         self._logger = logger
         
     @property
-    def context(self) -> TestContext:
+    def context(self) -> HarmonyTestContext:
         """Get the test context"""
         return self._context
         

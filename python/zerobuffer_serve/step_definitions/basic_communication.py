@@ -72,9 +72,6 @@ class BasicCommunicationSteps(BaseSteps):
             f"payload_size={payload_size}"
         )
         
-        # Small delay to ensure shared memory is fully initialized
-        await asyncio.sleep(0.1)
-        
     @when(r"(?:the '([^']+)' process )?connects to buffer '([^']+)'")
     async def connect_to_buffer(self, process: Optional[str], buffer_name: str) -> None:
         """Connect a writer to an existing buffer"""
@@ -87,9 +84,6 @@ class BasicCommunicationSteps(BaseSteps):
         self.store_resource(f"writer_{buffer_name}", writer)
         
         self.logger.info(f"Connected to buffer '{buffer_name}' (actual: '{actual_buffer_name}'")
-        
-        # Small delay to ensure shared memory updates are visible
-        await asyncio.sleep(0.1)
         
     @when(r"(?:the '([^']+)' process )?writes metadata with size '(\d+)'")
     async def write_metadata(self, process: Optional[str], size: str) -> None:
@@ -110,9 +104,6 @@ class BasicCommunicationSteps(BaseSteps):
         writer.set_metadata(metadata)
         
         self.logger.info(f"Wrote metadata with size {size}")
-        
-        # Small delay to ensure OIEB updates are visible
-        await asyncio.sleep(0.1)
         
     @when(r"(?:the '([^']+)' process )?writes frame with size '(\d+)' and sequence '(\d+)'")
     async def write_frame_with_sequence(self, process: Optional[str], size: str, sequence: str) -> None:
@@ -513,13 +504,13 @@ class BasicCommunicationSteps(BaseSteps):
                 assert TestDataPatterns.verify_simple_frame_data(frame_data), \
                     f"Frame {i+1} data does not match expected pattern"
                     
-            # Store frame info as dict  
-            frame_info = {
-                'sequence': frame.sequence,
-                'size': len(frame.data),
-                'data': bytes(frame.data)
-            }
-            self._frames_read.append(frame_info)
+                # Store frame info as dict - MUST be done inside the context manager
+                frame_info = {
+                    'sequence': frame.sequence,
+                    'size': len(frame.data),
+                    'data': bytes(frame.data)
+                }
+                self._frames_read.append(frame_info)
             
         self.logger.info(f"Read {count} frames with correct sizes")
         

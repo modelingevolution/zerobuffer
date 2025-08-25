@@ -512,7 +512,8 @@ class TestScenario11Performance:
     def test_throughput(self) -> None:
         """11.2 Measure throughput"""
         buffer_name = f"test_scenario_11b_{os.getpid()}"
-        config = BufferConfig(metadata_size=1024, payload_size=10*1024*1024)  # 10MB
+        # Increase buffer size to account for frame headers and alignment
+        config = BufferConfig(metadata_size=1024, payload_size=11*1024*1024)  # 11MB
         
         frame_size = 1024 * 1024  # 1MB frames
         frame_data = b"x" * frame_size

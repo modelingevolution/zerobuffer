@@ -28,7 +28,7 @@ from .base import BaseSteps
 from ..step_registry import given, when, then, parsers
 from ..services import BufferNamingService
 from ..test_data_patterns import TestDataPatterns
-from ..test_context import TestContext
+from ..test_context import HarmonyTestContext
 
 
 # Type aliases for clarity
@@ -334,7 +334,7 @@ class BasicCommunicationSteps(BaseSteps):
     
     def __init__(
         self, 
-        test_context: TestContext,
+        test_context: HarmonyTestContext,
         logger: logging.Logger,
         buffer_factory: Optional[BufferFactory] = None,
         performance_monitor: Optional[PerformanceMonitor] = None
@@ -481,9 +481,6 @@ class BasicCommunicationSteps(BaseSteps):
                     }
                 )
                 
-                # Small delay to ensure shared memory is fully initialized
-                await asyncio.sleep(0.1)
-                
             except Exception as e:
                 raise StepExecutionException("create_buffer", e) from e
                 
@@ -528,9 +525,6 @@ class BasicCommunicationSteps(BaseSteps):
                     }
                 )
                 
-                # Small delay to ensure shared memory updates are visible
-                await asyncio.sleep(0.1)
-                
             except Exception as e:
                 raise StepExecutionException("connect_to_buffer", e) from e
                 
@@ -569,9 +563,6 @@ class BasicCommunicationSteps(BaseSteps):
                         "size": int(size)
                     }
                 )
-                
-                # Small delay to ensure OIEB updates are visible
-                await asyncio.sleep(0.1)
                 
             except Exception as e:
                 raise StepExecutionException("write_metadata", e) from e

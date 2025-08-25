@@ -33,7 +33,8 @@ namespace ZeroBuffer
             {
                 // Create shared memory
                 int mode = PosixInterop.S_IRUSR | PosixInterop.S_IWUSR | 
-                          PosixInterop.S_IRGRP | PosixInterop.S_IWGRP;
+                          PosixInterop.S_IRGRP | PosixInterop.S_IWGRP |
+                          PosixInterop.S_IROTH | PosixInterop.S_IWOTH;  // 0666 - read/write for all
                 
                 _fd = PosixInterop.shm_open(name, 
                     PosixInterop.O_CREAT | PosixInterop.O_EXCL | PosixInterop.O_RDWR, 

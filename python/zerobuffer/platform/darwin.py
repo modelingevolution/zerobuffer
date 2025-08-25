@@ -110,7 +110,7 @@ class DarwinSemaphore(Semaphore):
                 self._sem = posix_ipc.Semaphore(
                     name,
                     flags=posix_ipc.O_CREX,
-                    mode=0o600,
+                    mode=0o666,  # Read/write for all
                     initial_value=initial_value
                 )
             else:
@@ -180,7 +180,7 @@ class DarwinFileLock(FileLock):
         
         try:
             # Open or create the lock file
-            self._fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+            self._fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o666)  # Read/write for all
             
             # Try to acquire exclusive lock (non-blocking)
             fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)

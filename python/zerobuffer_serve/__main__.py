@@ -9,7 +9,7 @@ import sys
 import logging
 from .server import ZeroBufferServe
 from .step_registry import StepRegistry
-from .test_context import TestContext
+from .test_context import HarmonyTestContext
 from .logging.dual_logger import DualLoggerProvider
 
 
@@ -22,7 +22,7 @@ async def main() -> None:
     
     # Create dependencies
     logger_provider = DualLoggerProvider()
-    test_context = TestContext()
+    test_context = HarmonyTestContext()
     
     # Create a logger for the step registry using the DualLoggerProvider
     main_logger = logger_provider.get_logger("StepRegistry")

@@ -31,7 +31,9 @@ namespace ZeroBuffer
             
             // Create or open the lock file
             _fd = PosixInterop.open(path, PosixInterop.O_CREAT | PosixInterop.O_RDWR, 
-                                         PosixInterop.S_IRUSR | PosixInterop.S_IWUSR);
+                                         PosixInterop.S_IRUSR | PosixInterop.S_IWUSR |
+                                         PosixInterop.S_IRGRP | PosixInterop.S_IWGRP |
+                                         PosixInterop.S_IROTH | PosixInterop.S_IWOTH);  // 0666
             
             if (_fd == -1)
             {

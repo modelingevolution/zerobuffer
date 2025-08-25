@@ -1,20 +1,30 @@
 """
-Proper SharedMemory abstraction for ZeroBuffer
+Shared memory abstraction with platform-specific implementation.
 
-This module provides a clean, tested abstraction over Python's multiprocessing.shared_memory
-that ensures reliable cross-process memory sharing.
+This module provides a clean abstraction for shared memory with proper 
+read/write semantics, delegating to platform-specific implementations.
 """
 
 import struct
+import sys
 from typing import Optional, Any
-from multiprocessing import shared_memory as mp_shared_memory
+
+# Import platform-specific implementation
+if sys.platform == 'linux':
+    from .platform.linux import LinuxSharedMemory as PlatformSharedMemory
+elif sys.platform == 'darwin':
+    from .platform.darwin import DarwinSharedMemory as PlatformSharedMemory  
+elif sys.platform == 'win32':
+    from .platform.windows import WindowsSharedMemory as PlatformSharedMemory
+else:
+    raise ImportError(f"Unsupported platform: {sys.platform}")
 
 
 class SharedMemory:
     """
     Clean abstraction for shared memory with proper read/write semantics.
     
-    Similar to C#'s ISharedMemory interface but adapted for Python.
+    Delegates to platform-specific implementation.
     """
     
     def __init__(self, name: str, size: int = 0, create: bool = False):
@@ -26,21 +36,13 @@ class SharedMemory:
             size: Size in bytes (required only when creating)
             create: True to create new, False to open existing
         """
+        # For POSIX systems, ensure name starts with /
+        if sys.platform in ('linux', 'darwin') and not name.startswith('/'):
+            name = '/' + name
+            
+        self._impl = PlatformSharedMemory(name, size, create)
         self._name = name
-        self._size = size
-        self._shm: Optional[mp_shared_memory.SharedMemory] = None
-        
-        if create:
-            if size <= 0:
-                raise ValueError("Size must be positive when creating shared memory")
-            # Create new shared memory
-            self._shm = mp_shared_memory.SharedMemory(name=name, create=True, size=size)
-            # Initialize to zeros
-            self.write_bytes(0, b'\x00' * size)
-        else:
-            # Open existing shared memory
-            self._shm = mp_shared_memory.SharedMemory(name=name, create=False)
-            self._size = self._shm.size
+        self._size = size if size > 0 else self._impl._size
     
     @property
     def name(self) -> str:
@@ -63,13 +65,11 @@ class SharedMemory:
         Returns:
             Bytes read from shared memory
         """
-        if not self._shm:
-            raise RuntimeError("Shared memory is closed")
         if offset < 0 or offset + length > self._size:
-            raise ValueError(f"Invalid read range: offset={offset}, length={length}, size={self._size}")
+            raise ValueError(f"Invalid read range: [{offset}:{offset+length}] for size {self._size}")
         
-        # Important: Convert to bytes to get a copy, not a view
-        return bytes(self._shm.buf[offset:offset + length])
+        buf = self._impl.get_buffer()
+        return bytes(buf[offset:offset+length])
     
     def write_bytes(self, offset: int, data: bytes) -> None:
         """
@@ -79,112 +79,71 @@ class SharedMemory:
             offset: Byte offset to start writing at
             data: Bytes to write
         """
-        if not self._shm:
-            raise RuntimeError("Shared memory is closed")
         if offset < 0 or offset + len(data) > self._size:
-            raise ValueError(f"Invalid write range: offset={offset}, length={len(data)}, size={self._size}")
+            raise ValueError(f"Invalid write range: [{offset}:{offset+len(data)}] for size {self._size}")
         
-        # Direct slice assignment to the buffer
-        self._shm.buf[offset:offset + len(data)] = data
+        buf = self._impl.get_buffer()
+        buf[offset:offset+len(data)] = data
     
-    def read_struct(self, offset: int, format_string: str) -> tuple[object, ...]:
-        """
-        Read a struct from shared memory.
-        
-        Args:
-            offset: Byte offset to read from
-            format_string: struct format string (e.g., '<Q' for little-endian uint64)
-            
-        Returns:
-            Tuple of unpacked values
-        """
-        size = struct.calcsize(format_string)
-        data = self.read_bytes(offset, size)
-        return struct.unpack(format_string, data)
+    def read_uint32(self, offset: int) -> int:
+        """Read a uint32 from shared memory."""
+        data = self.read_bytes(offset, 4)
+        return int(struct.unpack('<I', data)[0])
     
-    def write_struct(self, offset: int, format_string: str, *values: object) -> None:
-        """
-        Write a struct to shared memory.
-        
-        Args:
-            offset: Byte offset to write at
-            format_string: struct format string
-            *values: Values to pack and write
-        """
-        data = struct.pack(format_string, *values)
+    def write_uint32(self, offset: int, value: int) -> None:
+        """Write a uint32 to shared memory."""
+        data = struct.pack('<I', value)
         self.write_bytes(offset, data)
     
     def read_uint64(self, offset: int) -> int:
-        """Read a little-endian uint64 at the given offset."""
-        result = self.read_struct(offset, '<Q')[0]
-        # Cast is safe since we know '<Q' format returns an int
-        assert isinstance(result, int)
-        return result
+        """Read a uint64 from shared memory."""
+        data = self.read_bytes(offset, 8)
+        return int(struct.unpack('<Q', data)[0])
     
     def write_uint64(self, offset: int, value: int) -> None:
-        """Write a little-endian uint64 at the given offset."""
-        self.write_struct(offset, '<Q', value)
+        """Write a uint64 to shared memory."""
+        data = struct.pack('<Q', value)
+        self.write_bytes(offset, data)
     
-    def get_memoryview(self, offset: int = 0, length: Optional[int] = None) -> memoryview:
+    def get_view(self, offset: int, length: int) -> memoryview:
         """
-        Get a memoryview for direct access (use with caution).
-        
-        This is for advanced users who need zero-copy access.
-        Changes to the memoryview will directly affect shared memory.
+        Get a memoryview of a specific region of shared memory.
         
         Args:
-            offset: Starting offset
-            length: Length of view (None for remaining bytes)
+            offset: Byte offset to start the view
+            length: Length of the view in bytes
             
         Returns:
-            Memoryview of the shared memory region
+            Memoryview of the specified region
         """
-        if not self._shm:
-            raise RuntimeError("Shared memory is closed")
-        
-        if length is None:
-            length = self._size - offset
-        
         if offset < 0 or offset + length > self._size:
-            raise ValueError(f"Invalid view range: offset={offset}, length={length}, size={self._size}")
+            raise ValueError(f"Invalid view range: [{offset}:{offset+length}] for size {self._size}")
         
-        return memoryview(self._shm.buf)[offset:offset + length]
+        buf = self._impl.get_buffer()
+        return buf[offset:offset+length]
     
-    def flush(self) -> None:
+    def get_memoryview(self, offset: int, length: int) -> memoryview:
         """
-        Flush any pending writes (no-op on Linux, here for API compatibility).
+        Alias for get_view for compatibility.
+        
+        Args:
+            offset: Byte offset to start the view
+            length: Length of the view in bytes
+            
+        Returns:
+            Memoryview of the specified region
         """
-        # Python's shared_memory uses mmap which should be coherent
-        # This is here for API compatibility with C#
-        pass
+        return self.get_view(offset, length)
     
     def close(self) -> None:
-        """Close the shared memory handle (but don't unlink it)."""
-        if self._shm:
-            try:
-                self._shm.close()
-            except BufferError:
-                # Ignore BufferError if there are still exported pointers
-                # This can happen if memoryviews are still active
-                pass
-            self._shm = None
+        """Close the shared memory handle."""
+        if hasattr(self._impl, 'close'):
+            self._impl.close()
     
     def unlink(self) -> None:
-        """Remove the shared memory from the system."""
-        if self._shm:
-            try:
-                self._shm.unlink()
-            except FileNotFoundError:
-                pass  # Already unlinked
-    
-    def __enter__(self) -> 'SharedMemory':
-        return self
-    
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.close()
-    
-    def __del__(self) -> None:
-        self.close()
+        """Remove shared memory from the system."""
+        if hasattr(self._impl, 'unlink'):
+            self._impl.unlink()
 
 
 class SharedMemoryFactory:
@@ -208,8 +167,12 @@ class SharedMemoryFactory:
         This is a utility method to clean up orphaned shared memory.
         """
         try:
-            shm = mp_shared_memory.SharedMemory(name=name, create=False)
+            # For POSIX systems, ensure name starts with /
+            if sys.platform in ('linux', 'darwin') and not name.startswith('/'):
+                name = '/' + name
+                
+            shm = PlatformSharedMemory(name, 0, create=False)
             shm.unlink()
             shm.close()
-        except FileNotFoundError:
-            pass  # Already removed
+        except Exception:
+            pass  # Already removed or doesn't exist

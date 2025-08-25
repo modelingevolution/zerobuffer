@@ -94,9 +94,6 @@ class DuplexChannelSteps(BaseSteps):
             
         server.start(echo_handler, mode=ProcessingMode.SINGLE_THREAD)
         
-        # Give server time to initialize
-        await asyncio.sleep(0.1)
-        
         self.logger.info("Started echo handler")
         
     @given(r"the '([^']+)' process starts handler with '(\d+)' ms processing time")
@@ -117,9 +114,6 @@ class DuplexChannelSteps(BaseSteps):
             
         server.start(delayed_handler, mode=ProcessingMode.SINGLE_THREAD)
         
-        # Give server time to initialize
-        await asyncio.sleep(0.1)
-        
         self.logger.info(f"Started handler with {delay_ms}ms delay")
         
     @given(r"the '([^']+)' process starts handler that doubles request size")
@@ -138,9 +132,6 @@ class DuplexChannelSteps(BaseSteps):
             writer.commit_frame()
             
         server.start(doubling_handler, mode=ProcessingMode.SINGLE_THREAD)
-        
-        # Give server time to initialize
-        await asyncio.sleep(0.1)
         
         self.logger.info("Started doubling handler")
         

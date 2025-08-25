@@ -31,7 +31,7 @@ from zerobuffer_serve.step_definitions.basic_communication_refactored import (
     BasicCommunicationSteps,
     PerformanceMonitor
 )
-from zerobuffer_serve.test_context import TestContext
+from zerobuffer_serve.test_context import HarmonyTestContext
 
 
 async def run_production_test() -> None:
@@ -110,7 +110,7 @@ async def run_production_test() -> None:
             print(f"   - Test ID: {test_id}")
             
             # 7. Create test context and steps with dependency injection
-            test_context = TestContext()
+            test_context = HarmonyTestContext()
             test_context.initialize(
                 role="test",
                 platform="python",

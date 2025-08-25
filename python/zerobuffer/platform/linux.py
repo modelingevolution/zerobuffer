@@ -10,7 +10,7 @@ import struct
 import tempfile
 from pathlib import Path
 from typing import Optional
-from multiprocessing import shared_memory
+# Removed multiprocessing.shared_memory - using posix_ipc instead
 
 from .base import SharedMemory, Semaphore, FileLock
 from ..exceptions import ZeroBufferException
@@ -29,63 +29,60 @@ class LinuxSharedMemory(SharedMemory):
         self._name = name
         self._size = size
         self._shm = None
-        self._buffer = None
+        self._mapfile = None
         
+        # Use name as-is for consistency with C# and C++
+        # The name should already include '/' if needed
+            
         try:
             if create:
-                # Create new shared memory
-                self._shm = shared_memory.SharedMemory(name=name, create=True, size=size)
+                # Create new shared memory with 0666 permissions
+                flags = posix_ipc.O_CREAT | posix_ipc.O_EXCL | posix_ipc.O_RDWR
+                self._shm = posix_ipc.SharedMemory(name, flags=flags, mode=0o666, size=size)
+                
+                # Map the shared memory
+                self._mapfile = mmap.mmap(self._shm.fd, size)
+                
                 # Zero the memory
-                self._shm.buf[:] = b'\x00' * size
-                print(f"DEBUG: Created shared memory '{name}' with size {size}, actual name: {self._shm.name}", file=sys.stderr)
-                # Check if it actually exists in /dev/shm
-                import subprocess
-                result = subprocess.run(f"ls -la /dev/shm/ | grep {self._shm.name}", shell=True, capture_output=True, text=True)
-                print(f"DEBUG: /dev/shm check: {result.stdout.strip() if result.stdout else 'NOT FOUND'}", file=sys.stderr)
+                self._mapfile[:] = b'\x00' * size
             else:
                 # Open existing shared memory
-                self._shm = shared_memory.SharedMemory(name=name, create=False)
+                self._shm = posix_ipc.SharedMemory(name)
+                
+                # Map the shared memory
+                self._mapfile = mmap.mmap(self._shm.fd, self._shm.size)
                 self._size = self._shm.size
-                print(f"DEBUG: Opened shared memory '{name}', actual name: {self._shm.name}, size: {self._size}, shm object id: {id(self._shm)}", file=sys.stderr)
-                # Print first 16 bytes to verify we're looking at same memory
-                first_bytes = bytes(self._shm.buf[:16])
-                print(f"DEBUG: First 16 bytes: {first_bytes.hex()}", file=sys.stderr)
-                # Test if we can write
-                print(f"DEBUG: Testing write capability...", file=sys.stderr)
-                try:
-                    # Try to write a test byte
-                    old_val = self._shm.buf[0]
-                    self._shm.buf[0] = (old_val + 1) % 256
-                    new_val = self._shm.buf[0]
-                    self._shm.buf[0] = old_val  # Restore
-                    print(f"DEBUG: Write test: old={old_val}, new={new_val}, restored={self._shm.buf[0]}", file=sys.stderr)
-                except Exception as e:
-                    print(f"DEBUG: Write test failed: {e}", file=sys.stderr)
-        except FileExistsError:
-            raise ZeroBufferException(f"Shared memory '{name}' already exists")
-        except FileNotFoundError:
-            raise ZeroBufferException(f"Shared memory '{name}' not found")
+        except posix_ipc.ExistentialError as e:
+            if create:
+                raise ZeroBufferException(f"Shared memory '{name}' already exists")
+            else:
+                raise ZeroBufferException(f"Shared memory '{name}' not found")
         except Exception as e:
             raise ZeroBufferException(f"Failed to create/open shared memory: {e}")
     
     def get_buffer(self) -> memoryview:
         """Get memoryview of entire shared memory buffer"""
         # Don't cache - return fresh memoryview each time to avoid sync issues
-        if self._shm is not None:
-            return memoryview(self._shm.buf)
+        if self._mapfile is not None:
+            return memoryview(self._mapfile)
         else:
             raise RuntimeError("Shared memory not initialized")
     
     def close(self) -> None:
         """Close the shared memory handle"""
-        # Clear buffer reference without calling release
-        # (the Reader/Writer will handle releasing their views)
-        self._buffer = None
+        # Close the memory map
+        if self._mapfile:
+            try:
+                self._mapfile.close()
+            except Exception:
+                pass
+            self._mapfile = None
+            
+        # Close the file descriptor
         if self._shm:
             try:
-                self._shm.close()
-            except BufferError:
-                # Ignore BufferError - views still exist
+                self._shm.close_fd()
+            except Exception:
                 pass
             # Don't set to None yet - unlink() might need it
     
@@ -94,7 +91,7 @@ class LinuxSharedMemory(SharedMemory):
         if self._shm:
             try:
                 self._shm.unlink()
-            except FileNotFoundError:
+            except (FileNotFoundError, posix_ipc.ExistentialError):
                 pass  # Already removed
             # Now we can clear the reference
             self._shm = None
@@ -131,7 +128,7 @@ class LinuxSemaphore(Semaphore):
                 self._sem = posix_ipc.Semaphore(
                     name,
                     flags=posix_ipc.O_CREX,
-                    mode=0o600,
+                    mode=0o666,  # Read/write for all
                     initial_value=initial_value
                 )
             else:
@@ -201,7 +198,7 @@ class LinuxFileLock(FileLock):
         
         try:
             # Open or create the lock file
-            self._fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+            self._fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o666)  # Read/write for all
             
             # Try to acquire exclusive lock (non-blocking)
             fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)

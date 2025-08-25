@@ -20,7 +20,7 @@ from .models import (
 )
 from datetime import datetime
 from .step_registry import StepRegistry
-from .test_context import TestContext
+from .test_context import HarmonyTestContext
 from .logging.dual_logger import DualLoggerProvider
 
 
@@ -30,7 +30,7 @@ class ZeroBufferServe:
     def __init__(
         self,
         step_registry: StepRegistry,
-        test_context: TestContext,
+        test_context: HarmonyTestContext,
         logger_provider: DualLoggerProvider
     ):
         self._step_registry = step_registry

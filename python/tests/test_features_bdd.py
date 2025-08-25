@@ -21,7 +21,7 @@ try:
 except ImportError:
     pytest.skip("pytest-bdd is not installed. Run: pip install pytest-bdd", allow_module_level=True)
 
-from zerobuffer_serve.test_context import TestContext
+from zerobuffer_serve.test_context import HarmonyTestContext
 from zerobuffer_serve.logging.dual_logger import DualLoggerProvider
 from zerobuffer_serve.step_definitions import (
     BasicCommunicationSteps,
@@ -71,9 +71,9 @@ if FEATURE_DIR.exists():
 
 # Fixtures for step classes
 @pytest.fixture
-def test_context() -> Generator[TestContext, None, None]:
+def test_context() -> Generator[HarmonyTestContext, None, None]:
     """Provide a test context for each test"""
-    context = TestContext()
+    context = HarmonyTestContext()
     context.initialize(
         role="test",
         platform="python",
@@ -92,19 +92,19 @@ def logger() -> logging.Logger:
 
 
 @pytest.fixture
-def basic_steps(test_context: TestContext, logger: logging.Logger) -> BasicCommunicationSteps:
+def basic_steps(test_context: HarmonyTestContext, logger: logging.Logger) -> BasicCommunicationSteps:
     """Provide BasicCommunicationSteps instance"""
     return BasicCommunicationSteps(test_context, logger)
 
 
 @pytest.fixture
-def edge_steps(test_context: TestContext, logger: logging.Logger) -> EdgeCasesSteps:
+def edge_steps(test_context: HarmonyTestContext, logger: logging.Logger) -> EdgeCasesSteps:
     """Provide EdgeCasesSteps instance"""
     return EdgeCasesSteps(test_context, logger)
 
 
 @pytest.fixture
-def error_steps(test_context: TestContext, logger: logging.Logger) -> ErrorHandlingSteps:
+def error_steps(test_context: HarmonyTestContext, logger: logging.Logger) -> ErrorHandlingSteps:
     """Provide ErrorHandlingSteps instance"""
     return ErrorHandlingSteps(test_context, logger)
 

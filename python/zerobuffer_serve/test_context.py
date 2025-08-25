@@ -1,14 +1,14 @@
 """
 Test context for managing state during test execution
 
-Similar to ITestContext in the C# implementation.
+Similar to IHarmonyTestContext in the C# implementation.
 """
 
 from typing import Dict, Any, Optional
 import logging
 
 
-class TestContext:
+class HarmonyTestContext:
     """Manages test execution context and shared state"""
     
     def __init__(self) -> None:

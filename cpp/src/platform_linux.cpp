@@ -87,7 +87,7 @@ public:
         : name_(name), size_(size), fd_(-1), data_(nullptr) {
         
         int flags = create ? (O_CREAT | O_EXCL | O_RDWR) : O_RDWR;
-        mode_t mode = S_IRUSR | S_IWUSR;
+        mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;  // 0666 - read/write for all
         
         fd_ = shm_open(name.c_str(), flags, mode);
         if (fd_ == -1) {
@@ -169,7 +169,7 @@ public:
         : name_(name), sem_(nullptr) {
         
         if (create) {
-            sem_ = sem_open(name.c_str(), O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, initial_value);
+            sem_ = sem_open(name.c_str(), O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH, initial_value);  // 0666
         } else {
             sem_ = sem_open(name.c_str(), 0);
         }
@@ -237,7 +237,7 @@ public:
         // Create directory if it doesn't exist
         std::filesystem::create_directories(std::filesystem::path(path).parent_path());
         
-        fd_ = open(path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+        fd_ = open(path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);  // 0666
         if (fd_ == -1) {
             throw ZeroBufferException("Failed to create lock file: " + std::string(strerror(errno)));
         }

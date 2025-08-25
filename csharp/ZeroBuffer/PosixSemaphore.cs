@@ -25,7 +25,8 @@ namespace ZeroBuffer
             var semName = name.StartsWith('/') ? name : $"/{name}";
             
             int mode = PosixInterop.S_IRUSR | PosixInterop.S_IWUSR | 
-                      PosixInterop.S_IRGRP | PosixInterop.S_IWGRP;
+                      PosixInterop.S_IRGRP | PosixInterop.S_IWGRP |
+                      PosixInterop.S_IROTH | PosixInterop.S_IWOTH;  // 0666 - read/write for all
             
             _handle = PosixInterop.sem_open(semName,
                 PosixInterop.O_CREAT | PosixInterop.O_EXCL,

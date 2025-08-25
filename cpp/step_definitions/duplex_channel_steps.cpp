@@ -155,9 +155,6 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
                     // Echo back the data (v1.0.0 - write directly to response writer)
                     response_writer.write_frame(request.data(), request.size());
                 });
-                
-                // Give server time to initialize
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             } catch (const std::exception& e) {
                 ZEROBUFFER_LOG_ERROR("DuplexChannelSteps") 
                     << "Failed to start echo handler: " << e.what();
@@ -193,8 +190,6 @@ void registerDuplexChannelSteps(StepRegistry& registry) {
                     // Echo back after delay (v1.0.0 - write directly to response writer)
                     response_writer.write_frame(request.data(), request.size());
                 });
-                
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             } catch (const std::exception& e) {
                 ZEROBUFFER_LOG_ERROR("DuplexChannelSteps") 
                     << "Failed to start delayed echo handler: " << e.what();

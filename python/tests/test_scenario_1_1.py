@@ -22,7 +22,7 @@ from pytest_bdd import scenario, given, when, then, parsers
 
 # Import ZeroBuffer components
 from zerobuffer import Reader, Writer, BufferConfig
-from zerobuffer_serve.test_context import TestContext
+from zerobuffer_serve.test_context import HarmonyTestContext
 from zerobuffer_serve.logging.dual_logger import DualLoggerProvider
 from zerobuffer_serve.step_definitions.basic_communication import BasicCommunicationSteps
 
@@ -45,9 +45,9 @@ def test_simple_write_read_cycle() -> None:
 
 # Fixtures
 @pytest.fixture
-def test_context() -> Generator[TestContext, None, None]:
+def test_context() -> Generator[HarmonyTestContext, None, None]:
     """Provide test context"""
-    context = TestContext()
+    context = HarmonyTestContext()
     context.initialize(
         role="test",
         platform="python", 
@@ -66,7 +66,7 @@ def logger() -> logging.Logger:
 
 
 @pytest.fixture
-def steps(test_context: TestContext, logger: logging.Logger) -> BasicCommunicationSteps:
+def steps(test_context: HarmonyTestContext, logger: logging.Logger) -> BasicCommunicationSteps:
     """Provide step definitions instance"""
     return BasicCommunicationSteps(test_context, logger)
 

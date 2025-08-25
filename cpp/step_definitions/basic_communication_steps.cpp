@@ -84,9 +84,6 @@ void registerBasicCommunicationSteps() {
             const std::string& process = params[0];
             const std::string& bufferName = params[1];
             
-            // Give reader a moment to fully initialize
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
             ctx.createWriter(process, bufferName);
             ZEROBUFFER_LOG_DEBUG("Step") << process << " connected to buffer '" << bufferName << "'";
             

@@ -250,8 +250,7 @@ class Reader(LoggerMixin):
                 raise ZeroBufferException("Invalid metadata size")
             
             # Return view of actual metadata (skip size prefix)
-            buffer = self._shm.get_memoryview()
-            return buffer[metadata_offset + 8:metadata_offset + 8 + size]
+            return self._shm.get_memoryview(metadata_offset + 8, size)
     
     def read_frame(self, timeout: Optional[float] = 5.0) -> Optional[Frame]:
         """
@@ -408,14 +407,13 @@ class Reader(LoggerMixin):
         """
         Release frame and free buffer space
         
-        No-op: All updates are now done in read_frame() to match C++/C# behavior.
-        This method is kept for API compatibility.
+        This triggers the frame disposal which updates OIEB and signals the writer.
         
         Args:
             frame: Frame to release
         """
-        # No-op: All updates are now done in read_frame()
-        pass
+        # Dispose the frame to trigger the RAII cleanup
+        frame.dispose()
     
     def is_writer_connected(self, timeout_ms: Optional[int] = None) -> bool:
         """
