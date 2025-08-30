@@ -172,6 +172,8 @@ class Writer(LoggerMixin):
             self._logger.info("  metadata_free_bytes: %d", self._oieb.metadata_free_bytes)
             self._logger.info("  payload_free_bytes (unchanged): %d", self._oieb.payload_free_bytes)
             
+            # Flush shared memory to ensure metadata is visible
+            self._shm.flush()
             
             # Verify the write directly from shared memory
             self._logger.info("Verified OIEB after metadata write:")
@@ -326,8 +328,8 @@ class Writer(LoggerMixin):
             self._oieb.payload_free_bytes -= total_size
             self._oieb.payload_written_count += 1
             
-            # Memory barrier equivalent (handled by lock)
-            
+            # Flush shared memory to ensure all writes are visible
+            self._shm.flush()
             
             # Signal reader
             self._sem_write.release()
@@ -457,6 +459,8 @@ class Writer(LoggerMixin):
             self._oieb.payload_free_bytes -= self._pending_total_size
             self._oieb.payload_written_count += 1
             
+            # Flush shared memory to ensure all writes are visible
+            self._shm.flush()
             
             # Signal reader
             self._sem_write.release()

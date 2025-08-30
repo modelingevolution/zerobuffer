@@ -135,6 +135,11 @@ class SharedMemory:
         """
         return self.get_view(offset, length)
     
+    def flush(self) -> None:
+        """Flush shared memory to ensure all writes are visible to other processes."""
+        if hasattr(self._impl, 'flush'):
+            self._impl.flush()
+    
     def close(self) -> None:
         """Close the shared memory handle."""
         if hasattr(self._impl, 'close'):

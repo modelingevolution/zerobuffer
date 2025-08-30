@@ -259,9 +259,9 @@ class TestScenario5WriterDisconnect:
             # Verify writer is disconnected
             assert not reader.is_writer_connected()
             
-            # Try to read more - should timeout or raise exception
-            frame = reader.read_frame(timeout=0.5)
-            assert frame is None  # Timeout, no more data
+            # Try to read more - should raise WriterDeadException since writer disconnected gracefully
+            with pytest.raises(WriterDeadException):
+                reader.read_frame(timeout=0.5)
 
 
 class TestScenario6ReaderDisconnect:

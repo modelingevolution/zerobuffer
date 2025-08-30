@@ -276,10 +276,17 @@ class Reader(LoggerMixin):
                 # Wait for data signal FIRST (following the protocol correctly)
                 self._logger.debug("Waiting on write semaphore for data signal")
                 if not self._sem_write.acquire(timeout):
-                    # Timeout - check if writer is alive
-                    if self._oieb and self._oieb.writer_pid != 0 and not platform.process_exists(self._oieb.writer_pid):
-                        self._logger.warning("Writer process %d is dead", self._oieb.writer_pid)
-                        raise WriterDeadException()
+                    # Timeout - check if writer is alive or disconnected gracefully
+                    if self._oieb:
+                        if self._oieb.writer_pid == 0:
+                            # Writer disconnected gracefully - check if all frames have been read
+                            if self._oieb.payload_written_count <= self._oieb.payload_read_count:
+                                self._logger.info("Writer disconnected gracefully, all frames read")
+                                raise WriterDeadException()
+                        elif not platform.process_exists(self._oieb.writer_pid):
+                            # Writer process died unexpectedly
+                            self._logger.warning("Writer process %d is dead", self._oieb.writer_pid)
+                            raise WriterDeadException()
                     self._logger.debug("Read timeout after %s seconds", timeout)
                     return None  # Timeout
                 

@@ -68,6 +68,12 @@ class LinuxSharedMemory(SharedMemory):
         else:
             raise RuntimeError("Shared memory not initialized")
     
+    def flush(self) -> None:
+        """Flush shared memory to ensure all writes are visible to other processes"""
+        if self._mapfile is not None:
+            # Flush the memory-mapped file to ensure writes are visible
+            self._mapfile.flush()
+    
     def close(self) -> None:
         """Close the shared memory handle"""
         # Close the memory map

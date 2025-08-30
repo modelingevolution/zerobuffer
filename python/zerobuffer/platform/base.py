@@ -27,6 +27,11 @@ class SharedMemory(ABC):
         pass
     
     @abstractmethod
+    def flush(self) -> None:
+        """Flush shared memory to ensure all writes are visible to other processes"""
+        pass
+    
+    @abstractmethod
     def close(self) -> None:
         """Close the shared memory handle"""
         pass
