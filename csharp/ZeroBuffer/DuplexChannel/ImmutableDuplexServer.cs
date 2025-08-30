@@ -113,7 +113,10 @@ namespace ZeroBuffer.DuplexChannel
         
         private Writer ConnectToResponseBuffer(string bufferName)
         {
-            const int maxRetries = 50; // 5 second timeout
+            // Use the configured timeout, not a hardcoded value
+            // Default to 5 seconds if no timeout specified
+            var timeout = _timeout ?? TimeSpan.FromSeconds(5);
+            int maxRetries = (int)(timeout.TotalMilliseconds / 100); // Convert to 100ms intervals
             
             for (int i = 0; i < maxRetries; i++)
             {
@@ -127,7 +130,7 @@ namespace ZeroBuffer.DuplexChannel
                 }
             }
             
-            throw new TimeoutException($"Timeout waiting for response buffer {bufferName}");
+            throw new TimeoutException($"Timeout waiting for response buffer {bufferName} after {timeout.TotalSeconds} seconds");
         }
         
         private void ProcessRequests(RequestHandler handler, string responseBufferName,

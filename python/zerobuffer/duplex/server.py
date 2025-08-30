@@ -112,8 +112,10 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
             
             # Connect to response buffer as writer (matching C# behavior)
             # The response buffer is created by the client, so we retry until it's available
+            # Use the configured timeout, not a hardcoded value
+            max_retries = int(self._timeout * 10)  # Convert timeout to 100ms intervals
             retry_count = 0
-            while retry_count < 50:  # 5 seconds
+            while retry_count < max_retries:
                 if not self._is_running():
                     return
                 try:
