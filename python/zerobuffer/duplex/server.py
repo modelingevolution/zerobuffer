@@ -127,13 +127,17 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
             
             if self._response_writer is None:
                 if self._logger:
-                    self._logger.error("Failed to connect to response buffer")
+                    self._logger.error(f"Failed to connect to response buffer: {self._response_buffer_name}")
                 return
             
             # Call initialization callback with metadata if provided
             if hasattr(self, '_on_init') and self._on_init and self._request_reader:
+                if self._logger:
+                    self._logger.debug("Reading metadata from request buffer")
                 metadata = self._request_reader.get_metadata()
                 if metadata:
+                    if self._logger:
+                        self._logger.debug(f"Got metadata: {len(metadata)} bytes")
                     try:
                         self._on_init(metadata)
                     except Exception as e:
@@ -143,6 +147,9 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                     finally:
                         # Release the memoryview
                         metadata.release()
+                else:
+                    if self._logger:
+                        self._logger.warning("No metadata available in request buffer")
             
             # Process requests
             while True:
