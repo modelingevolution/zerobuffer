@@ -110,16 +110,8 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
             # Create request buffer as reader
             self._request_reader = Reader(self._request_buffer_name, self._config)
             
-            # Wait for client to create response buffer and connect as writer
-            timeout_start = time.time()
-            while self._running and not self._request_reader.is_writer_connected():
-                if time.time() - timeout_start > 30:  # 30 second timeout
-                    if self._logger:
-                        self._logger.warning("Timeout waiting for client")
-                    return
-                time.sleep(0.1)
-            
-            # Connect to response buffer as writer
+            # Connect to response buffer as writer (matching C# behavior)
+            # The response buffer is created by the client, so we retry until it's available
             retry_count = 0
             while retry_count < 50:  # 5 seconds
                 if not self._is_running():
