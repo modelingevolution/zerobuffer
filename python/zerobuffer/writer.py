@@ -62,18 +62,28 @@ class Writer:
 
         try:
             # Open existing shared memory using the new abstraction
+            logger.debug("Opening shared memory: %s", name)
             self._shm = SharedMemoryFactory.open(name)
+            logger.debug("Shared memory opened successfully, size: %d", self._shm.size)
 
             # Initialize OIEB view for direct memory access
+            logger.debug("Creating OIEB view")
             self._oieb = OIEBView(self._shm.get_memoryview(0, OIEBView.SIZE))
 
             # Verify OIEB
+            logger.debug("OIEB: size=%d, version=%d.%d.%d, reader_pid=%d, writer_pid=%d", 
+                        self._oieb.oieb_size, 
+                        self._oieb.version.major, self._oieb.version.minor, self._oieb.version.patch,
+                        self._oieb.reader_pid, self._oieb.writer_pid)
             if self._oieb.oieb_size != 128:
                 raise ZeroBufferException(f"Invalid OIEB size: {self._oieb.oieb_size} - version mismatch?")
 
             # Check if reader exists
-            if self._oieb.reader_pid == 0 or not platform.process_exists(self._oieb.reader_pid):
-                raise ZeroBufferException("No active reader found")
+            logger.debug("Checking if reader process %d exists", self._oieb.reader_pid)
+            if self._oieb.reader_pid == 0:
+                raise ZeroBufferException("No reader PID set in OIEB")
+            if not platform.process_exists(self._oieb.reader_pid):
+                raise ZeroBufferException(f"Reader process {self._oieb.reader_pid} does not exist")
 
             # Check if another writer exists
             if self._oieb.writer_pid != 0 and platform.process_exists(self._oieb.writer_pid):

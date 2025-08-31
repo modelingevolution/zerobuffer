@@ -116,7 +116,10 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                 try:
                     self._response_writer = Writer(self._response_buffer_name)
                     break
-                except Exception:
+                except Exception as e:
+                    if retry_count == 0 or retry_count % 10 == 0:
+                        if logger:
+                            logger.debug(f"Failed to connect to response buffer (attempt {retry_count + 1}): {type(e).__name__}: {e}")
                     retry_count += 1
                     time.sleep(0.1)
 

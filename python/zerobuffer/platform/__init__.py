@@ -78,9 +78,8 @@ def process_exists(pid: int) -> bool:
             return psutil.pid_exists(pid)
         else:
             import os
-            import signal
 
-            os.kill(pid, signal.SIG_DFL)
+            os.kill(pid, 0)
             return True
     except (OSError, ProcessLookupError):
         return False
