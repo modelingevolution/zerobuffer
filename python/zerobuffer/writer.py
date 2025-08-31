@@ -79,11 +79,10 @@ class Writer:
                 raise ZeroBufferException(f"Invalid OIEB size: {self._oieb.oieb_size} - version mismatch?")
 
             # Check if reader exists
-            logger.debug("Checking if reader process %d exists", self._oieb.reader_pid)
             if self._oieb.reader_pid == 0:
                 raise ZeroBufferException("No reader PID set in OIEB")
-            if not platform.process_exists(self._oieb.reader_pid):
-                raise ZeroBufferException(f"Reader process {self._oieb.reader_pid} does not exist")
+            else:
+                logger.debug("Reader PID from OIEB: %d (not verifying during init)", self._oieb.reader_pid)
 
             # Check if another writer exists
             if self._oieb.writer_pid != 0 and platform.process_exists(self._oieb.writer_pid):
