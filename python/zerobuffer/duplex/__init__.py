@@ -10,7 +10,7 @@ from .interfaces import (
     IImmutableDuplexServer,
     IMutableDuplexServer,
     IDuplexChannelFactory,
-    DuplexResponse
+    DuplexResponse,
 )
 
 from .factory import DuplexChannelFactory
@@ -19,14 +19,14 @@ from .server import ImmutableDuplexServer
 from .processing_mode import ProcessingMode
 
 __all__ = [
-    'IDuplexClient',
-    'IDuplexServer', 
-    'IImmutableDuplexServer',
-    'IMutableDuplexServer',
-    'IDuplexChannelFactory',
-    'DuplexResponse',
-    'DuplexChannelFactory',
-    'DuplexClient',
-    'ImmutableDuplexServer',
-    'ProcessingMode'
+    "IDuplexClient",
+    "IDuplexServer",
+    "IImmutableDuplexServer",
+    "IMutableDuplexServer",
+    "IDuplexChannelFactory",
+    "DuplexResponse",
+    "DuplexChannelFactory",
+    "DuplexClient",
+    "ImmutableDuplexServer",
+    "ProcessingMode",
 ]

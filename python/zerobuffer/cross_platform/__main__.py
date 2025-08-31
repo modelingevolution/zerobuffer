@@ -10,7 +10,7 @@ import os
 module_name = os.path.basename(os.path.dirname(__file__))
 
 if len(sys.argv) < 2:
-    print(f"Usage: python -m zerobuffer.cross_platform.<command> [args]")
+    print("Usage: python -m zerobuffer.cross_platform.<command> [args]")
     print("Commands: writer, reader, relay")
     sys.exit(1)
 
@@ -19,9 +19,11 @@ sys.argv = sys.argv[1:]  # Remove the command from argv
 
 if command == "writer":
     from .writer import main
+
     sys.exit(main())
 elif command == "reader":
     from .reader import main
+
     sys.exit(main())
 elif command == "relay":
     print("Error: relay command not yet implemented", file=sys.stderr)

@@ -7,6 +7,9 @@ with true zero-copy data access.
 
 __version__ = "1.1.8"
 
+import logging
+import os
+
 from .reader import Reader
 from .writer import Writer
 from .types import BufferConfig, Frame, OIEB, FrameHeader
@@ -20,11 +23,9 @@ from .exceptions import (
     FrameTooLargeException,
     SequenceError,
     InvalidFrameSizeException,
-    MetadataAlreadyWrittenException
+    MetadataAlreadyWrittenException,
 )
 from .error_event_args import ErrorEventArgs
-from .logging_config import setup_logging, get_logger
-from .logger_factory import ILoggerFactory, LoggerFactory, NullLoggerFactory, get_default_factory, set_default_factory
 
 # Duplex channel support
 from .duplex import (
@@ -37,44 +38,49 @@ from .duplex import (
     IMutableDuplexServer,
     IDuplexChannelFactory,
     DuplexResponse,
-    ProcessingMode
+    ProcessingMode,
 )
+
+# Configure library logger with NullHandler (best practice for libraries)
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+# Optional: Configure from environment variable
+_log_level = os.environ.get("ZEROBUFFER_LOG_LEVEL")
+if _log_level:
+    try:
+        logging.getLogger(__name__).setLevel(getattr(logging, _log_level.upper()))
+    except AttributeError:
+        pass  # Invalid log level, ignore
 
 __all__ = [
     # Core classes
-    'Reader',
-    'Writer', 
-    'BufferConfig',
-    'Frame',
+    "Reader",
+    "Writer",
+    "BufferConfig",
+    "Frame",
+    "OIEB",
+    "FrameHeader",
     # Exceptions
-    'ZeroBufferException',
-    'WriterDeadException',
-    'ReaderDeadException',
-    'WriterAlreadyConnectedException',
-    'ReaderAlreadyConnectedException',
-    'BufferFullException',
-    'FrameTooLargeException',
-    'SequenceError',
-    'InvalidFrameSizeException',
-    'MetadataAlreadyWrittenException',
-    'ErrorEventArgs',
-    # Logging
-    'setup_logging',
-    'get_logger',
-    'ILoggerFactory',
-    'LoggerFactory',
-    'NullLoggerFactory',
-    'get_default_factory',
-    'set_default_factory',
+    "ZeroBufferException",
+    "WriterDeadException",
+    "ReaderDeadException",
+    "WriterAlreadyConnectedException",
+    "ReaderAlreadyConnectedException",
+    "BufferFullException",
+    "FrameTooLargeException",
+    "SequenceError",
+    "InvalidFrameSizeException",
+    "MetadataAlreadyWrittenException",
+    "ErrorEventArgs",
     # Duplex channel
-    'DuplexChannelFactory',
-    'DuplexClient',
-    'ImmutableDuplexServer',
-    'IDuplexClient',
-    'IDuplexServer',
-    'IImmutableDuplexServer',
-    'IMutableDuplexServer',
-    'IDuplexChannelFactory',
-    'DuplexResponse',
-    'ProcessingMode'
+    "DuplexChannelFactory",
+    "DuplexClient",
+    "ImmutableDuplexServer",
+    "IDuplexClient",
+    "IDuplexServer",
+    "IImmutableDuplexServer",
+    "IMutableDuplexServer",
+    "IDuplexChannelFactory",
+    "DuplexResponse",
+    "ProcessingMode",
 ]

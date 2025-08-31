@@ -7,11 +7,11 @@ This is a minimal example to test the architecture before full implementation.
 
 import pytest
 from pathlib import Path
-from typing import Any
 
 # Try to import pytest-bdd
 try:
     from pytest_bdd import scenario, given, when, then, parsers
+
     PYTEST_BDD_AVAILABLE = True
 except ImportError:
     PYTEST_BDD_AVAILABLE = False
@@ -38,37 +38,38 @@ if PYTEST_BDD_AVAILABLE:
             Then the buffer 'test' should exist
             And the buffer 'test' should have size 1024
     """
-    
+
     # Write the feature to a temp file for pytest-bdd to read
     import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.feature', delete=False) as f:
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".feature", delete=False) as f:
         f.write(SIMPLE_FEATURE)
         temp_feature_path = f.name
-    
+
     # Define the scenario
-    @scenario(temp_feature_path, 'Basic buffer creation')
+    @scenario(temp_feature_path, "Basic buffer creation")
     def test_basic_buffer_creation() -> None:
         """Test basic buffer creation scenario"""
         pass
-    
+
     # Step definitions
     @given("the test environment is initialized")
     def init_environment() -> dict:
         """Initialize test environment"""
         return {"initialized": True}
-    
+
     @when(parsers.parse("a buffer named '{name}' is created with size {size:d}"))
     def create_buffer(name: str, size: str) -> dict:
         """Create a buffer"""
         # Simulate buffer creation
         buffer = {"name": name, "size": size}
         return buffer
-    
+
     @then(parsers.parse("the buffer '{name}' should exist"))
     def verify_buffer_exists(name: str, create_buffer: dict) -> None:
         """Verify buffer exists"""
         assert create_buffer["name"] == name
-    
+
     @then(parsers.parse("the buffer '{name}' should have size {size:d}"))
     def verify_buffer_size(name: str, size: str, create_buffer: dict) -> None:
         """Verify buffer size"""
@@ -83,7 +84,7 @@ def test_feature_files_exist() -> None:
         Path(__file__).parent.parent.parent / "csharp" / "ZeroBuffer.Tests" / "Features",
         Path(__file__).parent.parent.parent.parent / "csharp" / "ZeroBuffer.Tests" / "Features",
     ]
-    
+
     feature_dir_found = False
     for path in possible_paths:
         if path.exists():
@@ -93,7 +94,7 @@ def test_feature_files_exist() -> None:
             assert len(feature_files) > 0, f"No feature files found in {path}"
             print(f"Found {len(feature_files)} feature files")
             break
-    
+
     if not feature_dir_found:
         pytest.skip("Feature directory not found")
 

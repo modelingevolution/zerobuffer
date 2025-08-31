@@ -27,8 +27,6 @@ from zerobuffer_serve.step_definitions import (
     BasicCommunicationSteps,
     EdgeCasesSteps,
     ErrorHandlingSteps,
-    ProcessLifecycleSteps,
-    SynchronizationSteps,
 )
 
 
@@ -39,18 +37,18 @@ def get_feature_dir() -> Path:
     local_features = Path(__file__).parent.parent / "features"
     if local_features.exists():
         return local_features
-    
+
     # Fallback to original locations
     possible_paths = [
         Path(__file__).parent.parent.parent / "ZeroBuffer.Harmony.Tests" / "Features",
         Path(__file__).parent.parent.parent / "csharp" / "ZeroBuffer.Tests" / "Features",
         Path(__file__).parent.parent.parent.parent / "csharp" / "ZeroBuffer.Tests" / "Features",
     ]
-    
+
     for path in possible_paths:
         if path.exists():
             return path
-    
+
     # If not found, return a path that will cause a clear error
     return local_features
 
@@ -74,12 +72,7 @@ if FEATURE_DIR.exists():
 def test_context() -> Generator[HarmonyTestContext, None, None]:
     """Provide a test context for each test"""
     context = HarmonyTestContext()
-    context.initialize(
-        role="test",
-        platform="python",
-        scenario="pytest-bdd test",
-        test_run_id="pytest-bdd-run"
-    )
+    context.initialize(role="test", platform="python", scenario="pytest-bdd test", test_run_id="pytest-bdd-run")
     yield context
     context.cleanup()
 
@@ -112,6 +105,7 @@ def error_steps(test_context: HarmonyTestContext, logger: logging.Logger) -> Err
 # Step definitions that bridge pytest-bdd to our step classes
 # We need to wrap our class methods to work with pytest-bdd
 
+
 # Background steps
 @given("the test environment is initialized")
 def test_environment_initialized(basic_steps: BasicCommunicationSteps) -> None:
@@ -126,15 +120,20 @@ def all_processes_ready(basic_steps: BasicCommunicationSteps) -> None:
 
 
 # Buffer creation
-@given(parsers.re(r"the '(?P<process>[^']+)' process creates buffer '(?P<buffer_name>[^']+)' with metadata size '(?P<metadata_size>\d+)' and payload size '(?P<payload_size>\d+)'"))
-def create_buffer(basic_steps: BasicCommunicationSteps, process: str, buffer_name: str, metadata_size: int, payload_size: int) -> Any:
+@given(
+    parsers.re(
+        r"the '(?P<process>[^']+)' process creates buffer '(?P<buffer_name>[^']+)' with metadata size '(?P<metadata_size>\d+)' and payload size '(?P<payload_size>\d+)'"
+    )
+)
+def create_buffer(
+    basic_steps: BasicCommunicationSteps, process: str, buffer_name: str, metadata_size: int, payload_size: int
+) -> Any:
     """Create a new ZeroBuffer with specified configuration"""
     import asyncio
+
     # Run async method in sync context
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        basic_steps.create_buffer(process, buffer_name, metadata_size, payload_size)
-    )
+    return loop.run_until_complete(basic_steps.create_buffer(process, buffer_name, metadata_size, payload_size))
 
 
 # Writer connection
@@ -142,10 +141,9 @@ def create_buffer(basic_steps: BasicCommunicationSteps, process: str, buffer_nam
 def connect_to_buffer(basic_steps: BasicCommunicationSteps, process: str, buffer_name: str) -> Any:
     """Connect a writer to an existing buffer"""
     import asyncio
+
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        basic_steps.connect_to_buffer(process, buffer_name)
-    )
+    return loop.run_until_complete(basic_steps.connect_to_buffer(process, buffer_name))
 
 
 # Metadata operations
@@ -153,57 +151,63 @@ def connect_to_buffer(basic_steps: BasicCommunicationSteps, process: str, buffer
 def write_metadata(basic_steps: BasicCommunicationSteps, process: str, size: int) -> Any:
     """Write metadata to the buffer"""
     import asyncio
+
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        basic_steps.write_metadata(process, size)
-    )
+    return loop.run_until_complete(basic_steps.write_metadata(process, size))
 
 
 # Frame operations
-@when(parsers.re(r"the '(?P<process>[^']+)' process writes frame with size '(?P<size>\d+)' and sequence '(?P<sequence>\d+)'"))
+@when(
+    parsers.re(
+        r"the '(?P<process>[^']+)' process writes frame with size '(?P<size>\d+)' and sequence '(?P<sequence>\d+)'"
+    )
+)
 def write_frame_with_sequence(basic_steps: BasicCommunicationSteps, process: str, size: int, sequence: int) -> Any:
     """Write a frame with specific size and sequence"""
     import asyncio
+
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        basic_steps.write_frame_with_sequence(process, size, sequence)
+    return loop.run_until_complete(basic_steps.write_frame_with_sequence(process, size, sequence))
+
+
+@then(
+    parsers.re(
+        r"the '(?P<process>[^']+)' process should read frame with sequence '(?P<sequence>\d+)' and size '(?P<size>\d+)'"
     )
-
-
-@then(parsers.re(r"the '(?P<process>[^']+)' process should read frame with sequence '(?P<sequence>\d+)' and size '(?P<size>\d+)'"))
-def read_frame_verify_sequence_size(basic_steps: BasicCommunicationSteps, process: str, sequence: int, size: int) -> Any:
+)
+def read_frame_verify_sequence_size(
+    basic_steps: BasicCommunicationSteps, process: str, sequence: int, size: int
+) -> Any:
     """Read and verify frame with sequence and size"""
     import asyncio
+
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        basic_steps.read_frame_verify_sequence_size(process, sequence, size)
-    )
+    return loop.run_until_complete(basic_steps.read_frame_verify_sequence_size(process, sequence, size))
 
 
 @then(parsers.re(r"the '(?P<process>[^']+)' process should validate frame data"))
 def validate_frame_data(basic_steps: BasicCommunicationSteps, process: str) -> Any:
     """Validate frame data"""
     import asyncio
+
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        basic_steps.validate_frame_data(process)
-    )
+    return loop.run_until_complete(basic_steps.validate_frame_data(process))
 
 
 @then(parsers.re(r"the '(?P<process>[^']+)' process signals space available"))
 def signal_space_available(basic_steps: BasicCommunicationSteps, process: str) -> Any:
     """Signal that space is available"""
     import asyncio
+
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        basic_steps.signal_space_available(process)
-    )
+    return loop.run_until_complete(basic_steps.signal_space_available(process))
 
 
 # Helper for running async methods
 def run_async(coro: Any) -> Any:
     """Helper to run async coroutines in sync context"""
     import asyncio
+
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -218,5 +222,5 @@ if __name__ == "__main__":
     print(f"Feature files exist: {FEATURE_DIR.exists()}")
     if FEATURE_DIR.exists():
         print(f"Feature files found: {list(FEATURE_DIR.glob('*.feature'))}")
-    
+
     pytest.main([__file__, "-v", "-s"])

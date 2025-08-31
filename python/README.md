@@ -40,14 +40,18 @@ with Reader("my-buffer", config) as reader:
     while True:
         frame = reader.read_frame(timeout=5.0)
         if frame:
-            # Access data without copying
-            data = frame.data  # This is a memoryview
+            # Option 1: Manual frame management
+            data = frame.data  # This is a memoryview (zero-copy)
             print(f"Received frame {frame.sequence}: {len(data)} bytes")
-            
             # Process the frame...
+            reader.release_frame(frame)  # Must release to free buffer space
             
-            # Must release frame to free buffer space
-            reader.release_frame(frame)
+            # Option 2: Using context manager (RAII pattern - automatic disposal)
+            with frame:
+                data = frame.data  # Automatically released when exiting 'with' block
+                print(f"Received frame {frame.sequence}: {len(data)} bytes")
+                # Process the frame...
+                # Frame is automatically released here
 ```
 
 ### Writer Example
@@ -80,10 +84,10 @@ arr = np.arange(1000, dtype=np.float32)
 # Get memoryview of array (no copy)
 view = memoryview(arr)
 
-# Write with zero-copy
-writer.write_frame_zero_copy(view)
+# Write with zero-copy (memoryview is handled efficiently)
+writer.write_frame(view)
 
-# Or use direct buffer access
+# Or use direct buffer access for maximum performance
 buffer = writer.get_frame_buffer(size=4000)
 # Write directly into shared memory
 buffer[:] = arr.tobytes()
@@ -117,8 +121,7 @@ Connects to an existing buffer for writing.
 
 **Methods:**
 - `set_metadata(data: Union[bytes, bytearray, memoryview]) -> None`: Write metadata (once only)
-- `write_frame(data: Union[bytes, bytearray, memoryview]) -> None`: Write a frame
-- `write_frame_zero_copy(data: memoryview) -> None`: Write frame with zero-copy
+- `write_frame(data: Union[bytes, bytearray, memoryview]) -> None`: Write a frame (zero-copy for memoryview)
 - `get_frame_buffer(size: int) -> memoryview`: Get buffer for direct writing
 - `commit_frame() -> None`: Commit frame after direct writing
 - `is_reader_connected() -> bool`: Check if reader is connected
@@ -126,12 +129,33 @@ Connects to an existing buffer for writing.
 
 ### Frame Class
 
-Represents a zero-copy reference to frame data.
+Represents a zero-copy reference to frame data with RAII support.
 
 **Properties:**
 - `data -> memoryview`: Zero-copy view of frame data
 - `size -> int`: Size of frame data
 - `sequence -> int`: Sequence number
+- `is_valid -> bool`: Check if frame has valid data
+
+**RAII Support:**
+The Frame class implements the context manager protocol for automatic resource management:
+
+```python
+# Manual management
+frame = reader.read_frame()
+if frame:
+    process(frame.data)
+    reader.release_frame(frame)  # Must release manually
+
+# Automatic management with context manager (RAII)
+frame = reader.read_frame()
+if frame:
+    with frame:  # Enters context, frame is valid
+        process(frame.data)
+    # Frame is automatically disposed/released here
+```
+
+Using the context manager ensures frames are always properly released, even if an exception occurs during processing.
 
 ### BufferConfig Class
 
@@ -158,9 +182,10 @@ The Python implementation provides true zero-copy access through:
 ### Avoiding Copies
 
 - Use `memoryview` objects whenever possible
-- Use `write_frame_zero_copy()` for memoryview data
+- Pass memoryview directly to `write_frame()` for zero-copy operation
 - Use numpy arrays or other buffer protocol objects
 - Access frame data directly via `frame.data` memoryview
+- Use `get_frame_buffer()` and `commit_frame()` for direct memory access
 
 ## Performance Considerations
 
@@ -169,15 +194,82 @@ The Python implementation provides true zero-copy access through:
 3. **Use appropriate buffer sizes**: See capacity planning in main README
 4. **Monitor buffer utilization**: Avoid buffer full conditions
 
+## Logging Configuration
+
+The ZeroBuffer library uses Python's standard logging module. By default, it uses a NullHandler (no output) following Python library best practices.
+
+### Enable Logging via Environment Variable
+
+Set the `ZEROBUFFER_LOG_LEVEL` environment variable:
+
+```bash
+export ZEROBUFFER_LOG_LEVEL=DEBUG
+python your_app.py
+```
+
+Or in Python:
+```python
+import os
+os.environ['ZEROBUFFER_LOG_LEVEL'] = 'DEBUG'
+import zerobuffer  # Import after setting env var
+```
+
+### Configure Logging in Your Application
+
+```python
+import logging
+import zerobuffer
+
+# Option 1: Basic configuration for debugging
+logging.basicConfig(level=logging.DEBUG)
+
+# Option 2: Configure only zerobuffer logging
+logging.getLogger('zerobuffer').setLevel(logging.DEBUG)
+
+# Add a handler to see the output
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+logging.getLogger('zerobuffer').addHandler(handler)
+
+# Option 3: Configure specific modules
+logging.getLogger('zerobuffer.reader').setLevel(logging.DEBUG)  # Only reader logs
+logging.getLogger('zerobuffer.writer').setLevel(logging.DEBUG)  # Only writer logs
+logging.getLogger('zerobuffer.duplex.server').setLevel(logging.DEBUG)  # Only server logs
+```
+
+### Log Levels
+
+- **DEBUG**: Detailed information for diagnosing issues
+  - Buffer creation/initialization
+  - Frame read/write operations with sizes and sequences
+  - Wrap-around detection and handling
+  - Semaphore operations
+  - OIEB state changes
+- **INFO**: General operational information
+  - Buffer connection/disconnection
+  - Metadata operations
+  - Major state changes
+- **WARNING**: Important warnings that don't prevent operation
+  - Missing metadata
+  - Retry operations
+- **ERROR**: Error conditions
+  - Connection failures
+  - Processing errors
+  - Resource cleanup failures
+
 ## Error Handling
 
 All operations may raise exceptions from `zerobuffer.exceptions`:
 
-- `WriterDeadException`: Writer process died
-- `ReaderDeadException`: Reader process died  
+- `WriterDeadException`: Writer process died (accepts optional message)
+- `ReaderDeadException`: Reader process died (accepts optional message)
 - `BufferFullException`: Buffer is full
 - `FrameTooLargeException`: Frame exceeds buffer capacity
 - `SequenceError`: Frame sequence validation failed
+- `MetadataAlreadyWrittenException`: Metadata can only be written once
+- `ZeroBufferException`: Base exception for all ZeroBuffer errors
 
 ## Thread Safety
 
@@ -248,30 +340,65 @@ These utilities ensure that Python, C#, and C++ implementations can exchange dat
 The Python implementation includes full support for duplex channels (bidirectional request-response communication):
 
 ```python
-from zerobuffer.duplex import DuplexChannelFactory, ProcessingMode
-from zerobuffer import BufferConfig
+from zerobuffer.duplex import DuplexChannelFactory, ImmutableDuplexServer, ProcessingMode
+from zerobuffer import BufferConfig, Frame, Writer
 
 # Server side
 factory = DuplexChannelFactory()
-server = factory.create_immutable_server("my-service", BufferConfig(4096, 10*1024*1024))
+config = BufferConfig(metadata_size=4096, payload_size=10*1024*1024)
+server = factory.create_immutable_server("my-service", config)
 
-def process_request(frame):
-    """Process request and return response"""
-    # Frame is automatically disposed via RAII
-    data = bytes(frame.data)
-    result = process_data(data)
-    return result
+def handle_request(frame: Frame, response_writer: Writer) -> None:
+    """Process request and send response"""
+    with frame:  # RAII - frame is automatically disposed
+        # Access request data (zero-copy)
+        request_data = bytes(frame.data)
+        
+        # Process the request
+        response_data = process_data(request_data)
+        
+        # Send response
+        response_writer.write_frame(response_data)
 
-server.start(process_request, ProcessingMode.SINGLE_THREAD)
+# Start server with single-thread processing (default)
+server.start(handle_request)
+# Or specify processing mode explicitly
+# server.start(handle_request, mode=ProcessingMode.SINGLE_THREAD)
 
 # Client side
 client = factory.create_client("my-service")
-sequence = client.send_request(b"request data")
-response = client.receive_response(timeout_ms=5000)
 
-if response.is_valid and response.sequence == sequence:
-    with response:  # Context manager for RAII
+# Send request
+request_data = b"Hello, server!"
+client.send_request(request_data)
+
+# Receive response with timeout
+response = client.receive_response(timeout=5.0)
+if response:
+    with response:  # RAII - automatically disposed
         print(f"Response: {bytes(response.data)}")
+        print(f"Sequence: {response.sequence}")
+```
+
+### Server Error Handling
+
+```python
+from zerobuffer.error_event_args import ErrorEventArgs
+
+def handle_error(args: ErrorEventArgs) -> None:
+    """Handle server errors"""
+    print(f"Server error: {args.exception}")
+
+# Add error handler
+server.add_error_handler(handle_error)
+
+# Start server with metadata initialization
+def on_init(metadata: memoryview) -> None:
+    """Process client metadata on connection"""
+    client_info = bytes(metadata).decode()
+    print(f"Client connected with metadata: {client_info}")
+
+server.start(handle_request, on_init=on_init)
 ```
 
 See [DUPLEX_CHANNEL.md](DUPLEX_CHANNEL.md) for detailed documentation.
