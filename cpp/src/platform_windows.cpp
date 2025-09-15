@@ -1,9 +1,18 @@
 #ifdef _WIN32
 
 #include "zerobuffer/platform.h"
+#include "zerobuffer/reader.h"  // For ZeroBufferException
 #include <windows.h>
+// Prevent Windows.h from defining min/max macros that conflict with std::min/std::max
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 #include <sstream>
 #include <filesystem>
+#include <algorithm>
 
 namespace zerobuffer {
 namespace platform {

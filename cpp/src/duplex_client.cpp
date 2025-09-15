@@ -2,7 +2,9 @@
 #include "zerobuffer/logger.h"
 #include <cstring>
 #include <stdexcept>
+#ifndef _WIN32
 #include <sys/stat.h>
+#endif
 
 namespace zerobuffer {
 
@@ -25,6 +27,7 @@ DuplexClient::DuplexClient(const std::string& channel_name, const BufferConfig& 
         request_writer_ = std::make_unique<Writer>(request_buffer_name);
         
         // Create response buffer as reader (we own this)
+#ifndef _WIN32
         // Set umask to 0 temporarily to ensure the buffer is accessible by all
         mode_t old_umask = umask(0);
         try {
@@ -34,6 +37,10 @@ DuplexClient::DuplexClient(const std::string& channel_name, const BufferConfig& 
             throw;
         }
         umask(old_umask);  // Restore original umask
+#else
+        // On Windows, permissions are handled differently
+        response_reader_ = std::make_unique<Reader>(response_buffer_name, response_config_);
+#endif
     }
     catch (...) {
         // Clean up if construction fails

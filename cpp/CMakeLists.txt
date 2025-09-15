@@ -6,9 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Configure debug flags for better debugging experience
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    # Maximum debug info, no optimization, keep frame pointers
-    set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
-    set(CMAKE_C_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
+    if(MSVC)
+        # MSVC debug flags
+        set(CMAKE_CXX_FLAGS_DEBUG "/MDd /Zi /Od /DDEBUG")
+        set(CMAKE_C_FLAGS_DEBUG "/MDd /Zi /Od /DDEBUG")
+    else()
+        # GCC/Clang debug flags
+        set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
+        set(CMAKE_C_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
+    endif()
     
     message(STATUS "")
     message(STATUS "ZeroBuffer Debug Build Configuration:")
