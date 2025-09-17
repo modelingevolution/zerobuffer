@@ -1,7 +1,12 @@
 #include "buffer_naming_service.h"
 #include <cstdlib>
 #include <chrono>
+#ifdef _WIN32
+#include <windows.h>
+#include <process.h>
+#else
 #include <unistd.h>
+#endif
 #include <sstream>
 
 namespace zerobuffer {
@@ -25,15 +30,19 @@ void BufferNamingService::initializeTestRunId() {
             << "Initialized with Harmony test run ID: " << testRunId_;
     } else {
         // Running standalone - use process ID and timestamp for uniqueness
+#ifdef _WIN32
+        DWORD pid = GetCurrentProcessId();
+#else
         pid_t pid = getpid();
+#endif
         auto now = std::chrono::high_resolution_clock::now();
         auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(
             now.time_since_epoch()).count();
-        
+
         std::stringstream ss;
         ss << pid << "_" << timestamp;
         testRunId_ = ss.str();
-        ZEROBUFFER_LOG_DEBUG("BufferNamingService") 
+        ZEROBUFFER_LOG_DEBUG("BufferNamingService")
             << "Initialized with standalone test run ID: " << testRunId_;
     }
 }
