@@ -38,7 +38,7 @@ namespace ZeroBuffer.DuplexChannel
         /// <param name="onFrame">Handler that processes request and writes response to Writer</param>
         /// <param name="onInit">Called once, before the first invocation of onFrame</param>
         /// <param name="mode">Processing mode (SingleThread or ThreadPool)</param>
-        
+        static abstract bool WaitExists(string name, TimeSpan timeout);
         void Start(RequestHandler onFrame, Action<ReadOnlySpan<byte>> onInit = null, ProcessingMode mode = ProcessingMode.SingleThread);
     }
     
