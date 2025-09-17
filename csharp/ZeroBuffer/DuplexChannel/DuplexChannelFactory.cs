@@ -1,6 +1,7 @@
-using System;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System;
+using System.Threading;
 
 namespace ZeroBuffer.DuplexChannel
 {
@@ -19,7 +20,15 @@ namespace ZeroBuffer.DuplexChannel
         {
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         }
-        
+
+        bool IDuplexChannelFactory.WaitExists(string channelName, TimeSpan t)
+        {
+            return ImmutableDuplexServer.WaitExists(channelName, t);
+        }
+        public static bool WaitExists(string channelName, TimeSpan timeout)
+        {
+            return ImmutableDuplexServer.WaitExists(channelName, timeout);
+        }
         /// <inheritdoc/>
         public IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config, TimeSpan? timeout = null)
         {

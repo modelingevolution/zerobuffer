@@ -14,7 +14,8 @@ namespace ZeroBuffer.DuplexChannel
         /// <param name="config">Buffer configuration</param>
         /// <returns>Immutable duplex server</returns>
         IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config, TimeSpan? timeout=null);
-        
+
+        bool WaitExists(string channelName, TimeSpan timeout);
         // MutableDuplexServer will be implemented in v2.0.0
         // /// <summary>
         // /// Create a mutable server (mutates request data in-place)
@@ -23,7 +24,7 @@ namespace ZeroBuffer.DuplexChannel
         // /// <param name="config">Buffer configuration</param>
         // /// <returns>Mutable duplex server</returns>
         // IMutableDuplexServer CreateMutableServer(string channelName, BufferConfig config);
-        
+
         /// <summary>
         /// Connect to existing duplex channel (client-side)
         /// </summary>
