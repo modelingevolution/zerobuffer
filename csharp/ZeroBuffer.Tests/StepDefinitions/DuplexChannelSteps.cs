@@ -336,7 +336,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 }
                 
                 _receivedResponses[response.Sequence] = responseData;
-            }
+            } else throw new InvalidOperationException("Received response with unknown sequence number");
         }
 
         [Then(@"all responses should have correct sequence numbers")]

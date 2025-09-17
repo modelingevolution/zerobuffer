@@ -170,7 +170,43 @@ namespace ZeroBuffer
             string lockDir = Path.Combine(tempDir, "zerobuffer", "locks");
             return Path.Combine(lockDir, $"{name}.lock");
         }
+        public static bool WaitExists(string name, TimeSpan timeout)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(name);
 
+            var stopwatch = Stopwatch.StartNew();
+
+            while (stopwatch.Elapsed < timeout)
+            {
+                try
+                {
+                    // Try to open the shared memory
+                    using var sharedMemory = SharedMemoryFactory.Open(name);
+
+                    // Try to open the semaphores
+                    using var writeSemaphore = SemaphoreFactory.Open($"sem-w-{name}");
+                    using var readSemaphore = SemaphoreFactory.Open($"sem-r-{name}");
+
+                    // Read the OIEB to check if reader exists
+                    var oieb = sharedMemory.ReadRef<OIEB>(0);
+
+                    // Check if reader PID is non-zero (don't check if process is alive)
+                    if (oieb.ReaderPid != 0)
+                    {
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // Resources don't exist yet or can't be opened
+                }
+
+                // Wait a bit before retrying
+                Thread.Sleep(100);
+            }
+
+            return false;
+        }
         private void CleanupStaleResources()
         {
             // Get the lock directory

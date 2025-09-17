@@ -11,7 +11,7 @@ namespace ZeroBuffer
     internal sealed class PosixSharedMemory : ISharedMemory
     {
         private readonly string _name;
-        private readonly long _size;
+        private long _size;
         private readonly bool _owner;
         private IntPtr _baseAddress = IntPtr.Zero;
         private int _fd = -1;
@@ -90,11 +90,7 @@ namespace ZeroBuffer
                 // Reset position
                 PosixInterop.lseek(shm._fd, 0, PosixInterop.SEEK_SET);
                 
-                // Update size
-                typeof(PosixSharedMemory)
-                    .GetField("_size", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-                    .SetValue(shm, size);
-
+                shm._size = size;
                 shm.MapMemory();
                 return shm;
             }
@@ -201,14 +197,12 @@ namespace ZeroBuffer
                 PosixInterop.munmap(_baseAddress, (ulong)_size);
             }
 
-            if (_fd != -1)
-            {
-                PosixInterop.close(_fd);
+            if (_fd == -1) return;
+            PosixInterop.close(_fd);
                 
-                if (_owner)
-                {
-                    PosixInterop.shm_unlink(_name);
-                }
+            if (_owner)
+            {
+                PosixInterop.shm_unlink(_name);
             }
         }
         

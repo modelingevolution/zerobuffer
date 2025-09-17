@@ -14,14 +14,14 @@ namespace ZeroBuffer.DuplexChannel
         private readonly BufferConfig _config;
         private readonly TimeSpan? _timeout;
         private readonly ILogger<ImmutableDuplexServer> _logger;
-        private Reader _requestReader;
+        private Reader? _requestReader;
         private Writer? _responseWriter;
-        private Thread _processingThread;
-        private CancellationTokenSource _cancellationTokenSource;
+        private Thread? _processingThread;
+        private CancellationTokenSource? _cancellationTokenSource;
         private volatile bool _isRunning;
         private bool _disposed;
         
-        public event EventHandler<ErrorEventArgs> OnError;
+        public event EventHandler<ErrorEventArgs>? OnError;
         
         public ImmutableDuplexServer(string channelName, BufferConfig config,TimeSpan? timeout=null,  ILogger<ImmutableDuplexServer>? logger = null)
         {
@@ -32,8 +32,18 @@ namespace ZeroBuffer.DuplexChannel
         }
         
         public bool IsRunning => _isRunning;
-        
-        public void Start(RequestHandler onFrame,Action<ReadOnlySpan<byte>> onInit=null, ProcessingMode mode = ProcessingMode.SingleThread)
+        public static bool WaitExists(string channelName, TimeSpan timeout)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(channelName);
+
+            // For duplex channel, we need to check the request buffer
+            // which is created by the server (with Reader)
+            var requestBufferName = $"{channelName}_request";
+
+            // Use the Reader's WaitExists to check if the request buffer exists
+            return Reader.WaitExists(requestBufferName, timeout);
+        }
+        public void Start(RequestHandler onFrame, Action<ReadOnlySpan<byte>>? onInit = null, ProcessingMode mode = ProcessingMode.SingleThread)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(ImmutableDuplexServer));
