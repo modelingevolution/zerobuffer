@@ -48,6 +48,11 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
         """Check if server should keep running (thread-safe check)"""
         return bool(self._running)
 
+    @property
+    def request_reader(self) -> Optional[Reader]:
+        """Get the request reader instance (for metadata access)"""
+        return self._request_reader
+
     def add_error_handler(self, handler: Callable[[ErrorEventArgs], None]) -> None:
         """Add an error event handler"""
         with self._lock:
