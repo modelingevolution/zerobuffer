@@ -207,6 +207,9 @@ class Reader:
         # Update OIEB directly in shared memory
         if self._oieb:
             self._oieb.payload_free_bytes += total_frame_size
+            # Flush after updating payload_free_bytes (matching C# line 515 in OnFrameDisposed)
+            if self._shm:
+                self._shm.flush()
         # Signal writer that space is available
         # Only release if semaphore is still valid
         if hasattr(self, "_sem_read") and self._sem_read:
@@ -378,6 +381,8 @@ class Reader:
                     if self._oieb.payload_write_pos < self._oieb.payload_read_pos:
                         # Writer has wrapped, we should wrap too
                         self._oieb.payload_read_pos = 0
+                        # Flush after wrap-around handling (matching C# line 369)
+                        self._shm.flush()
                         # Re-read header at new position
                         header_offset = payload_base  # Start of payload buffer
                         header_data = self._shm.read_bytes(header_offset, FrameHeader.SIZE)
@@ -405,6 +410,9 @@ class Reader:
                     self._oieb.payload_read_count,
                     self._oieb.payload_read_pos,
                 )
+
+                # Flush after reading frame and updating OIEB (matching C# line 408)
+                self._shm.flush()
 
                 # Store frame disposal data for the cached callback
                 # This avoids creating a new lambda/closure for each frame
@@ -518,6 +526,9 @@ class Reader:
             try:
                 if self._oieb:
                     self._oieb.reader_pid = 0
+                    # Flush after clearing reader_pid (matching C# line 535 in Dispose)
+                    if self._shm:
+                        self._shm.flush()
             except Exception:
                 pass
 

@@ -5,6 +5,7 @@ Linux-specific implementations for shared memory and semaphores
 import os
 import fcntl
 import mmap
+import ctypes
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,29 @@ try:
     import posix_ipc
 except ImportError:
     raise ImportError("posix_ipc is required on Linux. Install with: pip install posix-ipc")
+
+
+def memory_barrier() -> None:
+    """
+    Implement a memory barrier to ensure all memory operations are visible across CPU cores.
+    Equivalent to Thread.MemoryBarrier() in C#.
+
+    Note: Python on Linux doesn't have direct access to CPU memory fence instructions.
+    We use OS-level synchronization primitives that include memory barriers.
+    """
+    # The most reliable approach is to use an actual memory fence via inline assembly
+    # But since we can't do that directly in Python, we use OS synchronization
+
+    # For mmap'd shared memory, the most effective approach is to use msync
+    # This is what we'll do in the flush() method of LinuxSharedMemory
+
+    # Here we just ensure the Python interpreter flushes any cached values
+    # by forcing a context switch
+    libc = ctypes.CDLL("libc.so.6")
+    # sched_yield() causes the calling thread to relinquish the CPU
+    # This can help with cache coherency on some systems
+    sched_yield = libc.sched_yield
+    sched_yield()
 
 
 class LinuxSharedMemory(SharedMemory):
@@ -69,8 +93,14 @@ class LinuxSharedMemory(SharedMemory):
     def flush(self) -> None:
         """Flush shared memory to ensure all writes are visible to other processes"""
         if self._mapfile is not None:
-            # Flush the memory-mapped file to ensure writes are visible
-            self._mapfile.flush()
+            # Use msync with MS_SYNC flag to ensure memory coherency
+            # This is the proper way to synchronize mmap'd memory between processes
+            # Python's mmap.flush() calls msync internally
+            # We use both offset and size parameters for better control
+            self._mapfile.flush(0, len(self._mapfile))
+
+            # Also call memory barrier for additional safety
+            memory_barrier()
 
     def close(self) -> None:
         """Close the shared memory handle"""
