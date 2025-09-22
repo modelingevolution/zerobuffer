@@ -167,7 +167,7 @@ namespace ZeroBuffer
 
         public void Flush()
         {
-            Thread.MemoryBarrier();
+            
             // On POSIX, we could call msync here if needed
         }
         
