@@ -162,6 +162,12 @@ class IDuplexServer(ABC):
 class IImmutableDuplexServer(IDuplexServer):
     """Server that processes immutable requests and returns new response data"""
 
+    @property
+    @abstractmethod
+    def request_reader(self) -> Optional[Any]:
+        """Get the request reader instance (for metadata access)"""
+        pass
+
     @abstractmethod
     def start(
         self,
