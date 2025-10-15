@@ -25,10 +25,8 @@ namespace ZeroBuffer.DuplexChannel
         {
             return ImmutableDuplexServer.WaitExists(channelName, t);
         }
-        public static bool WaitExists(string channelName, TimeSpan timeout)
-        {
-            return ImmutableDuplexServer.WaitExists(channelName, timeout);
-        }
+        public static bool WaitExists(string channelName, TimeSpan timeout, ILogger? logger = null) => ImmutableDuplexServer.WaitExists(channelName, timeout, logger);
+
         /// <inheritdoc/>
         public IImmutableDuplexServer CreateImmutableServer(string channelName, BufferConfig config, TimeSpan? timeout = null)
         {
