@@ -170,7 +170,7 @@ namespace ZeroBuffer
             string lockDir = Path.Combine(tempDir, "zerobuffer", "locks");
             return Path.Combine(lockDir, $"{name}.lock");
         }
-        public static bool WaitExists(string name, TimeSpan timeout)
+        public static bool WaitExists(string name, TimeSpan timeout, ILogger? logger = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -180,24 +180,34 @@ namespace ZeroBuffer
             {
                 try
                 {
+                    logger?.LogDebug("WaitExists: Checking existence of buffer '{BufferName}' [{elapsed}/{timeout}]", name, stopwatch.Elapsed, timeout);
                     // Try to open the shared memory
                     using var sharedMemory = SharedMemoryFactory.Open(name);
 
                     // Try to open the semaphores
+                    logger?.LogDebug("Checking semaphores for buffer '{BufferName}'", name);
                     using var writeSemaphore = SemaphoreFactory.Open($"sem-w-{name}");
                     using var readSemaphore = SemaphoreFactory.Open($"sem-r-{name}");
 
+                    logger?.LogDebug("Semaphores exists. Reading OIED.");
                     // Read the OIEB to check if reader exists
                     var oieb = sharedMemory.ReadRef<OIEB>(0);
 
                     // Check if reader PID is non-zero (don't check if process is alive)
                     if (oieb.ReaderPid != 0)
                     {
+                        logger?.LogDebug("WaitExists: Buffer '{BufferName}' exists with active reader PID {ReaderPid}", name, oieb.ReaderPid);
                         return true;
                     }
+                    else
+                    {
+                        logger?.LogDebug("WaitExists: Buffer '{BufferName}' exists but no active reader (ReaderPid=0)", name);
+                        return false;
+                    }
                 }
-                catch
+                catch(Exception ex)
                 {
+                    logger?.LogDebug(ex, "WaitExists: Exception while checking existence of buffer '{BufferName}'", name);
                     // Resources don't exist yet or can't be opened
                 }
 

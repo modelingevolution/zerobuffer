@@ -32,7 +32,7 @@ namespace ZeroBuffer.DuplexChannel
         }
         
         public bool IsRunning => _isRunning;
-        public static bool WaitExists(string channelName, TimeSpan timeout)
+        public static bool WaitExists(string channelName, TimeSpan timeout, ILogger? logger = null)
         {
             ArgumentException.ThrowIfNullOrEmpty(channelName);
 
@@ -41,7 +41,7 @@ namespace ZeroBuffer.DuplexChannel
             var requestBufferName = $"{channelName}_request";
 
             // Use the Reader's WaitExists to check if the request buffer exists
-            return Reader.WaitExists(requestBufferName, timeout);
+            return Reader.WaitExists(requestBufferName, timeout, logger);
         }
         public void Start(RequestHandler onFrame, Action<ReadOnlySpan<byte>>? onInit = null, ProcessingMode mode = ProcessingMode.SingleThread)
         {
