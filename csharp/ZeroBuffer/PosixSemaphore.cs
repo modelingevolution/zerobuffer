@@ -21,10 +21,13 @@ namespace ZeroBuffer
 
         public PosixSemaphore(string name, int initialCount) : this(name, true)
         {
+            // Ensure P/Invoke resolver is initialized before any native calls
+            PosixInterop.EnsureInitialized();
+
             // POSIX semaphore names must start with /
             var semName = name.StartsWith('/') ? name : $"/{name}";
-            
-            int mode = PosixInterop.S_IRUSR | PosixInterop.S_IWUSR | 
+
+            int mode = PosixInterop.S_IRUSR | PosixInterop.S_IWUSR |
                       PosixInterop.S_IRGRP | PosixInterop.S_IWGRP |
                       PosixInterop.S_IROTH | PosixInterop.S_IWOTH;  // 0666 - read/write for all
             
@@ -40,8 +43,11 @@ namespace ZeroBuffer
 
         public static PosixSemaphore OpenExisting(string name)
         {
+            // Ensure P/Invoke resolver is initialized before any native calls
+            PosixInterop.EnsureInitialized();
+
             var sem = new PosixSemaphore(name, false);
-            
+
             // POSIX semaphore names must start with /
             var semName = name.StartsWith('/') ? name : $"/{name}";
             
@@ -134,6 +140,9 @@ namespace ZeroBuffer
         /// </summary>
         public static void Remove(string name)
         {
+            // Ensure P/Invoke resolver is initialized before any native calls
+            PosixInterop.EnsureInitialized();
+
             try
             {
                 var semName = name.StartsWith('/') ? name : $"/{name}";

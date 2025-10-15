@@ -20,8 +20,11 @@ namespace ZeroBuffer
         
         public PosixFileLock(string path)
         {
+            // Ensure P/Invoke resolver is initialized before any native calls
+            PosixInterop.EnsureInitialized();
+
             _path = path;
-            
+
             // Create directory if it doesn't exist
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
@@ -80,6 +83,9 @@ namespace ZeroBuffer
         /// </summary>
         public static bool TryRemoveStale(string path)
         {
+            // Ensure P/Invoke resolver is initialized before any native calls
+            PosixInterop.EnsureInitialized();
+
             // Try to open the lock file
             int fd = PosixInterop.open(path, PosixInterop.O_RDWR, 0);
             if (fd == -1)

@@ -126,6 +126,10 @@ namespace ZeroBuffer
                         if (existingOieb.WriterPid != 0 && !ProcessExists(existingOieb.WriterPid))
                             shouldCleanup = true;
                     }
+                    catch (EntryPointNotFoundException ex)
+                    {
+                        throw;
+                    }
                     catch
                     {
                         // Failed to open existing memory - assume it's corrupted
@@ -180,7 +184,8 @@ namespace ZeroBuffer
             {
                 try
                 {
-                    logger?.LogDebug("WaitExists: Checking existence of buffer '{BufferName}' [{elapsed}/{timeout}]", name, stopwatch.Elapsed, timeout);
+                    logger?.LogDebug("WaitExists: Checking existence of buffer '{BufferName}' [{elapsed}/{timeout}]",
+                        name, stopwatch.Elapsed, timeout);
                     // Try to open the shared memory
                     using var sharedMemory = SharedMemoryFactory.Open(name);
 
@@ -196,14 +201,20 @@ namespace ZeroBuffer
                     // Check if reader PID is non-zero (don't check if process is alive)
                     if (oieb.ReaderPid != 0)
                     {
-                        logger?.LogDebug("WaitExists: Buffer '{BufferName}' exists with active reader PID {ReaderPid}", name, oieb.ReaderPid);
+                        logger?.LogDebug("WaitExists: Buffer '{BufferName}' exists with active reader PID {ReaderPid}",
+                            name, oieb.ReaderPid);
                         return true;
                     }
                     else
                     {
-                        logger?.LogDebug("WaitExists: Buffer '{BufferName}' exists but no active reader (ReaderPid=0)", name);
+                        logger?.LogDebug("WaitExists: Buffer '{BufferName}' exists but no active reader (ReaderPid=0)",
+                            name);
                         return false;
                     }
+                }
+                catch (EntryPointNotFoundException exception)
+                {
+                    throw;
                 }
                 catch(Exception ex)
                 {

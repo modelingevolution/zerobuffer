@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace ZeroBuffer
@@ -8,6 +9,71 @@ namespace ZeroBuffer
     /// </summary>
     internal static class PosixInterop
     {
+        private static bool _initialized = false;
+        private static readonly object _initLock = new object();
+
+        // Static constructor to set up DLL import resolver
+        // Called automatically by CLR before any member access - guaranteed thread-safe
+        static PosixInterop()
+        {
+            EnsureInitialized();
+        }
+
+        // Explicit initialization method that can be called to ensure resolver is set up
+        // Uses double-check locking pattern for thread-safety and performance
+        internal static void EnsureInitialized()
+        {
+            if (_initialized)
+                return;
+
+            lock (_initLock)
+            {
+                if (_initialized)
+                    return;
+
+                NativeLibrary.SetDllImportResolver(typeof(PosixInterop).Assembly, DllImportResolver);
+                _initialized = true;
+            }
+        }
+
+        // Custom DLL import resolver that tries multiple library variants
+        private static IntPtr DllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+        {
+            // Only handle "libc" - let other libraries use default resolution
+            if (libraryName != "libc")
+                return IntPtr.Zero;
+
+            // Try multiple library names in order of preference
+            // On most Linux systems, shm_open/sem_open are in librt, not libc
+            string[] librariesToTry = new[]
+            {
+                "librt.so.1",      // Real-time extensions (where shm_open actually is)
+                "librt.so",        // Real-time extensions (generic)
+                "libc.so.6",       // glibc on most Linux distributions (fallback)
+                "libc.so",         // Generic libc
+                "libc.musl-x86_64.so.1",  // musl libc on Alpine Linux (x64)
+                "libc.musl-aarch64.so.1", // musl libc on Alpine Linux (ARM64)
+                "libc",            // Let runtime figure it out
+            };
+
+            foreach (var libName in librariesToTry)
+            {
+                if (!NativeLibrary.TryLoad(libName, assembly, searchPath, out IntPtr handle)) continue;
+                // Verify that critical POSIX functions exist in this library
+                // This ensures we load the RIGHT library, not just ANY library
+                if (NativeLibrary.TryGetExport(handle, "shm_open", out _) ||
+                    NativeLibrary.TryGetExport(handle, "open", out _))  // At least basic functions
+                {
+                    return handle;
+                }
+                // If symbols not found, free this library and try next
+                NativeLibrary.Free(handle);
+            }
+
+            // If all attempts fail, return IntPtr.Zero and let the runtime handle the error
+            return IntPtr.Zero;
+        }
+
         // File modes
         public const int S_IRUSR = 0x100; // Owner read
         public const int S_IWUSR = 0x080; // Owner write
