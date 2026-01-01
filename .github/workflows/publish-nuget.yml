@@ -59,3 +59,12 @@ jobs:
       run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
       env:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+
+    - name: Publish to ModelingEvolution NuGet
+      working-directory: ./csharp/ZeroBuffer
+      run: |
+        dotnet nuget push "./nupkg/*.nupkg" \
+          --api-key ${{ secrets.NUGET_API_KEY_ME }} \
+          --source https://nuget.modelingevolution.com/v3/index.json \
+          --skip-duplicate
+      continue-on-error: true
