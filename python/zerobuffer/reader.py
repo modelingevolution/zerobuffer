@@ -347,8 +347,8 @@ class Reader:
                         self._oieb.payload_free_bytes,
                     )
 
-                    # Signal that we consumed the wrap marker (freed space)
-                    self._sem_read.release()
+                    # Don't signal semaphore for wrap marker - it's not a logical frame
+                    # The space freed by the wrap marker will be signaled when the actual frame is disposed
 
                     # Now read the actual frame at the beginning without waiting for another semaphore
                     # The writer wrote both the wrap marker and the frame before signaling

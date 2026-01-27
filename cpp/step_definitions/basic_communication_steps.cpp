@@ -793,6 +793,254 @@ void registerBasicCommunicationSteps() {
         }
     );
     
+    // ========== Test 1.6 - Slow Reader With Fast Writer ==========
+
+    // Step: the 'writer' process writes 'X' frames of size 'Y' as fast as possible
+    // This step starts writing in a background thread and returns immediately,
+    // allowing the reader step to run concurrently and consume frames.
+    registry.registerStep(
+        "the '([^']+)' process writes '([^']+)' frames of size '([^']+)' as fast as possible",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            const int frameCount = std::stoi(params[1]);
+            const size_t frameSize = std::stoull(params[2]);
+
+            auto* writer = ctx.getWriter(process);
+            if (!writer) {
+                throw std::runtime_error("Writer not found for process: " + process);
+            }
+
+            ZEROBUFFER_LOG_DEBUG("Step") << "Starting background writer for " << frameCount
+                                         << " frames of size " << frameSize;
+
+            // Store write results for later verification
+            ctx.setProperty("write_frames_written", "0");
+            ctx.setProperty("write_error", "");
+            ctx.setProperty("write_complete", "false");
+
+            // Start background thread for writing
+            std::thread writerThread([writer, frameCount, frameSize, &ctx, process]() {
+                try {
+                    for (int i = 0; i < frameCount; i++) {
+                        int sequenceNum = i + 1;  // 1-based sequence
+                        auto frameData = TestDataPatterns::generateFrameData(frameSize, sequenceNum);
+
+                        // Write frame - this will block if buffer is full until reader consumes
+                        writer->write_frame(frameData.data(), frameSize);
+                        ctx.setProperty("write_frames_written", std::to_string(sequenceNum));
+
+                        ZEROBUFFER_LOG_DEBUG("Step") << "Wrote frame " << sequenceNum << "/" << frameCount;
+                    }
+                    ctx.setProperty("write_complete", "true");
+                    ZEROBUFFER_LOG_INFO("Step") << "Background writer finished: wrote " << frameCount << " frames";
+
+                    // Wait 1 second for reader to finish reading, then close writer
+                    // This sets writer_pid=0 so reader can detect writer is done
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    ctx.removeWriter(process);
+                    ZEROBUFFER_LOG_INFO("Step") << "Writer closed after 1 second delay";
+                } catch (const std::exception& e) {
+                    ctx.setProperty("write_error", e.what());
+                    ZEROBUFFER_LOG_ERROR("Step") << "Background writer error: " << e.what();
+                }
+            });
+
+            // Detach the thread so it runs in background
+            writerThread.detach();
+
+            // Give the writer a moment to start and fill the buffer
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            ZEROBUFFER_LOG_DEBUG("Step") << "Background writer started, returning to allow reader to run";
+        }
+    );
+
+    // Step: the 'reader' process reads frames with 'X' ms delay between each read
+    // This step reads frames while the writer is running in a background thread.
+    // It continues reading until the writer is done and no more frames are available.
+    registry.registerStep(
+        "the '([^']+)' process reads frames with '([^']+)' ms delay between each read",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            const int delayMs = std::stoi(params[1]);
+
+            auto* reader = ctx.getReader(process);
+            if (!reader) {
+                throw std::runtime_error("Reader not found for process: " + process);
+            }
+
+            ZEROBUFFER_LOG_DEBUG("Step") << "Reading frames with " << delayMs << "ms delay between reads";
+
+            // Clear sequence errors tracker
+            ctx.setProperty("sequence_errors", "");
+
+            int framesRead = 0;
+            std::string readSequences;
+            int consecutiveTimeouts = 0;
+            const int maxConsecutiveTimeouts = 3;
+
+            // Total timeout to handle cross-platform tests where writer is external process
+            auto startTime = std::chrono::steady_clock::now();
+            const auto totalTimeout = std::chrono::seconds(30);
+
+            // Read frames until writer is done and no more frames are available
+            while (true) {
+                // Check total timeout first
+                auto elapsed = std::chrono::steady_clock::now() - startTime;
+                if (elapsed >= totalTimeout) {
+                    ZEROBUFFER_LOG_DEBUG("Step") << "Total timeout reached after " << framesRead << " frames";
+                    break;
+                }
+
+                try {
+                    auto frame = reader->read_frame(std::chrono::milliseconds(1000));
+
+                    if (!frame.valid()) {
+                        consecutiveTimeouts++;
+
+                        // Check if writer is done (for local writer thread)
+                        json writeComplete = ctx.getProperty("write_complete");
+                        bool writerDone = writeComplete.is_string() && writeComplete.get<std::string>() == "true";
+
+                        json writeError = ctx.getProperty("write_error");
+                        bool writerError = writeError.is_string() && !writeError.get<std::string>().empty();
+
+                        // In cross-platform tests, write_complete may never be set because
+                        // the writer is running in a different process. Check if no local
+                        // writer was started (write_complete property doesn't exist or is "false")
+                        // and we've had consecutive timeouts - assume external writer is done.
+                        if (consecutiveTimeouts >= maxConsecutiveTimeouts) {
+                            if (writerDone || writerError) {
+                                ZEROBUFFER_LOG_DEBUG("Step") << "Local writer complete and no more frames available";
+                                break;
+                            }
+                            // Check if writer_pid is 0 (writer disconnected) - handles cross-platform case
+                            if (!reader->is_writer_connected()) {
+                                ZEROBUFFER_LOG_DEBUG("Step") << "Writer disconnected, no more frames available";
+                                break;
+                            }
+                        }
+                        continue;
+                    }
+
+                    consecutiveTimeouts = 0;  // Reset on successful read
+
+                    // Track sequence number
+                    uint64_t sequence = frame.sequence();
+                    if (!readSequences.empty()) readSequences += ",";
+                    readSequences += std::to_string(sequence);
+
+                    ZEROBUFFER_LOG_DEBUG("Step") << "Read frame with sequence " << sequence;
+
+                    // Release the frame
+                    reader->release_frame(frame);
+                    framesRead++;
+
+                    // Add delay between reads (simulating slow processing)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
+
+                } catch (const std::exception& e) {
+                    std::string error = e.what();
+                    if (error.find("sequence") != std::string::npos ||
+                        error.find("Sequence") != std::string::npos) {
+                        std::string errors = ctx.getProperty("sequence_errors").get<std::string>();
+                        if (!errors.empty()) errors += ";";
+                        errors += error;
+                        ctx.setProperty("sequence_errors", errors);
+                        ZEROBUFFER_LOG_ERROR("Step") << "Sequence error: " << error;
+                    } else {
+                        ZEROBUFFER_LOG_ERROR("Step") << "Error reading frame: " << error;
+                    }
+                    break;
+                }
+            }
+
+            ctx.setProperty("frames_read_slow", std::to_string(framesRead));
+            ctx.setProperty("read_sequences", readSequences);
+            ZEROBUFFER_LOG_DEBUG("Step") << "Finished reading, total frames read: " << framesRead;
+        }
+    );
+
+    // Step: the 'reader' process should have read 'X' frames
+    registry.registerStep(
+        "the '([^']+)' process should have read '([^']+)' frames",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            const int expectedCount = std::stoi(params[1]);
+
+            json prop = ctx.getProperty("frames_read_slow");
+            int actualCount = 0;
+            if (prop.is_string()) {
+                actualCount = std::stoi(prop.get<std::string>());
+            }
+
+            if (actualCount != expectedCount) {
+                throw std::runtime_error("Expected " + std::to_string(expectedCount) +
+                    " frames, but read " + std::to_string(actualCount));
+            }
+
+            ZEROBUFFER_LOG_DEBUG("Step") << "Verified: read " << actualCount << " frames";
+        }
+    );
+
+    // Step: the 'reader' process should verify all frames have sequential sequence numbers starting from 'X'
+    registry.registerStep(
+        "the '([^']+)' process should verify all frames have sequential sequence numbers starting from '([^']+)'",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            const std::string& process = params[0];
+            const int startSeq = std::stoi(params[1]);
+
+            json prop = ctx.getProperty("read_sequences");
+            std::string readSequences = prop.is_string() ? prop.get<std::string>() : "";
+
+            if (readSequences.empty()) {
+                throw std::runtime_error("No frames were read to verify");
+            }
+
+            // Parse comma-separated sequences
+            std::vector<int> sequences;
+            size_t pos = 0;
+            while (pos < readSequences.length()) {
+                size_t nextComma = readSequences.find(',', pos);
+                if (nextComma == std::string::npos) {
+                    sequences.push_back(std::stoi(readSequences.substr(pos)));
+                    break;
+                } else {
+                    sequences.push_back(std::stoi(readSequences.substr(pos, nextComma - pos)));
+                    pos = nextComma + 1;
+                }
+            }
+
+            // Verify sequences start from startSeq and are consecutive
+            for (size_t i = 0; i < sequences.size(); ++i) {
+                int expected = startSeq + static_cast<int>(i);
+                if (sequences[i] != expected) {
+                    throw std::runtime_error("Frame " + std::to_string(i) +
+                        ": expected sequence " + std::to_string(expected) +
+                        ", got " + std::to_string(sequences[i]));
+                }
+            }
+
+            ZEROBUFFER_LOG_DEBUG("Step") << "Verified: all " << sequences.size()
+                                        << " frames have sequential sequences starting from " << startSeq;
+        }
+    );
+
+    // Step: no sequence errors should have occurred
+    registry.registerStep(
+        "no sequence errors should have occurred",
+        [](TestContext& ctx, const std::vector<std::string>& params) {
+            json prop = ctx.getProperty("sequence_errors");
+            std::string errors = prop.is_string() ? prop.get<std::string>() : "";
+
+            if (!errors.empty()) {
+                throw std::runtime_error("Sequence errors occurred: " + errors);
+            }
+
+            ZEROBUFFER_LOG_DEBUG("Step") << "Verified: no sequence errors occurred";
+        }
+    );
+
     ZEROBUFFER_LOG_DEBUG("BasicCommunication") << "Registered " << registry.getAllSteps().size() << " step definitions";
 }
 

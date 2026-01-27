@@ -552,5 +552,181 @@ class BasicCommunicationSteps(BaseSteps):
                 'data': bytes(frame.data)
             }
             self._frames_read.append(frame_info)
-            
+
             self.logger.info(f"Read frame with data: {expected_data}")
+
+    # ========== Test 1.6 - Slow Reader With Fast Writer ==========
+
+    @when(parsers.re(r"(?:the '(?P<process>[^']+)' process )?writes '(?P<count>\d+)' frames of size '(?P<size>\d+)' as fast as possible"))
+    async def write_frames_fast(self, process: Optional[str], count: str, size: str) -> None:
+        """Write multiple frames as fast as possible in a background thread.
+
+        This step starts writing in a background thread and returns immediately,
+        allowing the reader step to run concurrently and consume frames.
+        """
+        import threading
+
+        writer = self._writers[self._current_buffer]
+        frame_count = int(count)
+        frame_size = int(size)
+
+        self.logger.info(f"Starting background writer for {frame_count} frames of size {frame_size}")
+
+        # Track write results
+        write_results: Dict[str, Any] = {
+            'frames_written': 0,
+            'error': None,
+            'complete': False
+        }
+        self.set_data("write_results", write_results)
+
+        def write_frames_thread() -> None:
+            """Background thread that writes frames"""
+            try:
+                for i in range(frame_count):
+                    sequence_num = i + 1  # 1-based sequence
+                    frame_data = TestDataPatterns.generate_frame_data(frame_size, sequence_num)
+
+                    # Write frame - this will block if buffer is full until reader consumes
+                    writer.write_frame(frame_data)
+                    write_results['frames_written'] = sequence_num
+
+                write_results['complete'] = True
+                self.logger.info(f"Background writer finished: wrote {frame_count} frames")
+
+                # Wait 1 second for reader to finish reading, then close writer
+                # This sets writer_pid=0 so reader can detect writer is done
+                import time
+                time.sleep(1.0)
+                writer.close()
+                if self._current_buffer in self._writers:
+                    del self._writers[self._current_buffer]
+                self.logger.info("Writer closed after 1 second delay")
+            except Exception as e:
+                write_results['error'] = str(e)
+                self.logger.error(f"Background writer error: {e}")
+
+        # Start the background thread
+        writer_thread = threading.Thread(target=write_frames_thread, daemon=True)
+        writer_thread.start()
+        self.set_data("writer_thread", writer_thread)
+
+        # Give the writer a moment to start and fill the buffer
+        await asyncio.sleep(0.1)
+
+        self.logger.info(f"Background writer started, returning to allow reader to run")
+
+    @when(parsers.re(r"(?:the '(?P<process>[^']+)' process )?reads frames with '(?P<delay>\d+)' ms delay between each read"))
+    async def read_frames_with_delay(self, process: Optional[str], delay: str) -> None:
+        """Read all available frames with a delay between each read.
+
+        This step reads frames while the writer is running in a background thread.
+        It continues reading until the writer is done and no more frames are available.
+        """
+        import threading
+
+        reader = self._readers[self._current_buffer]
+        delay_seconds = int(delay) / 1000.0
+
+        self.logger.info(f"Reading frames with {delay}ms delay between reads")
+
+        # Clear tracking
+        self._frames_read.clear()
+        self.set_data("sequence_errors", [])
+
+        # Get the writer thread if it exists
+        writer_thread: Optional[threading.Thread] = self.get_data("writer_thread")
+        write_results: Optional[Dict[str, Any]] = self.get_data("write_results")
+
+        # Read frames until writer is done and no more frames are available
+        consecutive_timeouts = 0
+        max_consecutive_timeouts = 3  # Stop after 3 consecutive timeouts
+
+        while True:
+            try:
+                frame = reader.read_frame(timeout=1.0)
+                if frame is None:
+                    consecutive_timeouts += 1
+                    # Check if writer is done
+                    if write_results and write_results.get('complete'):
+                        if consecutive_timeouts >= max_consecutive_timeouts:
+                            self.logger.info("Writer complete and no more frames available")
+                            break
+                    elif write_results and write_results.get('error'):
+                        self.logger.error(f"Writer had error: {write_results['error']}")
+                        break
+                    continue
+
+                consecutive_timeouts = 0  # Reset on successful read
+
+                # Use context manager for RAII
+                with frame:
+                    # Store frame info for later validation
+                    frame_info = {
+                        'sequence': frame.sequence,
+                        'size': len(frame.data),
+                        'data': bytes(frame.data)
+                    }
+                    self._frames_read.append(frame_info)
+
+                    self.logger.debug(f"Read frame with sequence {frame.sequence}")
+
+                # Add delay between reads (simulating slow processing)
+                await asyncio.sleep(delay_seconds)
+
+            except Exception as e:
+                # Check if it's a sequence error
+                error_msg = str(e)
+                if "sequence" in error_msg.lower():
+                    errors = self.get_data("sequence_errors") or []
+                    errors.append(error_msg)
+                    self.set_data("sequence_errors", errors)
+                    self.logger.error(f"Sequence error: {e}")
+                else:
+                    self.logger.error(f"Error reading frame: {e}")
+                break
+
+        # Wait for writer thread to complete
+        if writer_thread and writer_thread.is_alive():
+            self.logger.info("Waiting for writer thread to complete...")
+            writer_thread.join(timeout=5.0)
+
+        self.logger.info(f"Finished reading, total frames read: {len(self._frames_read)}")
+
+    @then(parsers.re(r"(?:the '(?P<process>[^']+)' process )?should have read '(?P<count>\d+)' frames"))
+    async def verify_frames_read_count(self, process: Optional[str], count: str) -> None:
+        """Verify the number of frames read"""
+        expected_count = int(count)
+        actual_count = len(self._frames_read)
+
+        assert actual_count == expected_count, \
+            f"Expected {expected_count} frames, but read {actual_count}"
+
+        self.logger.info(f"Verified: read {actual_count} frames")
+
+    @then(parsers.re(r"(?:the '(?P<process>[^']+)' process )?should verify all frames have sequential sequence numbers starting from '(?P<start>\d+)'"))
+    async def verify_sequential_sequences_from(self, process: Optional[str], start: str) -> None:
+        """Verify all frames have sequential sequence numbers starting from given value"""
+        start_seq = int(start)
+
+        if not self._frames_read:
+            raise AssertionError("No frames were read to verify")
+
+        for i, frame_info in enumerate(self._frames_read):
+            expected_seq = start_seq + i
+            actual_seq = frame_info['sequence']
+
+            assert actual_seq == expected_seq, \
+                f"Frame {i}: expected sequence {expected_seq}, got {actual_seq}"
+
+        self.logger.info(f"Verified: all {len(self._frames_read)} frames have sequential sequences starting from {start_seq}")
+
+    @then(r"no sequence errors should have occurred")
+    async def verify_no_sequence_errors(self) -> None:
+        """Verify no sequence errors occurred during the test"""
+        errors = self.get_data("sequence_errors") or []
+
+        assert len(errors) == 0, \
+            f"Sequence errors occurred: {errors}"
+
+        self.logger.info("Verified: no sequence errors occurred")

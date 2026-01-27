@@ -126,18 +126,17 @@ if [ -n "$TEST_NUMBER" ]; then
         # Wildcard pattern - remove the asterisk for broader match
         TEST_PATTERN="${TEST_NUMBER%\*}"  # Remove trailing asterisk
         if [ -n "$BASE_FILTER" ]; then
-            FILTER="$BASE_FILTER&DisplayName~\"Test $TEST_PATTERN\""
+            FILTER="${BASE_FILTER}&DisplayName~Test%20${TEST_PATTERN}"
         else
-            FILTER="DisplayName~\"Test $TEST_PATTERN\""
+            FILTER="DisplayName~Test%20${TEST_PATTERN}"
         fi
         echo "Running tests matching pattern: $TEST_NUMBER"
     else
-        # Specific test - add " -" after test number to ensure exact match
-        # (e.g., "Test 13.1 -" won't match "Test 13.10 -")
+        # Specific test - match "Test X.Y " with trailing space to avoid matching X.Y0, X.Y1 etc
         if [ -n "$BASE_FILTER" ]; then
-            FILTER="$BASE_FILTER&DisplayName~\"Test $TEST_NUMBER -\""
+            FILTER="${BASE_FILTER}&DisplayName~Test%20${TEST_NUMBER}%20"
         else
-            FILTER="DisplayName~\"Test $TEST_NUMBER -\""
+            FILTER="DisplayName~Test%20${TEST_NUMBER}%20"
         fi
         echo "Running specific test: $TEST_NUMBER"
     fi

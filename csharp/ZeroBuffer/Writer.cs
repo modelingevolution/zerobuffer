@@ -166,7 +166,6 @@ namespace ZeroBuffer
         {
             ThrowIfDisposed();
 
-            Console.WriteLine($"[ZeroBuffer] GetFrameBuffer called with size={size} for buffer {_name}");
             _logger.LogDebug("GetFrameBuffer called with size={Size}", size);
 
             // Check frame size
@@ -217,8 +216,8 @@ namespace ZeroBuffer
             long writePos = _payloadOffset + (long)oieb.PayloadWritePos;
             long spaceToEnd = _payloadOffset + (long)oieb.PayloadSize - writePos;
 
-            // Check if we need to wrap
-            if (totalFrameSize > spaceToEnd)
+            // Check if we need to wrap (only if reader is not at position 0)
+            if (totalFrameSize > spaceToEnd && oieb.PayloadReadPos > 0)
             {
                 // Write wrap marker (protocol: payload_size = 0)
                 var wrapHeader = new FrameHeader
@@ -231,7 +230,7 @@ namespace ZeroBuffer
 
                 // Account for the wasted space at the end
                 oieb.PayloadFreeBytes -= (ulong)spaceToEnd;
-                
+
                 // Update position to beginning
                 oieb.PayloadWritePos = 0;
                 oieb.PayloadWrittenCount++;
@@ -285,9 +284,7 @@ namespace ZeroBuffer
             _sharedMemory.Flush();
 
             // Signal data available
-            Console.WriteLine($"[ZeroBuffer] CommitFrame: Releasing write semaphore for buffer {_name}");
             _writeSemaphore.Release();
-            Console.WriteLine($"[ZeroBuffer] CommitFrame: Write semaphore released successfully");
         }
 
         /// <summary>
@@ -332,8 +329,8 @@ namespace ZeroBuffer
             long writePos = _payloadOffset + (long)oieb.PayloadWritePos;
             long spaceToEnd = _payloadOffset + (long)oieb.PayloadSize - writePos;
 
-            // Check if we need to wrap
-            if (totalFrameSize > spaceToEnd)
+            // Check if we need to wrap (only if reader is not at position 0)
+            if (totalFrameSize > spaceToEnd && oieb.PayloadReadPos > 0)
             {
                 // Write wrap marker (protocol: payload_size = 0)
                 var wrapHeader = new FrameHeader
@@ -346,7 +343,7 @@ namespace ZeroBuffer
 
                 // Account for the wasted space at the end
                 oieb.PayloadFreeBytes -= (ulong)spaceToEnd;
-                
+
                 // Update position to beginning
                 oieb.PayloadWritePos = 0;
                 oieb.PayloadWrittenCount++;

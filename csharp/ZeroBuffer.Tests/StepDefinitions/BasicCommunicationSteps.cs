@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TechTalk.SpecFlow;
 using Xunit;
@@ -460,12 +461,183 @@ namespace ZeroBuffer.Tests.StepDefinitions
             var reader = _readers[_currentBuffer];
 
             using var frame = reader.ReadFrame(TimeSpan.FromSeconds(5));
-            
+
             Assert.True(frame.IsValid, "Frame should be valid");
-            
+
             // Convert frame data to string and compare
             var frameString = Encoding.UTF8.GetString(frame.Span);
             Assert.Equal(expectedData, frameString);
+        }
+
+        // ========== Test 1.6 - Slow Reader With Fast Writer ==========
+
+        private readonly List<ulong> _framesReadSequences = new();
+        private readonly List<string> _sequenceErrors = new();
+        private Thread? _writerThread;
+        private volatile bool _writeComplete;
+        private volatile string? _writeError;
+
+        [When(@"the '(.*)' process writes '(.*)' frames of size '(.*)' as fast as possible")]
+        public void WhenProcessWritesFramesAsFastAsPossible(string process, string count, string size)
+        {
+            var writer = _writers[_currentBuffer];
+            var bufferName = _currentBuffer; // Capture for closure
+            var frameCount = int.Parse(count);
+            var frameSize = int.Parse(size);
+
+            _writeComplete = false;
+            _writeError = null;
+
+            // Start writing in background thread
+            _writerThread = new Thread(() =>
+            {
+                try
+                {
+                    for (int i = 0; i < frameCount; i++)
+                    {
+                        var sequenceNum = (ulong)(i + 1); // 1-based sequence
+                        var data = TestDataPatterns.GenerateFrameData(frameSize, sequenceNum);
+
+                        // Write frame - this will block if buffer is full until reader consumes
+                        writer.WriteFrame(data);
+                    }
+                    _writeComplete = true;
+
+                    // Wait 1 second for reader to finish reading, then close writer
+                    // This sets writer_pid=0 so reader can detect writer is done
+                    Thread.Sleep(1000);
+                    writer.Dispose();
+                    _writers.Remove(bufferName);
+                }
+                catch (Exception ex)
+                {
+                    _writeError = ex.Message;
+                }
+            });
+            _writerThread.Start();
+
+            // Give the writer a moment to start and fill the buffer
+            Thread.Sleep(100);
+
+            _testData[$"{_currentBuffer}_frames_written_fast"] = BitConverter.GetBytes(frameCount);
+        }
+
+        [When(@"the '(.*)' process reads frames with '(.*)' ms delay between each read")]
+        public void WhenProcessReadsFramesWithDelayBetweenReads(string process, string delay)
+        {
+            var reader = _readers[_currentBuffer];
+            var delayMs = int.Parse(delay);
+
+            // Clear the tracking lists
+            _framesReadSequences.Clear();
+            _sequenceErrors.Clear();
+
+            int consecutiveTimeouts = 0;
+            const int maxConsecutiveTimeouts = 3;
+            var totalTimeout = TimeSpan.FromSeconds(30);
+            var startTime = DateTime.UtcNow;
+
+            // Read frames until writer is done and no more are available
+            while (DateTime.UtcNow - startTime < totalTimeout)
+            {
+                try
+                {
+                    // Read and process frame
+                    using (var frame = reader.ReadFrame(TimeSpan.FromSeconds(1)))
+                    {
+                        if (!frame.IsValid)
+                        {
+                            consecutiveTimeouts++;
+
+                            // Break after max consecutive timeouts (writer may be in different process)
+                            if (consecutiveTimeouts >= maxConsecutiveTimeouts)
+                            {
+                                // Check if we're expecting more frames from a local writer thread
+                                if (_writeComplete || _writeError != null || _writerThread == null)
+                                {
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
+
+                        consecutiveTimeouts = 0;
+
+                        // Track sequence number
+                        _framesReadSequences.Add(frame.Sequence);
+                    }
+                    // Frame is now disposed
+
+                    // Add delay between reads (simulating slow processing)
+                    Thread.Sleep(delayMs);
+                }
+                catch (TimeoutException)
+                {
+                    consecutiveTimeouts++;
+
+                    if (consecutiveTimeouts >= maxConsecutiveTimeouts)
+                    {
+                        if (_writeComplete || _writeError != null || _writerThread == null)
+                        {
+                            break;
+                        }
+                    }
+                }
+                catch (WriterDeadException)
+                {
+                    // Writer has closed - this is expected in cross-process tests
+                    // when the writer finishes and closes the connection
+                    break;
+                }
+                catch (Exception ex) when (ex.Message.Contains("sequence", StringComparison.OrdinalIgnoreCase) ||
+                                           ex.Message.Contains("Sequence", StringComparison.Ordinal))
+                {
+                    // Sequence error occurred
+                    _sequenceErrors.Add(ex.Message);
+                    break;
+                }
+            }
+
+            // Wait for writer thread to complete (only if we started one in this process)
+            if (_writerThread != null && _writerThread.IsAlive)
+            {
+                _writerThread.Join(TimeSpan.FromSeconds(5));
+            }
+
+            _testData[$"{_currentBuffer}_frames_read_slow"] = BitConverter.GetBytes(_framesReadSequences.Count);
+        }
+
+        [Then(@"the '(.*)' process should have read '(.*)' frames")]
+        public void ThenProcessShouldHaveReadFrames(string process, string expectedCount)
+        {
+            var expected = int.Parse(expectedCount);
+            var actual = _framesReadSequences.Count;
+
+            Assert.Equal(expected, actual);
+        }
+
+        [Then(@"the '(.*)' process should verify all frames have sequential sequence numbers starting from '(.*)'")]
+        public void ThenProcessShouldVerifySequentialSequencesStartingFrom(string process, string startSeq)
+        {
+            var start = ulong.Parse(startSeq);
+
+            Assert.True(_framesReadSequences.Count > 0, "No frames were read to verify");
+
+            for (int i = 0; i < _framesReadSequences.Count; i++)
+            {
+                var expected = start + (ulong)i;
+                var actual = _framesReadSequences[i];
+
+                Assert.True(actual == expected,
+                    $"Frame {i}: expected sequence {expected}, got {actual}");
+            }
+        }
+
+        [Then(@"no sequence errors should have occurred")]
+        public void ThenNoSequenceErrorsShouldHaveOccurred()
+        {
+            Assert.True(_sequenceErrors.Count == 0,
+                $"Sequence errors occurred: {string.Join("; ", _sequenceErrors)}");
         }
 
         // Cleanup

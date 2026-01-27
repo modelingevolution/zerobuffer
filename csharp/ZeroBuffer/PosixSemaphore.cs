@@ -54,17 +54,11 @@ namespace ZeroBuffer
 
             // POSIX semaphore names must start with /
             var semName = name.StartsWith('/') ? name : $"/{name}";
-            Console.WriteLine($"[PosixSemaphore] OpenExisting: '{semName}'");
-            Console.Out.Flush();
 
             sem._handle = PosixInterop.sem_open(semName, 0, 0, 0);
-            Console.WriteLine($"[PosixSemaphore] sem_open returned handle: 0x{sem._handle:X}");
-            Console.Out.Flush();
 
             if (sem._handle == SEM_FAILED)
             {
-                Console.WriteLine($"[PosixSemaphore] sem_open FAILED (SEM_FAILED = -1)");
-                Console.Out.Flush();
                 sem._handle = IntPtr.Zero; // Reset to safe value for Dispose()
                 var error = PosixInterop.GetLastError();
                 // ENOENT = 2 on most POSIX systems
@@ -75,8 +69,6 @@ namespace ZeroBuffer
                 throw new InvalidOperationException($"Failed to open semaphore '{semName}': {error}");
             }
 
-            Console.WriteLine($"[PosixSemaphore] OpenExisting succeeded: '{semName}' -> 0x{sem._handle:X}");
-            Console.Out.Flush();
             return sem;
         }
 
@@ -111,18 +103,12 @@ namespace ZeroBuffer
         public void Release()
         {
             ThrowIfDisposed();
-            Console.WriteLine($"[PosixSemaphore] Release: calling sem_post on handle 0x{_handle:X} (name: {_name})");
-            Console.Out.Flush();
 
             int result = PosixInterop.sem_post(_handle);
-            Console.WriteLine($"[PosixSemaphore] sem_post returned: {result}");
-            Console.Out.Flush();
 
             if (result != 0)
             {
                 var error = PosixInterop.GetLastError();
-                Console.WriteLine($"[PosixSemaphore] sem_post FAILED: {error}");
-                Console.Out.Flush();
                 throw new InvalidOperationException($"Failed to release semaphore: {error}");
             }
         }

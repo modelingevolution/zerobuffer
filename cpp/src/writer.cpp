@@ -180,22 +180,21 @@ public:
             if (oieb->reader_pid == 0) {
                 throw ReaderDeadException();
             }
-            
-            // Check continuous free space
-            size_t continuous_free = get_continuous_free_space();
-            
-            if (continuous_free >= total_size) {
+
+            // Check payload_free_bytes (NOT position-based calculation!)
+            // This ensures we don't overwrite frames that have been read but not yet disposed
+            if (oieb->payload_free_bytes >= total_size) {
                 // We have enough space
                 break;
             }
-            
+
             // Check if we've exceeded the write timeout
             auto elapsed = std::chrono::steady_clock::now() - start;
             if (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed) >= write_timeout_) {
                 ZEROBUFFER_LOG_DEBUG("Writer") << "Write timeout after " << write_timeout_.count() << "ms";
                 throw BufferFullException();
             }
-            
+
             // Wait for reader to free space (with shorter wait to check timeout periodically)
             if (!sem_read_->wait(std::chrono::milliseconds(100))) {
                 // Short timeout - check if reader is alive and overall timeout
@@ -285,15 +284,14 @@ public:
             if (oieb->reader_pid == 0) {
                 throw ReaderDeadException();
             }
-            
-            // Check continuous free space
-            size_t continuous_free = get_continuous_free_space();
-            
-            if (continuous_free >= total_size) {
+
+            // Check payload_free_bytes (NOT position-based calculation!)
+            // This ensures we don't overwrite frames that have been read but not yet disposed
+            if (oieb->payload_free_bytes >= total_size) {
                 // We have enough space
                 break;
             }
-            
+
             // Wait for reader to free space
             if (!sem_read_->wait(std::chrono::milliseconds(5000))) {
                 // Timeout - check if reader is alive

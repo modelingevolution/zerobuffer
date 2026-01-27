@@ -78,6 +78,16 @@ bool TestContext::hasWriter(const std::string& processName) const {
     return writers_.find(processName) != writers_.end();
 }
 
+void TestContext::removeWriter(const std::string& processName) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto it = writers_.find(processName);
+    if (it != writers_.end()) {
+        ZEROBUFFER_LOG_DEBUG("TestContext") << "Removing writer for process '" << processName << "'";
+        writers_.erase(it);  // unique_ptr destructor will destroy Writer, setting writer_pid=0
+    }
+}
+
 void TestContext::setCurrentBuffer(const std::string& bufferName) {
     std::lock_guard<std::mutex> lock(mutex_);
     currentBuffer_ = bufferName;

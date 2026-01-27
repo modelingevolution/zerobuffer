@@ -48,9 +48,12 @@ public:
     
     Reader* getReader(const std::string& processName);
     Writer* getWriter(const std::string& processName);
-    
+
     bool hasReader(const std::string& processName) const;
     bool hasWriter(const std::string& processName) const;
+
+    // Remove and destroy writer (sets writer_pid=0 in shared memory)
+    void removeWriter(const std::string& processName);
     
     // Buffer management
     void setCurrentBuffer(const std::string& bufferName);
