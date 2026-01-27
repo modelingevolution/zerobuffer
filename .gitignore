@@ -127,3 +127,4 @@ vcpkg_installed/
 /modules/harmony/ModelingEvolution.Harmony.Shared.Tests/bin/Release/net9.0
 /tools/harmony-cpp-gen/bin/Release/net9.0
 /csharp/ZeroBuffer/nupkg
+/logs
