@@ -134,26 +134,8 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                 self._running = False
                 return
 
-            # Call initialization callback with metadata if provided
-            if hasattr(self, "_on_init") and self._on_init and self._request_reader:
-                if logger:
-                    logger.debug("Reading metadata from request buffer")
-                metadata = self._request_reader.get_metadata()
-                if metadata:
-                    if logger:
-                        logger.debug(f"Got metadata: {len(metadata)} bytes")
-                    try:
-                        self._on_init(metadata)
-                    except Exception as e:
-                        if logger:
-                            logger.error(f"Error in initialization callback: {e}")
-                        self._invoke_error_handlers(e)
-                    finally:
-                        # Release the memoryview
-                        metadata.release()
-                else:
-                    if logger:
-                        logger.warning("No metadata available in request buffer")
+            # Store on_init callback - will be called once after first frame arrives (matching C# behavior)
+            on_init_callback = getattr(self, "_on_init", None)
 
             # Process requests
             while True:
@@ -164,6 +146,22 @@ class ImmutableDuplexServer(IImmutableDuplexServer):
                     frame = self._request_reader.read_frame(timeout=self._timeout)
                     if frame is None:
                         continue
+
+                    # Call on_init callback once after first valid frame (matching C# behavior)
+                    if on_init_callback is not None and self._request_reader:
+                        metadata = self._request_reader.get_metadata()
+                        if metadata:
+                            if logger:
+                                logger.debug(f"Got metadata: {len(metadata)} bytes")
+                            try:
+                                on_init_callback(metadata)
+                            except Exception as e:
+                                if logger:
+                                    logger.error(f"Error in initialization callback: {e}")
+                                self._invoke_error_handlers(e)
+                            finally:
+                                metadata.release()
+                        on_init_callback = None  # Only call once
 
                     # Use context manager for RAII - frame is disposed on exit
                     with frame:

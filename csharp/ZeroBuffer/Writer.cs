@@ -166,6 +166,7 @@ namespace ZeroBuffer
         {
             ThrowIfDisposed();
 
+            Console.WriteLine($"[ZeroBuffer] GetFrameBuffer called with size={size} for buffer {_name}");
             _logger.LogDebug("GetFrameBuffer called with size={Size}", size);
 
             // Check frame size
@@ -273,7 +274,7 @@ namespace ZeroBuffer
         public void CommitFrame()
         {
             ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
-            
+
             // Update write position directly in shared memory
             oieb.PayloadWritePos = (ulong)((_pendingWritePos + _pendingFrameSize - _payloadOffset) % (long)oieb.PayloadSize);
             oieb.PayloadWrittenCount++;
@@ -284,7 +285,9 @@ namespace ZeroBuffer
             _sharedMemory.Flush();
 
             // Signal data available
+            Console.WriteLine($"[ZeroBuffer] CommitFrame: Releasing write semaphore for buffer {_name}");
             _writeSemaphore.Release();
+            Console.WriteLine($"[ZeroBuffer] CommitFrame: Write semaphore released successfully");
         }
 
         /// <summary>
