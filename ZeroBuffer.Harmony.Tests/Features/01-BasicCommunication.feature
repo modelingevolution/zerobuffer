@@ -66,3 +66,19 @@ Feature: Basic Communication Tests
 
         Then the 'reader' process should read 4 frames with sizes '100,1024,10240,1' in order
 
+    Scenario: Test 1.6 - Slow Reader With Fast Writer
+        # This test verifies that frames are not overwritten when reader is slow
+        # Buffer is sized to hold ~5 frames, writer sends 20 frames as fast as possible
+        # Reader adds 100ms delay between reads to simulate slow processing
+        # All 20 frames must be received in correct sequence order
+        Given the 'reader' process creates buffer 'test-slow-reader' with metadata size '64' and payload size '10240'
+
+        When the 'writer' process connects to buffer 'test-slow-reader'
+        And the 'writer' process writes '20' frames of size '1024' as fast as possible
+
+        And the 'reader' process reads frames with '100' ms delay between each read
+
+        Then the 'reader' process should have read '20' frames
+        And the 'reader' process should verify all frames have sequential sequence numbers starting from '1'
+        And no sequence errors should have occurred
+

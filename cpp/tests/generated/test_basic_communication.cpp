@@ -194,3 +194,29 @@ TEST_F(BasicCommunicationTest, Test_1_5_Mixed_Frame_Sizes) {
     ASSERT_TRUE(ExecuteStep(StepType::Then, "the 'reader' process should read 4 frames with sizes '100,1024,10240,1' in order")) << "Failed: Then the 'reader' process should read 4 frames with sizes '100,1024,10240,1' in order";
 }
 
+TEST_F(BasicCommunicationTest, Test_1_6_Slow_Reader_With_Fast_Writer) {
+    // Scenario: Test 1.6 - Slow Reader With Fast Writer
+
+    // Background steps
+    // Given the test environment is initialized
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the test environment is initialized")) << "Failed: Given the test environment is initialized";
+    // And all processes are ready
+    ASSERT_TRUE(ExecuteStep(StepType::And, "all processes are ready")) << "Failed: And all processes are ready";
+
+    // Scenario steps
+    // Given the 'reader' process creates buffer 'test-slow-reader' with metadata size '64' and payload size '10240'
+    ASSERT_TRUE(ExecuteStep(StepType::Given, "the 'reader' process creates buffer 'test-slow-reader' with metadata size '64' and payload size '10240'")) << "Failed: Given the 'reader' process creates buffer 'test-slow-reader' with metadata size '64' and payload size '10240'";
+    // When the 'writer' process connects to buffer 'test-slow-reader'
+    ASSERT_TRUE(ExecuteStep(StepType::When, "the 'writer' process connects to buffer 'test-slow-reader'")) << "Failed: When the 'writer' process connects to buffer 'test-slow-reader'";
+    // And the 'writer' process writes '20' frames of size '1024' as fast as possible
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'writer' process writes '20' frames of size '1024' as fast as possible")) << "Failed: And the 'writer' process writes '20' frames of size '1024' as fast as possible";
+    // And the 'reader' process reads frames with '100' ms delay between each read
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'reader' process reads frames with '100' ms delay between each read")) << "Failed: And the 'reader' process reads frames with '100' ms delay between each read";
+    // Then the 'reader' process should have read '20' frames
+    ASSERT_TRUE(ExecuteStep(StepType::Then, "the 'reader' process should have read '20' frames")) << "Failed: Then the 'reader' process should have read '20' frames";
+    // And the 'reader' process should verify all frames have sequential sequence numbers starting from '1'
+    ASSERT_TRUE(ExecuteStep(StepType::And, "the 'reader' process should verify all frames have sequential sequence numbers starting from '1'")) << "Failed: And the 'reader' process should verify all frames have sequential sequence numbers starting from '1'";
+    // And no sequence errors should have occurred
+    ASSERT_TRUE(ExecuteStep(StepType::And, "no sequence errors should have occurred")) << "Failed: And no sequence errors should have occurred";
+}
+
