@@ -188,8 +188,13 @@ namespace ZeroBuffer
                 // First check current state
                 oiebRef = ref _sharedMemory.ReadRef<OIEB>(0);
                 
-                // Check if we already have enough space
-                if (oiebRef.PayloadFreeBytes >= (ulong)totalFrameSize)
+                // Calculate required space including potential wrap-around waste
+                long spaceToEndCheck = (long)oiebRef.PayloadSize - (long)oiebRef.PayloadWritePos;
+                ulong requiredSpace = (spaceToEndCheck >= totalFrameSize)
+                    ? (ulong)totalFrameSize                                      // no wrap needed
+                    : (ulong)spaceToEndCheck + (ulong)totalFrameSize;            // wrap: waste at end + frame at beginning
+
+                if (oiebRef.PayloadFreeBytes >= requiredSpace)
                     break;
 
                 // Need to wait for space - wait on semaphore
@@ -310,8 +315,13 @@ namespace ZeroBuffer
                 if (oieb.ReaderPid == 0)
                     throw new ReaderDeadException();
                 
-                // Check if we already have enough space
-                if (oieb.PayloadFreeBytes >= (ulong)totalFrameSize)
+                // Calculate required space including potential wrap-around waste
+                long spaceToEndCheck = (long)oieb.PayloadSize - (long)oieb.PayloadWritePos;
+                ulong requiredSpace = (spaceToEndCheck >= totalFrameSize)
+                    ? (ulong)totalFrameSize                                      // no wrap needed
+                    : (ulong)spaceToEndCheck + (ulong)totalFrameSize;            // wrap: waste at end + frame at beginning
+
+                if (oieb.PayloadFreeBytes >= requiredSpace)
                     break;
 
                 // Need to wait for space - wait on semaphore

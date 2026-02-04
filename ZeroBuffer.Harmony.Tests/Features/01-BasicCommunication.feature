@@ -82,3 +82,20 @@ Feature: Basic Communication Tests
         And the 'reader' process should verify all frames have sequential sequence numbers starting from '1'
         And no sequence errors should have occurred
 
+    Scenario: Test 1.7 - Slow Reader With Fast Writer High Volume
+        # Reproducer for production sequence error: expected 35355, got 35361
+        # Buffer holds ~5 frames, writer sends 35000 frames at full speed
+        # Reader has no artificial delay - relies purely on flow control
+        # This forces ~7000 wrap-around cycles at maximum native throughput
+        # KNOWN FAILURE: Sequence error at ~frame 163 (expected 163, got 172)
+        Given the 'reader' process creates buffer 'test-slow-reader-hv' with metadata size '64' and payload size '10240'
+
+        When the 'writer' process connects to buffer 'test-slow-reader-hv'
+        And the 'writer' process writes '5000' frames of size '1024' as fast as possible
+
+        And the 'reader' process reads frames with '0' ms delay between each read
+
+        Then the 'reader' process should have read '5000' frames
+        And the 'reader' process should verify all frames have sequential sequence numbers starting from '1'
+        And no sequence errors should have occurred
+

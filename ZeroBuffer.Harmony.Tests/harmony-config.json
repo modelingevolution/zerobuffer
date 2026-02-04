@@ -1,7 +1,7 @@
 {
   "platforms": {
     "csharp": {
-      "executable": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.Serve/bin/Debug/net9.0/ZeroBuffer.Serve",
+      "executable": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer/csharp/ZeroBuffer.Serve/bin/Debug/net10.0/ZeroBuffer.Serve",
       "arguments": "",
       "workingDirectory": "/mnt/d/source/modelingevolution/streamer/src/zerobuffer"
     },

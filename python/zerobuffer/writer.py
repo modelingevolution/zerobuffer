@@ -261,9 +261,14 @@ class Writer:
                     self._oieb.payload_size,
                 )
 
-                # Check for available space
-                if self._oieb.payload_free_bytes >= total_size:
-                    # We have enough space
+                # Calculate required space including potential wrap-around waste
+                space_to_end_check = self._oieb.payload_size - self._oieb.payload_write_pos
+                required_space = (
+                    total_size if space_to_end_check >= total_size
+                    else space_to_end_check + total_size  # wrap: waste at end + frame at beginning
+                )
+
+                if self._oieb.payload_free_bytes >= required_space:
                     logger.debug("Have enough space, breaking from wait loop")
                     break
 
@@ -387,8 +392,15 @@ class Writer:
                 if self._oieb.reader_pid == 0:
                     raise ReaderDeadException()
 
+                # Calculate required space including potential wrap-around waste
+                space_to_end_check = self._oieb.payload_size - self._oieb.payload_write_pos
+                required_space = (
+                    total_size if space_to_end_check >= total_size
+                    else space_to_end_check + total_size  # wrap: waste at end + frame at beginning
+                )
+
                 # Check for available space
-                if self._oieb.payload_free_bytes >= total_size:
+                if self._oieb.payload_free_bytes >= required_space:
                     break
 
                 if not self._sem_read.acquire(timeout=self._write_timeout.total_seconds()):

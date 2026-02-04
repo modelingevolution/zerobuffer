@@ -181,10 +181,13 @@ public:
                 throw ReaderDeadException();
             }
 
-            // Check payload_free_bytes (NOT position-based calculation!)
-            // This ensures we don't overwrite frames that have been read but not yet disposed
-            if (oieb->payload_free_bytes >= total_size) {
-                // We have enough space
+            // Calculate required space including potential wrap-around waste
+            size_t space_to_end = oieb->payload_size - oieb->payload_write_pos;
+            size_t required_space = (space_to_end >= total_size)
+                ? total_size                    // no wrap needed
+                : space_to_end + total_size;    // wrap: waste at end + frame at beginning
+
+            if (oieb->payload_free_bytes >= required_space) {
                 break;
             }
 
@@ -285,10 +288,13 @@ public:
                 throw ReaderDeadException();
             }
 
-            // Check payload_free_bytes (NOT position-based calculation!)
-            // This ensures we don't overwrite frames that have been read but not yet disposed
-            if (oieb->payload_free_bytes >= total_size) {
-                // We have enough space
+            // Calculate required space including potential wrap-around waste
+            size_t space_to_end = oieb->payload_size - oieb->payload_write_pos;
+            size_t required_space = (space_to_end >= total_size)
+                ? total_size                    // no wrap needed
+                : space_to_end + total_size;    // wrap: waste at end + frame at beginning
+
+            if (oieb->payload_free_bytes >= required_space) {
                 break;
             }
 
