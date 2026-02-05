@@ -221,8 +221,8 @@ namespace ZeroBuffer
             long writePos = _payloadOffset + (long)oieb.PayloadWritePos;
             long spaceToEnd = _payloadOffset + (long)oieb.PayloadSize - writePos;
 
-            // Check if we need to wrap (only if reader is not at position 0)
-            if (totalFrameSize > spaceToEnd && oieb.PayloadReadPos > 0)
+            // Check if we need to wrap
+            if (totalFrameSize > spaceToEnd)
             {
                 // Write wrap marker (protocol: payload_size = 0)
                 var wrapHeader = new FrameHeader
@@ -233,8 +233,8 @@ namespace ZeroBuffer
 
                 _sharedMemory.Write(writePos, wrapHeader);
 
-                // Account for the wasted space at the end
-                oieb.PayloadFreeBytes -= (ulong)spaceToEnd;
+                // Account for the wasted space at the end - atomic to prevent lost updates
+                Interlocked.Add(ref Unsafe.As<ulong, long>(ref oieb.PayloadFreeBytes), -(long)spaceToEnd);
 
                 // Update position to beginning
                 oieb.PayloadWritePos = 0;
@@ -242,7 +242,7 @@ namespace ZeroBuffer
                 writePos = _payloadOffset;
 
                 // Check space again after wrap
-                if (oieb.PayloadFreeBytes < (ulong)totalFrameSize)
+                if ((ulong)Interlocked.Read(ref Unsafe.As<ulong, long>(ref oieb.PayloadFreeBytes)) < (ulong)totalFrameSize)
                 {
                     throw new BufferFullException();
                 }
@@ -261,17 +261,17 @@ namespace ZeroBuffer
             // Get pointer to frame data area
             long dataPos = writePos + FrameHeader.SIZE;
             byte* framePtr = _sharedMemory.GetPointer(dataPos);
-            
+
             // Store write position for commit
             _pendingWritePos = dataPos;
             _pendingFrameSize = size;
-            
+
             return new Span<byte>(framePtr, size);
         }
-        
+
         private long _pendingWritePos;
         private int _pendingFrameSize;
-        
+
         /// <summary>
         /// Commit the frame after writing to the buffer returned by GetFrameBuffer
         /// </summary>
@@ -283,9 +283,9 @@ namespace ZeroBuffer
             oieb.PayloadWritePos = (ulong)((_pendingWritePos + _pendingFrameSize - _payloadOffset) % (long)oieb.PayloadSize);
             oieb.PayloadWrittenCount++;
 
-            // Update free bytes directly in shared memory
+            // Update free bytes - atomic to prevent lost updates when reader adds concurrently
             long totalFrameSize = FrameHeader.SIZE + _pendingFrameSize;
-            oieb.PayloadFreeBytes -= (ulong)totalFrameSize;
+            Interlocked.Add(ref Unsafe.As<ulong, long>(ref oieb.PayloadFreeBytes), -totalFrameSize);
             _sharedMemory.Flush();
 
             // Signal data available
@@ -339,8 +339,8 @@ namespace ZeroBuffer
             long writePos = _payloadOffset + (long)oieb.PayloadWritePos;
             long spaceToEnd = _payloadOffset + (long)oieb.PayloadSize - writePos;
 
-            // Check if we need to wrap (only if reader is not at position 0)
-            if (totalFrameSize > spaceToEnd && oieb.PayloadReadPos > 0)
+            // Check if we need to wrap
+            if (totalFrameSize > spaceToEnd)
             {
                 // Write wrap marker (protocol: payload_size = 0)
                 var wrapHeader = new FrameHeader
@@ -351,8 +351,8 @@ namespace ZeroBuffer
 
                 _sharedMemory.Write(writePos, wrapHeader);
 
-                // Account for the wasted space at the end
-                oieb.PayloadFreeBytes -= (ulong)spaceToEnd;
+                // Account for the wasted space at the end - atomic to prevent lost updates
+                Interlocked.Add(ref Unsafe.As<ulong, long>(ref oieb.PayloadFreeBytes), -(long)spaceToEnd);
 
                 // Update position to beginning
                 oieb.PayloadWritePos = 0;
@@ -360,7 +360,7 @@ namespace ZeroBuffer
                 writePos = _payloadOffset;
 
                 // Check space again after wrap
-                if (oieb.PayloadFreeBytes < (ulong)totalFrameSize)
+                if ((ulong)Interlocked.Read(ref Unsafe.As<ulong, long>(ref oieb.PayloadFreeBytes)) < (ulong)totalFrameSize)
                 {
                     throw new BufferFullException();
                 }
@@ -381,13 +381,13 @@ namespace ZeroBuffer
 
             // Now get a reference to update the OIEB in shared memory
             ref var oiebUpdate = ref _sharedMemory.ReadRef<OIEB>(0);
-            
+
             // Update write position
             oiebUpdate.PayloadWritePos = (ulong)((dataPos + data.Length - _payloadOffset) % (long)oieb.PayloadSize);
             oiebUpdate.PayloadWrittenCount = oieb.PayloadWrittenCount + 1;
 
-            // Update free bytes
-            oiebUpdate.PayloadFreeBytes = oieb.PayloadFreeBytes - (ulong)totalFrameSize;
+            // Update free bytes - atomic to prevent lost updates when reader adds concurrently
+            Interlocked.Add(ref Unsafe.As<ulong, long>(ref oiebUpdate.PayloadFreeBytes), -(long)totalFrameSize);
             _sharedMemory.Flush();
 
             // Signal data available

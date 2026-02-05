@@ -204,9 +204,9 @@ class Reader:
             return
 
         logger.debug("Frame disposed, releasing %d bytes for seq=%d", total_frame_size, sequence)
-        # Update OIEB directly in shared memory
+        # Update OIEB directly in shared memory - atomic to prevent lost updates
         if self._oieb:
-            self._oieb.payload_free_bytes += total_frame_size
+            self._oieb.atomic_add_payload_free_bytes(total_frame_size)
             # Flush after updating payload_free_bytes (matching C# line 515 in OnFrameDisposed)
             if self._shm:
                 self._shm.flush()
@@ -334,8 +334,8 @@ class Reader:
                         self._oieb.payload_size,
                     )
 
-                    # Add back the wasted space to free bytes
-                    self._oieb.payload_free_bytes += wasted_space
+                    # Add back the wasted space to free bytes - atomic to prevent lost updates
+                    self._oieb.atomic_add_payload_free_bytes(wasted_space)
 
                     # Move to beginning of buffer
                     self._oieb.payload_read_pos = 0
@@ -375,25 +375,13 @@ class Reader:
                     self._oieb.payload_read_pos,
                 )
 
-                # Check if frame wraps around buffer
+                # Frame must not extend past buffer boundary — writer must always place wrap markers
                 if self._oieb.payload_read_pos + total_frame_size > self._oieb.payload_size:
-                    # Frame would extend beyond buffer
-                    if self._oieb.payload_write_pos < self._oieb.payload_read_pos:
-                        # Writer has wrapped, we should wrap too
-                        self._oieb.payload_read_pos = 0
-                        # Flush after wrap-around handling (matching C# line 369)
-                        self._shm.flush()
-                        # Re-read header at new position
-                        header_offset = payload_base  # Start of payload buffer
-                        header_data = self._shm.read_bytes(header_offset, FrameHeader.SIZE)
-                        header = FrameHeader.unpack(header_data)
-
-                        # Re-validate sequence number after wrap
-                        if header.sequence_number != self._expected_sequence:
-                            raise SequenceError(self._expected_sequence, header.sequence_number)
-                    else:
-                        # Writer hasn't wrapped yet, wait
-                        continue
+                    raise ZeroBufferException(
+                        f"Frame extends past buffer boundary: readPos={self._oieb.payload_read_pos}"
+                        f", frameSize={total_frame_size}, payloadSize={self._oieb.payload_size}"
+                        f", writePos={self._oieb.payload_write_pos}"
+                    )
 
                 # Update OIEB read position and count (but NOT free bytes yet!)
                 old_pos = self._oieb.payload_read_pos

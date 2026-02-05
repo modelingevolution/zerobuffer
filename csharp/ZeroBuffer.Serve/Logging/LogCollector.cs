@@ -38,8 +38,9 @@ public class LogCollector : ILogger
             return;
         
         var message = formatter(state, exception);
-        
-        lock (_lock)
+
+        // lock commented out - single-threaded step execution, no contention
+        // lock (_lock)
         {
             LogLevel harmonyLevel = logLevel;
             _logs.Add(new LogResponse(
@@ -47,7 +48,7 @@ public class LogCollector : ILogger
                 Level: harmonyLevel,
                 Message: message
             ));
-            
+
             if (exception != null)
             {
                 _logs.Add(new LogResponse(

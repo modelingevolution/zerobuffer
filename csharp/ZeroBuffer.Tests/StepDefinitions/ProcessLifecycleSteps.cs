@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using TechTalk.SpecFlow;
 using Xunit;
 using Xunit.Sdk;
@@ -18,13 +20,24 @@ namespace ZeroBuffer.Tests.StepDefinitions
         // Own copies of readers and writers - no dependency on other step files
         private readonly Dictionary<string, Reader> _readers = new();
         private readonly Dictionary<string, Writer> _writers = new();
+        private static readonly bool DetailedLogging =
+            Environment.GetEnvironmentVariable("ZEROBUFFER_DETAILED_LOGGING") == "true";
+
         private readonly IBufferNamingService _bufferNaming;
+        private readonly ILoggerFactory _loggerFactory;
         private Exception? _lastException;
 
-        public ProcessLifecycleSteps(IBufferNamingService bufferNaming)
+        public ProcessLifecycleSteps(IBufferNamingService bufferNaming, ILoggerFactory loggerFactory)
         {
             _bufferNaming = bufferNaming;
+            _loggerFactory = loggerFactory;
         }
+
+        private ILogger<Reader> CreateReaderLogger() =>
+            DetailedLogging ? CreateReaderLogger() : NullLogger<Reader>.Instance;
+
+        private ILogger<Writer> CreateWriterLogger() =>
+            DetailedLogging ? CreateWriterLogger() : NullLogger<Writer>.Instance;
 
         [Given(@"we run in harmony")]
         public void GivenWeRunInHarmony()
@@ -261,13 +274,13 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 // Create new reader for existing buffer - need to get config
                 // Since we're connecting to existing buffer, we assume default config
                 var config = new BufferConfig(1024, 10240); // Use default sizes
-                var reader = new Reader(actualBufferName, config);
+                var reader = new Reader(actualBufferName, config, CreateReaderLogger());
                 _readers[bufferName] = reader;
             }
             else if (process == "writer")
             {
                 // Create new writer for existing buffer
-                var writer = new Writer(actualBufferName);
+                var writer = new Writer(actualBufferName, CreateWriterLogger());
                 _writers[bufferName] = writer;
             }
         }
@@ -303,7 +316,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 if (process == "writer")
                 {
                     // Try to create a second writer - should fail
-                    var writer = new Writer(actualBufferName);
+                    var writer = new Writer(actualBufferName, CreateWriterLogger());
                     // If we get here, no exception was thrown
                     _lastException = null;
                     writer.Dispose();
@@ -312,7 +325,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
                 {
                     // Try to create a second reader - should fail
                     var config = new BufferConfig(1024, 10240); // Use default sizes
-                    var reader = new Reader(actualBufferName, config);
+                    var reader = new Reader(actualBufferName, config, CreateReaderLogger());
                     // If we get here, no exception was thrown
                     _lastException = null;
                     reader.Dispose();

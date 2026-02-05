@@ -210,12 +210,12 @@ public:
         
         // Check if we need to wrap
         size_t space_to_end = oieb->payload_size - oieb->payload_write_pos;
-        if (space_to_end < total_size && oieb->payload_read_pos > 0) {
-            ZEROBUFFER_LOG_DEBUG("Writer") << "Need to wrap: frameSize=" << total_size 
-                << " > spaceToEnd=" << space_to_end 
-                << ", writePos=" << oieb->payload_write_pos 
+        if (space_to_end < total_size) {
+            ZEROBUFFER_LOG_DEBUG("Writer") << "Need to wrap: frameSize=" << total_size
+                << " > spaceToEnd=" << space_to_end
+                << ", writePos=" << oieb->payload_write_pos
                 << ", readPos=" << oieb->payload_read_pos;
-            
+
             // Need to wrap to beginning
             // Write a special marker at current position if there's space for a header
             if (space_to_end >= sizeof(FrameHeader)) {
@@ -225,41 +225,41 @@ public:
                 wrap_marker.payload_size = 0;  // Indicates wrap-around
                 wrap_marker.sequence_number = 0;
                 std::memcpy(wrap_marker_ptr, &wrap_marker, sizeof(wrap_marker));
-                
+
                 ZEROBUFFER_LOG_DEBUG("Writer") << "Wrote wrap marker at position " << oieb->payload_write_pos;
-                
+
                 // Increment written count for the wrap marker
                 oieb->payload_written_count++;
             }
             // Account for the wasted space at the end
             size_t wasted_space = space_to_end;
-            ZEROBUFFER_LOG_DEBUG("Writer") << "Wrap-around: wasted space = " << wasted_space 
+            ZEROBUFFER_LOG_DEBUG("Writer") << "Wrap-around: wasted space = " << wasted_space
                 << " bytes (from " << oieb->payload_write_pos << " to " << oieb->payload_size << ")";
-            
-            oieb->payload_free_bytes -= space_to_end;
+
+            __atomic_fetch_sub(&oieb->payload_free_bytes, space_to_end, __ATOMIC_RELEASE);
             oieb->payload_write_pos = 0;
-            
+
             ZEROBUFFER_LOG_DEBUG("Writer") << "After wrap: writePos=0, freeBytes=" << oieb->payload_free_bytes;
         }
-        
+
         // Write frame header
         uint8_t* write_ptr = payload_start_ + oieb->payload_write_pos;
         FrameHeader header;
         header.payload_size = size;
         header.sequence_number = sequence_number_;
         std::memcpy(write_ptr, &header, sizeof(header));
-        
+
         // Write frame data
         std::memcpy(write_ptr + sizeof(header), data, size);
-        
+
         // Update tracking
         oieb->payload_write_pos += total_size;
         sequence_number_++;
         frames_written_++;
         bytes_written_ += size;
-        
-        // Update OIEB
-        oieb->payload_free_bytes -= total_size;
+
+        // Update OIEB - atomic to prevent lost updates when reader adds concurrently
+        __atomic_fetch_sub(&oieb->payload_free_bytes, (uint64_t)total_size, __ATOMIC_RELEASE);
         oieb->payload_written_count++;
         
         // Release memory barrier
@@ -310,12 +310,12 @@ public:
         
         // Check if we need to wrap
         size_t space_to_end = oieb->payload_size - oieb->payload_write_pos;
-        if (space_to_end < total_size && oieb->payload_read_pos > 0) {
-            ZEROBUFFER_LOG_DEBUG("Writer") << "Need to wrap: frameSize=" << total_size 
-                << " > spaceToEnd=" << space_to_end 
-                << ", writePos=" << oieb->payload_write_pos 
+        if (space_to_end < total_size) {
+            ZEROBUFFER_LOG_DEBUG("Writer") << "Need to wrap: frameSize=" << total_size
+                << " > spaceToEnd=" << space_to_end
+                << ", writePos=" << oieb->payload_write_pos
                 << ", readPos=" << oieb->payload_read_pos;
-            
+
             // Need to wrap to beginning
             // Write a special marker at current position if there's space for a header
             if (space_to_end >= sizeof(FrameHeader)) {
@@ -325,23 +325,23 @@ public:
                 wrap_marker.payload_size = 0;  // Indicates wrap-around
                 wrap_marker.sequence_number = 0;
                 std::memcpy(wrap_marker_ptr, &wrap_marker, sizeof(wrap_marker));
-                
+
                 ZEROBUFFER_LOG_DEBUG("Writer") << "Wrote wrap marker at position " << oieb->payload_write_pos;
-                
+
                 // Increment written count for the wrap marker
                 oieb->payload_written_count++;
             }
             // Account for the wasted space at the end
             size_t wasted_space = space_to_end;
-            ZEROBUFFER_LOG_DEBUG("Writer") << "Wrap-around: wasted space = " << wasted_space 
+            ZEROBUFFER_LOG_DEBUG("Writer") << "Wrap-around: wasted space = " << wasted_space
                 << " bytes (from " << oieb->payload_write_pos << " to " << oieb->payload_size << ")";
-            
-            oieb->payload_free_bytes -= space_to_end;
+
+            __atomic_fetch_sub(&oieb->payload_free_bytes, space_to_end, __ATOMIC_RELEASE);
             oieb->payload_write_pos = 0;
-            
+
             ZEROBUFFER_LOG_DEBUG("Writer") << "After wrap: writePos=0, freeBytes=" << oieb->payload_free_bytes;
         }
-        
+
         // Store pending operation info
         pending_write_pos_ = oieb->payload_write_pos;
         pending_frame_size_ = size;
@@ -367,8 +367,8 @@ public:
         frames_written_++;
         bytes_written_ += pending_frame_size_;
         
-        // Update OIEB
-        oieb->payload_free_bytes -= pending_frame_total_size_;
+        // Update OIEB - atomic to prevent lost updates when reader adds concurrently
+        __atomic_fetch_sub(&oieb->payload_free_bytes, (uint64_t)pending_frame_total_size_, __ATOMIC_RELEASE);
         oieb->payload_written_count++;
         
         // Release memory barrier

@@ -239,8 +239,8 @@ public:
                 ZEROBUFFER_LOG_DEBUG("Reader") << "Wrap-around: wasted space = " << wasted_space 
                     << " bytes (from " << oieb->payload_read_pos << " to " << oieb->payload_size << ")";
                 
-                // Add back the wasted space to free bytes
-                oieb->payload_free_bytes += wasted_space;
+                // Add back the wasted space to free bytes - atomic to prevent lost updates
+                __atomic_fetch_add(&oieb->payload_free_bytes, wasted_space, __ATOMIC_RELEASE);
                 
                 // This is a wrap marker, move to beginning of buffer
                 oieb->payload_read_pos = 0;
@@ -269,33 +269,13 @@ public:
             
             size_t total_frame_size = sizeof(FrameHeader) + header->payload_size;
             
-            // Check if frame wraps around buffer
+            // Frame must not extend past buffer boundary — writer must always place wrap markers
             if (oieb->payload_read_pos + total_frame_size > oieb->payload_size) {
-                // Frame would extend beyond buffer - check if we need to wrap to beginning
-                if (oieb->payload_write_pos < oieb->payload_read_pos) {
-                    // Writer has wrapped, we should wrap too
-                    // This shouldn't happen if writer correctly writes wrap markers,
-                    // but handle it just in case
-                    
-                    // Calculate wasted space from current read position to end of buffer
-                    uint64_t wasted_space = oieb->payload_size - oieb->payload_read_pos;
-                    
-                    // Add back the wasted space to free bytes
-                    oieb->payload_free_bytes += wasted_space;
-                    
-                    oieb->payload_read_pos = 0;
-                    // Re-read header at new position
-                    read_ptr = payload_start_ + oieb->payload_read_pos;
-                    header = reinterpret_cast<const FrameHeader*>(read_ptr);
-                    
-                    // Re-validate sequence number after wrap
-                    if (header->sequence_number != expected_sequence_) {
-                        throw SequenceError(expected_sequence_, header->sequence_number);
-                    }
-                } else {
-                    // Writer hasn't wrapped yet, wait
-                    continue;
-                }
+                throw ZeroBufferException(
+                    "Frame extends past buffer boundary: readPos=" + std::to_string(oieb->payload_read_pos) +
+                    ", frameSize=" + std::to_string(total_frame_size) +
+                    ", payloadSize=" + std::to_string(oieb->payload_size) +
+                    ", writePos=" + std::to_string(oieb->payload_write_pos));
             }
             
             // Create frame reference with RAII - zero allocations
@@ -340,8 +320,8 @@ public:
         // Update OIEB - this is what was missing!
         OIEB* oieb = get_oieb();
         
-        // Add back the frame size to free bytes
-        oieb->payload_free_bytes += frame_size;
+        // Add back the frame size to free bytes - atomic to prevent lost updates
+        __atomic_fetch_add(&oieb->payload_free_bytes, frame_size, __ATOMIC_RELEASE);
         
         // Release memory barrier to ensure OIEB updates are visible
         std::atomic_thread_fence(std::memory_order_release);

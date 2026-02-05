@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -354,11 +355,13 @@ namespace ZeroBuffer
                 }
 
                 // Semaphore was signaled - data should be available
+                // Acquire fence ensures all writes by the writer (signaler) are visible
+                Thread.MemoryBarrier();
                 // Use ref to access OIEB directly (no copy needed)
                 ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
 
                 // This is quick check to ensure writer hasn't disconnected gracefully; when writerPid == 0 we can check PayloadWrittenCount as it won't be changed anymore by external process.
-                if (oieb.WriterPid == 0 && oieb.PayloadWrittenCount <= oieb.PayloadReadCount) 
+                if (oieb.WriterPid == 0 && oieb.PayloadWrittenCount <= oieb.PayloadReadCount)
                     throw new WriterDeadException();
 
                 _logger.LogTrace("OIEB state after semaphore: WrittenCount={WrittenCount}, ReadCount={ReadCount}, WritePos={WritePos}, ReadPos={ReadPos}, FreeBytes={FreeBytes}, PayloadSize={PayloadSize}",
@@ -379,8 +382,8 @@ namespace ZeroBuffer
                     _logger.LogDebug("Wrap-around: wasted space = {WastedSpace} bytes (from {ReadPos} to {PayloadSize})",
                         wastedSpace, oieb.PayloadReadPos, oieb.PayloadSize);
 
-                    // Update OIEB directly via ref
-                    oieb.PayloadFreeBytes += wastedSpace;
+                    // Update OIEB - atomic to prevent lost updates when writer subtracts concurrently
+                    Interlocked.Add(ref Unsafe.As<ulong, long>(ref oieb.PayloadFreeBytes), (long)wastedSpace);
                     oieb.PayloadReadPos = 0;
                     oieb.PayloadReadCount++;
 
@@ -398,7 +401,22 @@ namespace ZeroBuffer
                 if (header.PayloadSize == 0 || header.PayloadSize > oieb.PayloadSize)
                 {
                     _logger.LogError("Invalid frame size: {FrameSize} (buffer size: {PayloadSize})", header.PayloadSize, oieb.PayloadSize);
-                    throw new InvalidOperationException($"Invalid frame size: {header.PayloadSize}");
+                    throw new InvalidOperationException(
+                        $"Invalid frame size: {header.PayloadSize} (seq={header.SequenceNumber}) | " +
+                        $"ReadPos={oieb.PayloadReadPos}, WritePos={oieb.PayloadWritePos}, " +
+                        $"ReadCount={oieb.PayloadReadCount}, WrittenCount={oieb.PayloadWrittenCount}, " +
+                        $"FreeBytes={oieb.PayloadFreeBytes}, PayloadSize={oieb.PayloadSize}, " +
+                        $"readPos(abs)={readPos}, payloadOffset={_payloadOffset}");
+                }
+
+                // Frame must not extend past buffer boundary — writer must always place wrap markers
+                ulong totalFrameSizeCheck = (ulong)FrameHeader.SIZE + header.PayloadSize;
+                if (oieb.PayloadReadPos + totalFrameSizeCheck > oieb.PayloadSize)
+                {
+                    throw new InvalidOperationException(
+                        $"Frame extends past buffer boundary: ReadPos={oieb.PayloadReadPos}" +
+                        $", frameSize={totalFrameSizeCheck}, PayloadSize={oieb.PayloadSize}" +
+                        $", WritePos={oieb.PayloadWritePos}");
                 }
 
                 _logger.LogDebug("Reading frame: seq={Sequence}, size={Size} from position {ReadPos}",
@@ -530,9 +548,9 @@ namespace ZeroBuffer
             _logger.LogTrace("Frame disposed, releasing {Size} bytes for seq={Sequence}", 
                 totalFrameSize, frame.Sequence);
             
-            // Update OIEB to mark space as available (matching C++ pattern)
+            // Update OIEB to mark space as available - atomic to prevent lost updates
             ref var oieb = ref _sharedMemory.ReadRef<OIEB>(0);
-            oieb.PayloadFreeBytes += totalFrameSize;
+            Interlocked.Add(ref Unsafe.As<ulong, long>(ref oieb.PayloadFreeBytes), (long)totalFrameSize);
             _sharedMemory.Flush();
             
             // Signal writer that space is available

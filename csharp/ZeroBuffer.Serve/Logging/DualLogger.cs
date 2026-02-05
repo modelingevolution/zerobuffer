@@ -33,9 +33,9 @@ public class DualLogger : ILogger
         if (!IsEnabled(logLevel))
             return;
         
-        // Log to both destinations
+        // Log to collector only (FileLogger commented out - too heavy for hot path)
         _logCollector.Log(logLevel, eventId, state, exception, formatter);
-        _fileLogger.Log(logLevel, eventId, state, exception, formatter);
+        // _fileLogger.Log(logLevel, eventId, state, exception, formatter);
     }
     
     private class CompositeScope : IDisposable

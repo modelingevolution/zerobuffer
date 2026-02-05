@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using TechTalk.SpecFlow;
 using Xunit;
 using ZeroBuffer.Tests.Services;
@@ -18,14 +20,25 @@ namespace ZeroBuffer.Tests.StepDefinitions
         private readonly Dictionary<string, byte[]> _testData = new();
         private readonly Dictionary<string, byte[]> _lastFrameData = new();
         private readonly Dictionary<string, ulong> _lastFrameSequences = new();
+        private static readonly bool DetailedLogging =
+            Environment.GetEnvironmentVariable("ZEROBUFFER_DETAILED_LOGGING") == "true";
+
         private readonly IBufferNamingService _bufferNaming;
+        private readonly ILoggerFactory _loggerFactory;
         private Exception? _lastException;
         private string _currentBuffer = "";
 
-        public BasicCommunicationSteps(IBufferNamingService bufferNaming)
+        public BasicCommunicationSteps(IBufferNamingService bufferNaming, ILoggerFactory loggerFactory)
         {
             _bufferNaming = bufferNaming;
+            _loggerFactory = loggerFactory;
         }
+
+        private ILogger<Reader> CreateReaderLogger() =>
+            DetailedLogging ? CreateReaderLogger() : NullLogger<Reader>.Instance;
+
+        private ILogger<Writer> CreateWriterLogger() =>
+            DetailedLogging ? CreateWriterLogger() : NullLogger<Writer>.Instance;
 
         [Given(@"the test environment is initialized")]
         public void GivenTheTestEnvironmentIsInitialized()
@@ -53,7 +66,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
             // Accept process parameter but ignore it (as per guidelines)
             var actualBufferName = _bufferNaming.GetBufferName(bufferName);
             var config = new BufferConfig(int.Parse(metadataSize), int.Parse(payloadSize));
-            var reader = new Reader(actualBufferName, config);
+            var reader = new Reader(actualBufferName, config, CreateReaderLogger());
             _readers[bufferName] = reader;
             _currentBuffer = bufferName;
         }
@@ -64,7 +77,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
         {
             // Accept process parameter but ignore it
             var actualBufferName = _bufferNaming.GetBufferName(bufferName);
-            var writer = new Writer(actualBufferName);
+            var writer = new Writer(actualBufferName, CreateWriterLogger());
             _writers[bufferName] = writer;
             _currentBuffer = bufferName;
         }
@@ -415,7 +428,7 @@ namespace ZeroBuffer.Tests.StepDefinitions
                     
                     // Reconnect
                     var actualBufferName = _bufferNaming.GetBufferName(_currentBuffer);
-                    var newWriter = new Writer(actualBufferName);
+                    var newWriter = new Writer(actualBufferName, CreateWriterLogger());
                     _writers[_currentBuffer] = newWriter;
                     
                     // Now write the new metadata

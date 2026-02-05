@@ -302,7 +302,7 @@ class Writer:
             space_to_end = self._oieb.payload_size - self._oieb.payload_write_pos
 
             # We need to wrap if frame doesn't fit in continuous space
-            if continuous_free >= total_size and space_to_end < total_size and self._oieb.payload_read_pos > 0:
+            if continuous_free >= total_size and space_to_end < total_size:
                 # Need to wrap to beginning
                 # Write a special marker if there's space for at least a header
                 if space_to_end >= FrameHeader.SIZE:
@@ -312,8 +312,8 @@ class Writer:
                     wrap_offset = payload_base + self._oieb.payload_write_pos
                     self._shm.write_bytes(wrap_offset, wrap_header.pack())
 
-                # Account for the wasted space at the end
-                self._oieb.payload_free_bytes -= space_to_end
+                # Account for the wasted space at the end - atomic to prevent lost updates
+                self._oieb.atomic_sub_payload_free_bytes(space_to_end)
 
                 # Move to beginning of buffer
                 self._oieb.payload_write_pos = 0
@@ -335,8 +335,8 @@ class Writer:
             self._frames_written += 1
             self._bytes_written += frame_size
 
-            # Update OIEB
-            self._oieb.payload_free_bytes -= total_size
+            # Update OIEB - atomic to prevent lost updates when reader adds concurrently
+            self._oieb.atomic_sub_payload_free_bytes(total_size)
             self._oieb.payload_written_count += 1
 
             # Flush shared memory to ensure all writes are visible
@@ -416,7 +416,7 @@ class Writer:
             space_to_end = self._oieb.payload_size - self._oieb.payload_write_pos
 
             # We need to wrap if frame doesn't fit in continuous space
-            if continuous_free >= total_size and space_to_end < total_size and self._oieb.payload_read_pos > 0:
+            if continuous_free >= total_size and space_to_end < total_size:
                 if space_to_end >= FrameHeader.SIZE:
                     # Write wrap marker header
                     wrap_header = FrameHeader(payload_size=0, sequence_number=0)
@@ -424,8 +424,8 @@ class Writer:
                     wrap_offset = payload_base + self._oieb.payload_write_pos
                     self._shm.write_bytes(wrap_offset, wrap_header.pack())
 
-                # Account for the wasted space at the end
-                self._oieb.payload_free_bytes -= space_to_end
+                # Account for the wasted space at the end - atomic to prevent lost updates
+                self._oieb.atomic_sub_payload_free_bytes(space_to_end)
 
                 # Move to beginning of buffer
                 self._oieb.payload_write_pos = 0
@@ -472,8 +472,8 @@ class Writer:
             self._frames_written += 1
             self._bytes_written += self._pending_frame_size
 
-            # Update OIEB
-            self._oieb.payload_free_bytes -= self._pending_total_size
+            # Update OIEB - atomic to prevent lost updates when reader adds concurrently
+            self._oieb.atomic_sub_payload_free_bytes(self._pending_total_size)
             self._oieb.payload_written_count += 1
 
             # Flush shared memory to ensure all writes are visible

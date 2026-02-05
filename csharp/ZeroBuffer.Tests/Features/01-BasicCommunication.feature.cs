@@ -387,6 +387,54 @@ namespace ZeroBuffer.Tests.Features
             this.ScenarioCleanup();
         }
         
+        [Xunit.SkippableFactAttribute(DisplayName="Test 1.7 - Slow Reader With Fast Writer High Volume")]
+        [Xunit.TraitAttribute("FeatureTitle", "Basic Communication Tests")]
+        [Xunit.TraitAttribute("Description", "Test 1.7 - Slow Reader With Fast Writer High Volume")]
+        public void Test1_7_SlowReaderWithFastWriterHighVolume()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Test 1.7 - Slow Reader With Fast Writer High Volume", null, tagsOfScenario, argumentsOfScenario, featureTags);
+#line 85
+    this.ScenarioInitialize(scenarioInfo);
+#line hidden
+            if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                testRunner.SkipScenario();
+            }
+            else
+            {
+                this.ScenarioStart();
+#line 4
+    this.FeatureBackground();
+#line hidden
+#line 91
+        testRunner.Given("the \'reader\' process creates buffer \'test-slow-reader-hv\' with metadata size \'64\'" +
+                        " and payload size \'10240\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+#line hidden
+#line 93
+        testRunner.When("the \'writer\' process connects to buffer \'test-slow-reader-hv\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+#line hidden
+#line 94
+        testRunner.And("the \'writer\' process writes \'5000\' frames of size \'1024\' as fast as possible", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 96
+        testRunner.And("the \'reader\' process reads frames with \'0\' ms delay between each read", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 98
+        testRunner.Then("the \'reader\' process should have read \'5000\' frames", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+#line hidden
+#line 99
+        testRunner.And("the \'reader\' process should verify all frames have sequential sequence numbers st" +
+                        "arting from \'1\'", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+#line 100
+        testRunner.And("no sequence errors should have occurred", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
+#line hidden
+            }
+            this.ScenarioCleanup();
+        }
+        
         [System.CodeDom.Compiler.GeneratedCodeAttribute("TechTalk.SpecFlow", "3.9.0.0")]
         [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
         public class FixtureData : System.IDisposable
