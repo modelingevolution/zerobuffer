@@ -143,13 +143,17 @@ public:
     // Zero-copy tear-free read of the newest published frame. Invokes
     //   consume(const uint8_t* src, size_t size, uint64_t sequence)
     // with `src` pointing DIRECTLY into the published slot (no copy). The seqlock
-    // is validated AROUND the consume: if the writer laps the slot mid-read,
-    // consume is re-invoked on the newest slot (bounded retries), so the caller
-    // must treat its work as committed only when this returns true. Returns false
-    // if the segment is absent, no NEW frame appears within `timeout`, or all
-    // retries tore. Intermediate frames the writer overwrote are drops (sequence
-    // gap). `size` is clamped to slot_size. The primitive stays generic — it
-    // never copies and knows nothing about the caller's consume.
+    // is validated AROUND the consume, so `consume` must obey a stricter contract
+    // than a copy API:
+    //   1. it MAY be handed torn bytes (a writer lap mid-read) — do not trust the
+    //      pixel values until this function returns true;
+    //   2. it MAY be invoked more than once per call (one per retry) — keep the
+    //      work restartable/idempotent (e.g. repack into the same target slot);
+    //   3. commit / present only when this returns true.
+    // Returns false if the segment is absent, no NEW frame appears within
+    // `timeout`, or all retries tore. Intermediate frames the writer overwrote
+    // are drops (sequence gap). `size` is clamped to slot_size. The primitive
+    // stays generic — it never copies and knows nothing about the caller's consume.
     template <class Fn>
     bool read_latest_into(Fn&& consume, std::chrono::milliseconds timeout) {
         auto deadline = std::chrono::steady_clock::now() + timeout;
