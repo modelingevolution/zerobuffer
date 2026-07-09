@@ -261,6 +261,22 @@ TEST(LatestFrameTest, MetadataSetAndRewrite) {
     EXPECT_EQ(0, std::memcmp(md + 4, caps2.data(), caps2.size()));
 }
 
+// A frame published BEFORE the first set_metadata -> reader reports caps
+// not-ready (null / size 0), never a valid-but-empty caps block (MINOR-2).
+TEST(LatestFrameTest, MetadataNotReadyBeforeFirstSet) {
+    std::string name = make_name("meta_notready");
+    LatestFrameWriter writer(name, 1024, 3);
+    uint8_t* slot = writer.get_slot();
+    fill_pattern(slot, 1024, 1);
+    writer.publish(1, 1024);  // published, but no set_metadata yet
+
+    LatestFrameReader reader(name);
+    LatestFrame f = reader.read_latest(1000ms);
+    ASSERT_TRUE(f.valid());
+    EXPECT_EQ(reader.get_metadata_raw(), nullptr);
+    EXPECT_EQ(reader.get_metadata_size(), 0u);
+}
+
 // Tear-free read under concurrent write: a reader loop vs a fast writer over
 // many iterations must never return a torn (mixed-lap) frame.
 TEST(LatestFrameTest, TearFreeUnderConcurrentWrite) {
