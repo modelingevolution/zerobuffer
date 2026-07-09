@@ -8,18 +8,23 @@
 //
 // The writer creates and owns the segment and never waits on a reader; N
 // readers map it read-only and read the newest published slot tear-free via a
-// per-slot seqlock over a triple- (or wider) slot ring. Caps travel in the
-// header as a length-prefixed JSON block consumed verbatim by native-player's
-// ShmCaps::parse (4-byte little-endian length prefix + JSON).
+// per-slot seqlock over a triple- (or wider) slot ring. Reads are ZERO-COPY:
+// LatestFrameReader::read_latest_into() hands the caller a pointer directly into
+// the published slot and validates the seqlock around the caller's consume — no
+// per-frame copy and no per-frame allocation (zerobuffer perf rule #1). Caps
+// travel in the header as a length-prefixed JSON block consumed verbatim by
+// native-player's ShmCaps::parse (4-byte little-endian length prefix + JSON).
 
 #include "zerobuffer/platform.h"
 #include "zerobuffer/reader.h"  // ZeroBufferException
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace zerobuffer {
@@ -31,6 +36,8 @@ constexpr uint32_t LATEST_FRAME_VERSION = 1u;
 constexpr uint32_t LATEST_FRAME_MIN_SLOTS = 3u;           // triple-slot minimum
 constexpr size_t LATEST_FRAME_ALIGNMENT = 64u;            // cache-line alignment
 constexpr size_t LATEST_FRAME_METADATA_CAPACITY = 8192u;  // caps JSON block bytes
+constexpr int LATEST_FRAME_READ_RETRIES = 16;             // seqlock retries per read
+constexpr std::chrono::microseconds LATEST_FRAME_READ_POLL{300};  // poll gap while waiting
 
 // Per-slot header. `seqlock` is the tear-free guard: even = stable, odd = write
 // in progress. `frame_number` and `size` are plain fields protected by it.
@@ -65,27 +72,6 @@ struct LatestFrameSharedHeader {
 static_assert(sizeof(LatestFrameSharedHeader) == 128, "shared header must be 128 bytes");
 static_assert(sizeof(LatestFrameSharedHeader) % LATEST_FRAME_ALIGNMENT == 0,
               "shared header must be cache-line aligned");
-
-// ----- frame view returned by the reader ------------------------------------
-
-// Zero-allocation view of one tear-free frame copy. `data()` points into the
-// reader's reusable scratch buffer and is valid until the next read_latest().
-class LatestFrame {
-public:
-    LatestFrame() = default;
-
-    const void* data() const { return _data; }
-    size_t size() const { return _size; }
-    uint64_t sequence() const { return _sequence; }
-    bool valid() const { return _valid; }
-
-private:
-    friend class LatestFrameReader;
-    const void* _data = nullptr;
-    size_t _size = 0;
-    uint64_t _sequence = 0;
-    bool _valid = false;
-};
 
 // ----- writer (producer) ----------------------------------------------------
 
@@ -154,10 +140,43 @@ public:
     LatestFrameReader(LatestFrameReader&&) noexcept;
     LatestFrameReader& operator=(LatestFrameReader&&) noexcept;
 
-    // Read the newest published frame tear-free (seqlock). Returns an invalid
-    // frame if the segment is absent or no NEW frame appears within `timeout`.
-    // Intermediate frames the writer overwrote are drops (sequence gap).
-    LatestFrame read_latest(std::chrono::milliseconds timeout);
+    // Zero-copy tear-free read of the newest published frame. Invokes
+    //   consume(const uint8_t* src, size_t size, uint64_t sequence)
+    // with `src` pointing DIRECTLY into the published slot (no copy). The seqlock
+    // is validated AROUND the consume: if the writer laps the slot mid-read,
+    // consume is re-invoked on the newest slot (bounded retries), so the caller
+    // must treat its work as committed only when this returns true. Returns false
+    // if the segment is absent, no NEW frame appears within `timeout`, or all
+    // retries tore. Intermediate frames the writer overwrote are drops (sequence
+    // gap). `size` is clamped to slot_size. The primitive stays generic — it
+    // never copies and knows nothing about the caller's consume.
+    template <class Fn>
+    bool read_latest_into(Fn&& consume, std::chrono::milliseconds timeout) {
+        auto deadline = std::chrono::steady_clock::now() + timeout;
+        for (;;) {
+            if (!_header) {
+                try_attach();
+            }
+            if (_header) {
+                if (std::atomic_ref<uint32_t>(_header->magic).load(std::memory_order_acquire) !=
+                    LATEST_FRAME_MAGIC) {
+                    detach();  // producer closed / restarted -> re-attach to a fresh segment
+                } else {
+                    refresh_metadata();
+                    if (try_consume_newest(consume)) {
+                        return true;
+                    }
+                }
+            }
+            if (std::chrono::steady_clock::now() >= deadline) {
+                if (_header && writer_gone()) {
+                    detach();  // producer gone -> next call re-attaches (restart recovery)
+                }
+                return false;
+            }
+            std::this_thread::sleep_for(LATEST_FRAME_READ_POLL);
+        }
+    }
 
     // Caps block as [4-byte LE len][JSON], consumed verbatim by ShmCaps::parse.
     const void* get_metadata_raw();
@@ -172,18 +191,65 @@ public:
 private:
     bool try_attach();
     void detach();
-    bool try_read_once(LatestFrame& out);
     void refresh_metadata();
     bool writer_gone();
-    const LatestFrameSlotHeader* slot_hdr(uint32_t i) const;
-    const uint8_t* slot_payload(uint32_t i) const;
+
+    LatestFrameSlotHeader* slot_hdr(uint32_t i) {
+        return reinterpret_cast<LatestFrameSlotHeader*>(
+            _base + _header->slots_offset + static_cast<size_t>(i) * _header->slot_stride);
+    }
+    uint8_t* slot_payload(uint32_t i) {
+        return reinterpret_cast<uint8_t*>(slot_hdr(i)) + sizeof(LatestFrameSlotHeader);
+    }
+
+    // Seqlock read of the newest published slot, invoking consume zero-copy and
+    // re-checking the seqlock; retries onto the newest slot on a mid-read lap.
+    template <class Fn>
+    bool try_consume_newest(Fn& consume) {
+        for (int attempt = 0; attempt < LATEST_FRAME_READ_RETRIES; ++attempt) {
+            int64_t idx =
+                std::atomic_ref<int64_t>(_header->publish_index).load(std::memory_order_acquire);
+            if (idx < 0 || idx >= static_cast<int64_t>(_header->slot_count)) {
+                return false;  // nothing published yet
+            }
+            uint32_t w = static_cast<uint32_t>(idx);
+            LatestFrameSlotHeader* sh = slot_hdr(w);
+
+            uint64_t s1 = std::atomic_ref<uint64_t>(sh->seqlock).load(std::memory_order_acquire);
+            if (s1 & 1) {
+                std::this_thread::yield();  // writer mid-write on this slot
+                continue;
+            }
+            uint64_t fn = std::atomic_ref<uint64_t>(sh->frame_number).load(std::memory_order_relaxed);
+            uint64_t sz = std::atomic_ref<uint64_t>(sh->size).load(std::memory_order_relaxed);
+            if (sz > _header->slot_size) {
+                sz = _header->slot_size;  // bounds clamp: never hand out past the slot
+            }
+            if (_have_last && fn == _last_sequence) {
+                return false;  // no new frame since the last read
+            }
+
+            // Zero-copy: hand the slot payload straight to the caller.
+            consume(slot_payload(w), static_cast<size_t>(sz), fn);
+
+            std::atomic_thread_fence(std::memory_order_acquire);
+            uint64_t s2 = std::atomic_ref<uint64_t>(sh->seqlock).load(std::memory_order_acquire);
+            if (s1 != s2) {
+                continue;  // slot rewritten under us -> redo consume on the newest
+            }
+
+            _last_sequence = fn;
+            _have_last = true;
+            return true;
+        }
+        return false;
+    }
 
     std::string _name;
     std::unique_ptr<SharedMemory> _shm;
     LatestFrameSharedHeader* _header = nullptr;
     uint8_t* _base = nullptr;
-    std::vector<uint8_t> _scratch;     // reused frame copy (no per-frame alloc)
-    std::vector<uint8_t> _meta_cache;  // cached [u32 len][json]
+    std::vector<uint8_t> _meta_cache;  // cached [u32 len][json] (on-change only)
     size_t _meta_size = 0;
     uint32_t _meta_seq_seen = 0;
     bool _meta_valid = false;

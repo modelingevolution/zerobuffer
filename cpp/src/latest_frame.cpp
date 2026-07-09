@@ -1,9 +1,7 @@
 #include "zerobuffer/latest_frame.h"
 
 #include <atomic>
-#include <chrono>
 #include <cstring>
-#include <thread>
 #include <utility>
 
 // Producer-owned latest-frame primitive (ADR-11). The seqlock lives in each
@@ -17,14 +15,12 @@
 // on-segment bytes stay a language-neutral layout. Ordering:
 //   - writer: payload store, then seqlock even (release), then publish_index
 //     (release) -> a reader that acquires publish_index sees the payload.
-//   - reader: publish_index (acquire), seqlock (acquire), copy, acquire fence,
-//     seqlock re-check.
+//   - reader: publish_index (acquire), seqlock (acquire), consume zero-copy,
+//     acquire fence, seqlock re-check. The zero-copy read loop lives in the
+//     header (templated on the caller's consume functor).
 
 namespace zerobuffer {
 namespace {
-
-constexpr int MAX_READ_RETRIES = 16;
-constexpr auto READ_POLL_INTERVAL = std::chrono::microseconds(300);
 
 // A completed metadata write leaves metadata_seq even and >= 2 (0 = never
 // written, 1 = first write in progress). Readers treat < 2 as "no caps yet".
@@ -253,8 +249,8 @@ LatestFrameReader::~LatestFrameReader() {
 
 LatestFrameReader::LatestFrameReader(LatestFrameReader&& o) noexcept
     : _name(std::move(o._name)), _shm(std::move(o._shm)), _header(o._header), _base(o._base),
-      _scratch(std::move(o._scratch)), _meta_cache(std::move(o._meta_cache)),
-      _meta_size(o._meta_size), _meta_seq_seen(o._meta_seq_seen), _meta_valid(o._meta_valid),
+      _meta_cache(std::move(o._meta_cache)), _meta_size(o._meta_size),
+      _meta_seq_seen(o._meta_seq_seen), _meta_valid(o._meta_valid),
       _last_sequence(o._last_sequence), _have_last(o._have_last) {
     o._header = nullptr;
     o._base = nullptr;
@@ -267,7 +263,6 @@ LatestFrameReader& LatestFrameReader::operator=(LatestFrameReader&& o) noexcept 
         _shm = std::move(o._shm);
         _header = o._header;
         _base = o._base;
-        _scratch = std::move(o._scratch);
         _meta_cache = std::move(o._meta_cache);
         _meta_size = o._meta_size;
         _meta_seq_seen = o._meta_seq_seen;
@@ -309,7 +304,6 @@ bool LatestFrameReader::try_attach() {
     _shm = std::move(shm);
     _header = h;
     _base = static_cast<uint8_t*>(_shm->data());
-    _scratch.assign(static_cast<size_t>(_header->slot_size), 0);
     _meta_valid = false;
     _meta_size = 0;
     _meta_seq_seen = 0;
@@ -324,92 +318,6 @@ void LatestFrameReader::detach() {
     _base = nullptr;
     _meta_valid = false;
     _have_last = false;
-}
-
-const LatestFrameSlotHeader* LatestFrameReader::slot_hdr(uint32_t i) const {
-    return reinterpret_cast<const LatestFrameSlotHeader*>(
-        _base + _header->slots_offset + static_cast<size_t>(i) * _header->slot_stride);
-}
-
-const uint8_t* LatestFrameReader::slot_payload(uint32_t i) const {
-    return reinterpret_cast<const uint8_t*>(slot_hdr(i)) + sizeof(LatestFrameSlotHeader);
-}
-
-bool LatestFrameReader::try_read_once(LatestFrame& out) {
-    for (int attempt = 0; attempt < MAX_READ_RETRIES; ++attempt) {
-        int64_t idx =
-            std::atomic_ref<int64_t>(_header->publish_index).load(std::memory_order_acquire);
-        if (idx < 0 || idx >= static_cast<int64_t>(_header->slot_count)) {
-            return false;  // nothing published yet
-        }
-        uint32_t w = static_cast<uint32_t>(idx);
-        const LatestFrameSlotHeader* sh = slot_hdr(w);
-        uint64_t& seq_field = const_cast<uint64_t&>(sh->seqlock);
-
-        uint64_t s1 = std::atomic_ref<uint64_t>(seq_field).load(std::memory_order_acquire);
-        if (s1 & 1) {
-            std::this_thread::yield();  // writer mid-write on this slot
-            continue;
-        }
-        uint64_t fn = std::atomic_ref<uint64_t>(const_cast<uint64_t&>(sh->frame_number))
-                          .load(std::memory_order_relaxed);
-        uint64_t sz = std::atomic_ref<uint64_t>(const_cast<uint64_t&>(sh->size))
-                          .load(std::memory_order_relaxed);
-        if (sz > _scratch.size()) {
-            sz = _scratch.size();  // defensive: never read past the slot
-        }
-        // Plain payload copy, validated by the seqlock re-check below: a byte
-        // race here is torn iff the seqlock changed, which the re-check catches.
-        std::memcpy(_scratch.data(), slot_payload(w), sz);
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        uint64_t s2 = std::atomic_ref<uint64_t>(seq_field).load(std::memory_order_acquire);
-        if (s1 != s2) {
-            continue;  // slot rewritten under us -> retry, lands on the newest
-        }
-
-        if (_have_last && fn == _last_sequence) {
-            return false;  // no new frame since the last read
-        }
-        _last_sequence = fn;
-        _have_last = true;
-        out._data = _scratch.data();
-        out._size = static_cast<size_t>(sz);
-        out._sequence = fn;
-        out._valid = true;
-        return true;
-    }
-    return false;
-}
-
-LatestFrame LatestFrameReader::read_latest(std::chrono::milliseconds timeout) {
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    for (;;) {
-        if (!_header) {
-            try_attach();
-        }
-        if (_header) {
-            if (std::atomic_ref<uint32_t>(_header->magic).load(std::memory_order_acquire) !=
-                LATEST_FRAME_MAGIC) {
-                detach();  // producer closed / restarted -> re-attach to a fresh segment
-            } else {
-                refresh_metadata();
-                LatestFrame f;
-                if (try_read_once(f)) {
-                    return f;
-                }
-            }
-        }
-        if (std::chrono::steady_clock::now() >= deadline) {
-            // Producer gone: drop the mapping so the next call re-attaches to a
-            // freshly created segment (writer restart recovery, ADR-5).
-            if (_header && writer_gone()) {
-                detach();
-            }
-            return LatestFrame{};
-        }
-        std::this_thread::sleep_for(READ_POLL_INTERVAL);
-    }
 }
 
 void LatestFrameReader::refresh_metadata() {
