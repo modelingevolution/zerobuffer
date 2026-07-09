@@ -372,19 +372,16 @@ bool LatestFrameReader::is_writer_alive() {
     if (!_header) {
         return false;
     }
-    if (std::atomic_ref<uint32_t>(_header->magic).load(std::memory_order_acquire) !=
-        LATEST_FRAME_MAGIC) {
-        return false;  // producer closed the segment
-    }
-    uint64_t pid = _header->writer_pid;
-    if (pid == 0 || !platform::process_exists(pid)) {
-        return false;
-    }
-    uint64_t start = _header->writer_start_time;
-    if (start != 0 && platform::get_process_start_time(pid) != start) {
-        return false;  // pid reused by a different process
-    }
-    return true;
+    // Liveness is the segment magic alone: the writer publishes it on create and
+    // invalidates it on clean close, both directly in the shared segment. The
+    // writer_pid is the producer's pid in ITS OWN pid namespace — a reader in a
+    // different namespace (e.g. a host consumer reading a container producer's
+    // segment) cannot validate it with process_exists, so a pid check would
+    // spuriously report the writer dead every poll. Magic is namespace-independent.
+    // Detecting a producer that crashed WITHOUT a clean close is left to the
+    // consumer via frame staleness, which is likewise namespace-independent.
+    return std::atomic_ref<uint32_t>(_header->magic).load(std::memory_order_acquire) ==
+           LATEST_FRAME_MAGIC;
 }
 
 bool LatestFrameReader::writer_gone() {
