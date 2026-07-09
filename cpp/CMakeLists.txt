@@ -46,6 +46,7 @@ endif()
 add_library(zerobuffer STATIC
     src/reader.cpp
     src/writer.cpp
+    src/latest_frame.cpp
     src/duplex_client.cpp
     src/immutable_duplex_server.cpp
     src/duplex_channel_factory.cpp

@@ -1,5 +1,27 @@
 cmake_minimum_required(VERSION 3.20)
 
+# Ensure nlohmann_json is available for the generated tests, which link it but
+# rely on the parent scope providing the target. The main CMakeLists only fetches
+# it under BUILD_SERVE and AFTER add_subdirectory(tests), so hoist it here to make
+# the test tree self-sufficient (breaks CMake configure otherwise).
+if(NOT TARGET nlohmann_json::nlohmann_json)
+    find_package(nlohmann_json QUIET)
+    if(NOT nlohmann_json_FOUND)
+        include(FetchContent)
+        set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
+        cmake_policy(SET CMP0048 NEW)
+        FetchContent_Declare(
+            json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.11.3
+            CMAKE_ARGS -DCMAKE_POLICY_DEFAULT_CMP0048=NEW
+        )
+        set(JSON_BuildTests OFF CACHE INTERNAL "")
+        set(JSON_Install OFF CACHE INTERNAL "")
+        FetchContent_MakeAvailable(json)
+    endif()
+endif()
+
 # POC tests for testing infrastructure development
 # DISABLED: These are proof-of-concept tests, not needed for production
 # add_subdirectory(poc)
@@ -34,21 +56,44 @@ cmake_minimum_required(VERSION 3.20)
 # )
 
 # Frame RAII tests
-add_executable(test_frame_raii
-    test_frame_raii.cpp
+# NOTE: test_frame_raii.cpp is referenced here but is absent from the repo (not
+# git-tracked on master), which breaks CMake configure with BUILD_TESTS=ON.
+# Guarded so the source is only added when present; unrelated to the latest-frame
+# primitive. Flagged to the team lead.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_frame_raii.cpp")
+    add_executable(test_frame_raii
+        test_frame_raii.cpp
+    )
+
+    target_link_libraries(test_frame_raii
+        PRIVATE
+            zerobuffer
+            GTest::gtest
+            GTest::gtest_main
+    )
+
+    include(GoogleTest)
+    gtest_discover_tests(test_frame_raii
+        PROPERTIES TIMEOUT 30
+    )
+endif()
+
+include(GoogleTest)
+
+# Latest-frame primitive tests (LatestFrameWriter / LatestFrameReader)
+add_executable(test_latest_frame
+    test_latest_frame.cpp
 )
 
-target_link_libraries(test_frame_raii
+target_link_libraries(test_latest_frame
     PRIVATE
         zerobuffer
         GTest::gtest
         GTest::gtest_main
 )
 
-# Add test discovery
-include(GoogleTest)
-gtest_discover_tests(test_frame_raii
-    PROPERTIES TIMEOUT 30
+gtest_discover_tests(test_latest_frame
+    PROPERTIES TIMEOUT 60
 )
 
 # Generated tests from feature files
