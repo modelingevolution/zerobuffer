@@ -42,6 +42,8 @@ Testing/
 /cpp/tests/*_test
 /cpp/benchmarks/test_*
 /cpp/benchmarks/*_test
+# ...but keep test SOURCES tracked (patterns above target built binaries)
+!/cpp/tests/test_*.cpp
 
 # C# build artifacts
 /csharp/.vs/
