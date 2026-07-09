@@ -83,12 +83,12 @@ size_t align_to_boundary(size_t size, size_t alignment) {
 // Linux SharedMemory implementation
 class LinuxSharedMemory : public SharedMemory {
 public:
-    LinuxSharedMemory(const std::string& name, size_t size, bool create)
+    LinuxSharedMemory(const std::string& name, size_t size, bool create, bool read_only = false)
         : name_(name), size_(size), fd_(-1), data_(nullptr) {
-        
-        int flags = create ? (O_CREAT | O_EXCL | O_RDWR) : O_RDWR;
+
+        int flags = create ? (O_CREAT | O_EXCL | O_RDWR) : (read_only ? O_RDONLY : O_RDWR);
         mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;  // 0666 - read/write for all
-        
+
         fd_ = shm_open(name.c_str(), flags, mode);
         if (fd_ == -1) {
             throw ZeroBufferException("Failed to open shared memory: " + std::string(strerror(errno)));
@@ -110,7 +110,8 @@ public:
             size_ = static_cast<size_t>(st.st_size);
         }
         
-        data_ = mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);
+        int prot = read_only ? PROT_READ : (PROT_READ | PROT_WRITE);
+        data_ = mmap(nullptr, size_, prot, MAP_SHARED, fd_, 0);
         if (data_ == MAP_FAILED) {
             close(fd_);
             if (create) shm_unlink(name.c_str());
@@ -155,6 +156,10 @@ std::unique_ptr<SharedMemory> SharedMemory::create(const std::string& name, size
 
 std::unique_ptr<SharedMemory> SharedMemory::open(const std::string& name) {
     return std::make_unique<LinuxSharedMemory>(name, 0, false);
+}
+
+std::unique_ptr<SharedMemory> SharedMemory::open_readonly(const std::string& name) {
+    return std::make_unique<LinuxSharedMemory>(name, 0, false, true);
 }
 
 void SharedMemory::remove(const std::string& name) {

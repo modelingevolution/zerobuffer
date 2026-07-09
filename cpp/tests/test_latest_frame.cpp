@@ -402,3 +402,29 @@ TEST(LatestFrameTest, StaleSegmentReclaimedOnCreate) {
     ASSERT_TRUE(f.valid);
     EXPECT_EQ(f.sequence, 9u);
 }
+
+// The reader attaches with a read-only (PROT_READ) mapping: it must still read
+// the published payload back byte-for-byte, and keep tracking further publishes.
+// This proves read-only READS work; the cross-UID privilege boundary (root
+// writer / non-root reader) is validated by the live run, not by same-user CI.
+TEST(LatestFrameTest, ReadOnlyReaderReadsPublishedFrame) {
+    std::string name = make_name("readonly");
+    constexpr size_t FRAME = 4096;
+
+    LatestFrameWriter writer(name, FRAME, 3);
+    publish_pattern(writer, 42, FRAME);
+
+    LatestFrameReader reader(name);  // now opens the segment read-only
+    Captured f = read_capture(reader, 1000ms);
+    ASSERT_TRUE(f.valid);
+    EXPECT_EQ(f.sequence, 42u);
+    EXPECT_EQ(f.size, FRAME);
+    EXPECT_TRUE(all_bytes_equal(f.bytes.data(), f.bytes.size(), 42));
+
+    // A later publish is still picked up through the read-only mapping.
+    publish_pattern(writer, 7, FRAME);
+    Captured f2 = read_capture(reader, 1000ms);
+    ASSERT_TRUE(f2.valid);
+    EXPECT_EQ(f2.sequence, 7u);
+    EXPECT_TRUE(all_bytes_equal(f2.bytes.data(), f2.bytes.size(), 7));
+}
