@@ -26,12 +26,9 @@ namespace {
 constexpr int MAX_READ_RETRIES = 16;
 constexpr auto READ_POLL_INTERVAL = std::chrono::microseconds(300);
 
-uint64_t now_ns() {
-    return static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch())
-            .count());
-}
+// A completed metadata write leaves metadata_seq even and >= 2 (0 = never
+// written, 1 = first write in progress). Readers treat < 2 as "no caps yet".
+constexpr uint32_t METADATA_WRITTEN = 2;
 
 size_t align_up(size_t v, size_t a) {
     return (v + a - 1) & ~(a - 1);
@@ -86,7 +83,6 @@ LatestFrameWriter::LatestFrameWriter(std::string name, size_t slot_size, uint32_
     _header->publish_index = -1;
     _header->writer_pid = platform::get_current_pid();
     _header->writer_start_time = platform::get_current_process_start_time();
-    _header->heartbeat_ns = now_ns();
 
     std::atomic_ref<uint32_t>(_header->magic).store(LATEST_FRAME_MAGIC, std::memory_order_release);
 }
@@ -232,19 +228,17 @@ void LatestFrameWriter::publish(uint64_t sequence, size_t size) {
         size = _slot_size;
     }
     LatestFrameSlotHeader* sh = slot_hdr(w);
-    sh->frame_number = sequence;
-    sh->size = size;
+    // Relaxed atomic stores of the seqlock-guarded fields: the seqlock release
+    // below is the actual publication fence; relaxed keeps these free of any
+    // abstract-machine data race on the fields themselves.
+    std::atomic_ref<uint64_t>(sh->frame_number).store(sequence, std::memory_order_relaxed);
+    std::atomic_ref<uint64_t>(sh->size).store(size, std::memory_order_relaxed);
 
     std::atomic_thread_fence(std::memory_order_release);
     std::atomic_ref<uint64_t>(sh->seqlock).store(_pending_seq_even, std::memory_order_release);
     std::atomic_ref<int64_t>(_header->publish_index).store(static_cast<int64_t>(w),
                                                            std::memory_order_release);
-    std::atomic_ref<uint64_t>(_header->heartbeat_ns).store(now_ns(), std::memory_order_release);
     _pending_slot = -1;
-}
-
-void LatestFrameWriter::heartbeat() {
-    std::atomic_ref<uint64_t>(_header->heartbeat_ns).store(now_ns(), std::memory_order_release);
 }
 
 // ----------------------------- Reader ---------------------------------------
@@ -357,11 +351,15 @@ bool LatestFrameReader::try_read_once(LatestFrame& out) {
             std::this_thread::yield();  // writer mid-write on this slot
             continue;
         }
-        uint64_t fn = sh->frame_number;
-        uint64_t sz = sh->size;
+        uint64_t fn = std::atomic_ref<uint64_t>(const_cast<uint64_t&>(sh->frame_number))
+                          .load(std::memory_order_relaxed);
+        uint64_t sz = std::atomic_ref<uint64_t>(const_cast<uint64_t&>(sh->size))
+                          .load(std::memory_order_relaxed);
         if (sz > _scratch.size()) {
             sz = _scratch.size();  // defensive: never read past the slot
         }
+        // Plain payload copy, validated by the seqlock re-check below: a byte
+        // race here is torn iff the seqlock changed, which the re-check catches.
         std::memcpy(_scratch.data(), slot_payload(w), sz);
         std::atomic_thread_fence(std::memory_order_acquire);
 
@@ -420,6 +418,9 @@ void LatestFrameReader::refresh_metadata() {
     }
     std::atomic_ref<uint32_t> mseq(_header->metadata_seq);
     uint32_t s1 = mseq.load(std::memory_order_acquire);
+    if (s1 < METADATA_WRITTEN) {
+        return;  // no caps written yet -> stays "not available", not empty caps
+    }
     if (s1 & 1) {
         return;  // caps being rewritten -> keep the previous cache
     }

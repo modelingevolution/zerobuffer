@@ -43,7 +43,7 @@ struct LatestFrameSlotHeader {
 static_assert(sizeof(LatestFrameSlotHeader) == 32, "slot header must be 32 bytes");
 
 // Segment header. POD; accessed cross-process. Concurrency-sensitive fields
-// (seqlock, publish_index, heartbeat_ns, metadata_seq) are read/written through
+// (seqlock, publish_index, metadata_seq, magic) are read/written through
 // std::atomic_ref so the underlying bytes stay a plain cross-language layout.
 struct LatestFrameSharedHeader {
     uint32_t magic;
@@ -60,8 +60,7 @@ struct LatestFrameSharedHeader {
     int64_t  publish_index;      // newest published slot; -1 = none published
     uint64_t writer_pid;         // owning writer pid (0 = none)
     uint64_t writer_start_time;  // writer process start time (pid-reuse guard)
-    uint64_t heartbeat_ns;       // steady_clock tick stamped by the writer
-    uint64_t reserved1[4];
+    uint64_t reserved1[5];
 };
 static_assert(sizeof(LatestFrameSharedHeader) == 128, "shared header must be 128 bytes");
 static_assert(sizeof(LatestFrameSharedHeader) % LATEST_FRAME_ALIGNMENT == 0,
@@ -115,13 +114,10 @@ public:
     // writes up to slot_size() bytes then calls publish().
     uint8_t* get_slot();
 
-    // Finalize the slot reserved by get_slot(): record (sequence, size), make it
-    // the newest published slot (seqlock release), and stamp the heartbeat.
+    // Finalize the slot reserved by get_slot(): record (sequence, size) and make
+    // it the newest published slot (seqlock release).
     // `size` above slot_size() is clamped. Never blocks on a reader.
     void publish(uint64_t sequence, size_t size);
-
-    // Stamp writer liveness without publishing a frame.
-    void heartbeat();
 
     size_t slot_size() const { return _slot_size; }
     uint32_t slot_count() const { return _slot_count; }
