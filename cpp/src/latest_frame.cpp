@@ -281,7 +281,10 @@ bool LatestFrameReader::try_attach() {
     }
     std::unique_ptr<SharedMemory> shm;
     try {
-        shm = SharedMemory::open(_name);
+        // Read-only mapping: the reader is a pure consumer, so a lower-privilege
+        // process can attach to a segment created by a higher-privilege writer
+        // (e.g. root-owned 0644) without EACCES from an O_RDWR open.
+        shm = SharedMemory::open_readonly(_name);
     } catch (const ZeroBufferException&) {
         return false;  // absent -> caller polls
     }

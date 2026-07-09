@@ -47,11 +47,12 @@ size_t align_to_boundary(size_t size, size_t alignment) {
 // Windows SharedMemory implementation
 class WindowsSharedMemory : public SharedMemory {
 public:
-    WindowsSharedMemory(const std::string& name, size_t size, bool create)
+    WindowsSharedMemory(const std::string& name, size_t size, bool create, bool read_only = false)
         : name_(name), size_(size), handle_(NULL), data_(nullptr) {
-        
+
         std::string fullName = "Global\\" + name;
-        
+        DWORD access = read_only ? FILE_MAP_READ : FILE_MAP_ALL_ACCESS;
+
         if (create) {
             LARGE_INTEGER liSize;
             liSize.QuadPart = size;
@@ -74,13 +75,13 @@ public:
                 throw ZeroBufferException("Shared memory already exists");
             }
         } else {
-            handle_ = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, fullName.c_str());
+            handle_ = OpenFileMappingA(access, FALSE, fullName.c_str());
             if (handle_ == NULL) {
                 throw ZeroBufferException("Failed to open shared memory: " + std::to_string(GetLastError()));
             }
         }
-        
-        data_ = MapViewOfFile(handle_, FILE_MAP_ALL_ACCESS, 0, 0, size);
+
+        data_ = MapViewOfFile(handle_, access, 0, 0, size);
         if (data_ == nullptr) {
             CloseHandle(handle_);
             throw ZeroBufferException("Failed to map shared memory: " + std::to_string(GetLastError()));
@@ -119,6 +120,10 @@ std::unique_ptr<SharedMemory> SharedMemory::create(const std::string& name, size
 
 std::unique_ptr<SharedMemory> SharedMemory::open(const std::string& name) {
     return std::make_unique<WindowsSharedMemory>(name, 0, false);
+}
+
+std::unique_ptr<SharedMemory> SharedMemory::open_readonly(const std::string& name) {
+    return std::make_unique<WindowsSharedMemory>(name, 0, false, true);
 }
 
 void SharedMemory::remove(const std::string& name) {

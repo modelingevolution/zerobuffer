@@ -45,6 +45,10 @@ public:
     
     // Open existing shared memory
     static std::unique_ptr<SharedMemory> open(const std::string& name);
+
+    // Open existing shared memory read-only (PROT_READ / O_RDONLY) so a
+    // lower-privilege consumer can attach to a segment it may not write.
+    static std::unique_ptr<SharedMemory> open_readonly(const std::string& name);
     
     // Get memory pointer
     virtual void* data() = 0;
