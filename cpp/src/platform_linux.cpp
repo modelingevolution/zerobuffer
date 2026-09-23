@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <signal.h>
+#include <cerrno>
 #include <sys/file.h>
 #include <cstring>
 #include <sstream>
@@ -23,7 +24,11 @@ uint64_t get_current_pid() {
 
 bool process_exists(uint64_t pid) {
     if (pid == 0) return false;
-    return kill(static_cast<pid_t>(pid), 0) == 0;
+    // kill(pid, 0) fails with EPERM when the process exists but belongs to another user (e.g. a root-owned
+    // reader inside a container checked by a non-root writer). EPERM therefore means "alive"; only ESRCH
+    // means the process is gone.
+    if (kill(static_cast<pid_t>(pid), 0) == 0) return true;
+    return errno == EPERM;
 }
 
 uint64_t get_process_start_time(uint64_t pid) {
