@@ -137,8 +137,14 @@ void LatestFrameWriter::reclaim_stale_or_throw() {
     if (magic == LATEST_FRAME_MAGIC) {
         uint64_t pid = h->writer_pid;
         uint64_t start = h->writer_start_time;
-        bool alive = pid != 0 && platform::process_exists(pid) &&
-                     (start == 0 || platform::get_process_start_time(pid) == start);
+        // A writer is alive only when the header names a pid that exists AND
+        // that pid's start time matches the recorded one. start == 0 cannot
+        // prove ownership: every writer built before the /proc/<pid>/stat
+        // parse fix recorded 0, and a fresh container reuses the dead writer's
+        // pid (often the new writer's own), so "pid exists" alone took a dead
+        // segment for a live one (epic-144, 2026-11-07).
+        bool alive = pid != 0 && start != 0 && platform::process_exists(pid) &&
+                     platform::get_process_start_time(pid) == start;
         if (alive) {
             throw ZeroBufferException("LatestFrameWriter: segment '" + _name +
                                       "' is owned by a live writer (pid " +

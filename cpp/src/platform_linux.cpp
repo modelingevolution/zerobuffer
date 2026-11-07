@@ -46,20 +46,22 @@ uint64_t get_process_start_time(uint64_t pid) {
         return 0;
     }
     
-    // Parse fields after the command
+    // Fields after the command start at field 3 (state: a single character
+    // such as 'R' or 'S'), so they are read as text tokens; extracting field 3
+    // into an integer fails and would make every start time 0. Field 22 is
+    // starttime in clock ticks since boot: the 20th token after ')'.
     std::istringstream iss(line.substr(cmd_end + 1));
-    uint64_t field;
-    
-    // Skip fields 3-21 (we need field 22)
-    for (int i = 3; i <= 21; ++i) {
-        if (!(iss >> field)) {
+    std::string token;
+    for (int field = 3; field <= 22; ++field) {
+        if (!(iss >> token)) {
             return 0;
         }
     }
-    
-    // Field 22 is start time in clock ticks since boot
-    uint64_t start_time;
-    if (!(iss >> start_time)) {
+
+    uint64_t start_time = 0;
+    try {
+        start_time = std::stoull(token);
+    } catch (const std::exception&) {
         return 0;
     }
     
