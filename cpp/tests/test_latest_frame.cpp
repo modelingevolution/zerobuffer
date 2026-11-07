@@ -6,6 +6,8 @@
 #include <atomic>
 #include <chrono>
 #include <cstring>
+#include <fstream>
+#include <sstream>
 #include <set>
 #include <string>
 #include <thread>
@@ -402,6 +404,97 @@ TEST(LatestFrameTest, StaleSegmentReclaimedOnCreate) {
     ASSERT_TRUE(f.valid);
     EXPECT_EQ(f.sequence, 9u);
 }
+
+#ifdef __linux__
+// Field 22 (starttime) of /proc/<pid>/stat, parsed independently of the
+// library: fields after the ")" that closes comm start at field 3 (state, a
+// single character), so field 22 is the 20th token after ")".
+static uint64_t proc_stat_starttime(uint64_t pid) {
+    std::ifstream f("/proc/" + std::to_string(pid) + "/stat");
+    std::string line;
+    std::getline(f, line);
+    std::istringstream iss(line.substr(line.rfind(')') + 1));
+    std::string tok;
+    for (int field = 3; field <= 22; ++field) {
+        iss >> tok;
+    }
+    return std::stoull(tok);
+}
+
+// Regression (epic-144): the parser fed field 3 (state char, e.g. 'R') into a
+// uint64_t extraction, failed, and returned 0 for every process, so every
+// writer recorded writer_start_time = 0 and the pid-reuse guard never ran.
+TEST(LatestFrameTest, ProcessStartTimeIsProcStatField22) {
+    uint64_t self = platform::get_current_pid();
+    uint64_t expected = proc_stat_starttime(self);
+    ASSERT_NE(expected, 0u);
+    EXPECT_EQ(platform::get_process_start_time(self), expected);
+    EXPECT_EQ(platform::get_current_process_start_time(), expected);
+}
+
+// A live writer records its real start time in the header (the value a later
+// writer compares against to tell a reused pid from the original owner).
+TEST(LatestFrameTest, WriterRecordsRealStartTime) {
+    std::string name = make_name("start_time");
+    LatestFrameWriter writer(name, 1024, 3);
+    auto shm = SharedMemory::open(name);
+    auto* h = static_cast<const LatestFrameSharedHeader*>(shm->data());
+    EXPECT_EQ(h->writer_pid, platform::get_current_pid());
+    EXPECT_EQ(h->writer_start_time, proc_stat_starttime(platform::get_current_pid()));
+}
+#endif
+
+// Leave a magic-valid segment that no process will unlink, as a writer killed
+// without a clean close (docker rm -f) leaves it: header names `pid` and `start`.
+static void make_stale_segment(const std::string& name, uint64_t pid, uint64_t start) {
+    auto shm = SharedMemory::create(name, 65536);
+    auto* h = static_cast<LatestFrameSharedHeader*>(shm->data());
+    std::memset(h, 0, sizeof(*h));
+    h->version = LATEST_FRAME_VERSION;
+    h->slot_count = 3;
+    h->slot_size = 1024;
+    h->slot_stride = 1088;
+    h->slots_offset = 8320;
+    h->metadata_offset = sizeof(LatestFrameSharedHeader);
+    h->metadata_capacity = LATEST_FRAME_METADATA_CAPACITY;
+    h->publish_index = -1;
+    h->writer_pid = pid;
+    h->writer_start_time = start;
+    std::atomic_ref<uint32_t>(h->magic).store(LATEST_FRAME_MAGIC, std::memory_order_release);
+}
+
+// Observed on epic-144 (2026-11-07): a container killed without a clean close
+// leaves the segment in a shared /dev/shm; the fresh container's writer gets the
+// SAME pid, and the header written by the dead writer carries writer_start_time
+// 0 (every pre-fix Linux writer wrote 0). The new writer took the header's pid
+// (its own) for a live owner and failed set_caps -> not-negotiated.
+TEST(LatestFrameTest, StaleSegmentWithOwnPidAndZeroStartTimeReclaimed) {
+    std::string name = make_name("stale_own_pid_zero_start");
+    make_stale_segment(name, platform::get_current_pid(), 0);
+
+    LatestFrameWriter fresh(name, 1024, 3);
+    publish_pattern(fresh, 5, 1024);
+    LatestFrameReader reader(name);
+    Captured f = read_capture(reader, 1000ms);
+    ASSERT_TRUE(f.valid);
+    EXPECT_EQ(f.sequence, 5u);
+}
+
+#ifdef __linux__
+// Same pid reused by a different process lifetime (start time differs): stale.
+TEST(LatestFrameTest, StaleSegmentWithReusedPidReclaimed) {
+    std::string name = make_name("stale_reused_pid");
+    uint64_t self = platform::get_current_pid();
+    make_stale_segment(name, self, proc_stat_starttime(self) - 1);
+
+    LatestFrameWriter fresh(name, 1024, 3);
+    publish_pattern(fresh, 6, 1024);
+    LatestFrameReader reader(name);
+    Captured f = read_capture(reader, 1000ms);
+    ASSERT_TRUE(f.valid);
+    EXPECT_EQ(f.sequence, 6u);
+}
+#endif
 
 // The reader attaches with a read-only (PROT_READ) mapping: it must still read
 // the published payload back byte-for-byte, and keep tracking further publishes.
